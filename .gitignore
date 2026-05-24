@@ -7,4 +7,6 @@ users.json
 payments.json
 scores.json
 aura_scores.json
+data/users.json
+data/waitlist.json
 .DS_Store

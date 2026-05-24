@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — MainCharacter</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0E0E10;
+    --bg-card: #16161A;
+    --bg-card2: #1C1C22;
+    --gold: #C9A84C;
+    --gold-bright: #E0C068;
+    --gold-dim: rgba(201,168,76,0.15);
+    --text: #F5F0E8;
+    --text-dim: #A09B8E;
+    --text-faint: #6B665C;
+    --border: rgba(201,168,76,0.12);
+    --green: #4ADE80;
+    --red: #EF4444;
+    --blue: #60A5FA;
+    --radius: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    padding: 24px;
+    font-size: 14px;
+  }
+
+  /* ─── Login ─── */
+  #login-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+    gap: 20px;
+  }
+  #login-screen h2 {
+    color: var(--gold);
+    font-size: 0.85rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .login-input {
+    padding: 12px 18px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.9rem;
+    width: 280px;
+    outline: none;
+  }
+  .login-input:focus { border-color: var(--gold); }
+  .login-btn {
+    padding: 12px 32px;
+    background: transparent;
+    border: 1px solid var(--gold);
+    border-radius: var(--radius);
+    color: var(--gold);
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.1em;
+  }
+  .login-btn:hover { background: var(--gold-dim); }
+  .login-error { color: var(--red); font-size: 0.82rem; display: none; }
+
+  /* ─── Dashboard ─── */
+  #admin-dashboard { display: none; }
+
+  .admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  .admin-header h1 {
+    color: var(--gold);
+    font-size: 0.85rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .header-actions { display: flex; gap: 10px; }
+  .header-btn {
+    padding: 8px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .header-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  /* Stats bar */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    text-align: center;
+  }
+  .stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--gold-bright);
+  }
+  .stat-label {
+    font-size: 0.72rem;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 4px;
+  }
+
+  /* User table */
+  .table-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow-x: auto;
+    margin-bottom: 24px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th {
+    text-align: left;
+    padding: 12px 14px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    white-space: nowrap;
+  }
+  tr:hover td { background: rgba(201,168,76,0.03); }
+  tr { cursor: pointer; }
+
+  .status-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+  .status-active { background: rgba(74,222,128,0.15); color: var(--green); }
+  .status-paused { background: rgba(251,191,36,0.15); color: #FbbF24; }
+  .status-completed { background: rgba(96,165,250,0.15); color: var(--blue); }
+
+  /* Detail panel */
+  #detail-panel {
+    display: none;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  #detail-panel.open { display: block; }
+  .detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .detail-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--gold-bright);
+  }
+  .detail-close {
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-size: 1.2rem;
+    cursor: pointer;
+  }
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .detail-section { margin-bottom: 16px; }
+  .detail-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+  }
+  .detail-value {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+  }
+
+  /* Chart */
+  .chart-wrap {
+    max-height: 200px;
+    margin-bottom: 16px;
+  }
+
+  /* Send message */
+  .msg-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .msg-input {
+    flex: 1;
+    padding: 10px 14px;
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.85rem;
+    outline: none;
+  }
+  .msg-input:focus { border-color: var(--gold); }
+  .msg-send {
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid var(--gold);
+    border-radius: var(--radius);
+    color: var(--gold);
+    font-weight: 600;
+    font-size: 0.82rem;
+    cursor: pointer;
+  }
+  .msg-send:hover { background: var(--gold-dim); }
+
+  /* Broadcast panel */
+  .broadcast-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .broadcast-panel h3 {
+    font-size: 0.78rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 12px;
+  }
+  .broadcast-textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 12px;
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.85rem;
+    resize: vertical;
+    outline: none;
+    margin-bottom: 10px;
+  }
+  .broadcast-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .broadcast-select {
+    padding: 8px 14px;
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 0.82rem;
+  }
+
+  @media (max-width: 768px) {
+    .stats-bar { grid-template-columns: repeat(3, 1fr); }
+    .detail-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px) {
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    body { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <h2>◆ MainCharacter Admin</h2>
+  <input type="password" class="login-input" id="pw-input" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+  <button class="login-btn" onclick="doLogin()">Enter →</button>
+  <div class="login-error" id="login-error">Incorrect password.</div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="admin-dashboard">
+  <div class="admin-header">
+    <h1>◆ MainCharacter Admin</h1>
+    <div class="header-actions">
+      <a class="header-btn" id="export-btn" href="#">Export CSV ↓</a>
+      <button class="header-btn" onclick="loadData()">Refresh ↻</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar" id="stats-bar"></div>
+
+  <!-- Detail Panel -->
+  <div id="detail-panel">
+    <div class="detail-header">
+      <div class="detail-name" id="detail-name">—</div>
+      <button class="detail-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="detail-grid" id="detail-content"></div>
+    <div class="chart-wrap"><canvas id="score-chart"></canvas></div>
+    <div class="msg-row">
+      <input type="text" class="msg-input" id="msg-input" placeholder="Send a message to this user...">
+      <button class="msg-send" onclick="sendCustomMsg()">Send</button>
+    </div>
+  </div>
+
+  <!-- Users Table -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Phone</th><th>Pillar</th><th>Day</th><th>Streak</th><th>Status</th><th>Rank</th><th>Last Active</th></tr>
+      </thead>
+      <tbody id="users-table"></tbody>
+    </table>
+  </div>
+
+  <!-- Broadcast -->
+  <div class="broadcast-panel">
+    <h3>Broadcast</h3>
+    <textarea class="broadcast-textarea" id="broadcast-msg" placeholder="Write a message to send to multiple users..."></textarea>
+    <div class="broadcast-row">
+      <select class="broadcast-select" id="broadcast-filter">
+        <option value="all">All Users</option>
+        <option value="active">Active Only</option>
+        <option value="completed">Trial Complete</option>
+        <option value="paid">Paid Subscribers</option>
+      </select>
+      <button class="msg-send" onclick="doBroadcast()">Broadcast →</button>
+      <span id="broadcast-status" style="font-size:0.78rem;color:var(--text-faint);"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+let adminPw = '';
+let currentUsers = [];
+let selectedPhone = '';
+let scoreChart = null;
+
+function doLogin() {
+  adminPw = document.getElementById('pw-input').value;
+  fetch('/api/admin/stats?pw=' + encodeURIComponent(adminPw))
+    .then(r => {
+      if (!r.ok) throw new Error('bad');
+      return r.json();
+    })
+    .then(data => {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('admin-dashboard').style.display = 'block';
+      renderData(data);
+    })
+    .catch(() => {
+      document.getElementById('login-error').style.display = 'block';
+    });
+}
+
+function loadData() {
+  fetch('/api/admin/stats', { headers: { 'x-admin-password': adminPw } })
+    .then(r => r.json())
+    .then(renderData)
+    .catch(console.error);
+}
+
+function renderData(data) {
+  currentUsers = data.users || [];
+
+  // Stats
+  document.getElementById('stats-bar').innerHTML = [
+    { v: data.totalUsers, l: 'Total Users' },
+    { v: data.activeToday, l: 'Active Today' },
+    { v: data.trialComplete, l: 'Trial Done' },
+    { v: data.paidSubscribers, l: 'Paid' },
+    { v: '+' + data.avgImprovement, l: 'Avg Improvement' },
+  ].map(s => `<div class="stat-card"><div class="stat-value">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('');
+
+  // Table
+  const tbody = document.getElementById('users-table');
+  tbody.innerHTML = currentUsers.map(u => {
+    const statusCls = u.status === 'active' ? 'status-active' : (u.status === 'paused' ? 'status-paused' : 'status-completed');
+    const lastActive = u.lastActive ? new Date(u.lastActive).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+    return `<tr onclick="openDetail('${u.phone}')">
+      <td style="color:var(--text)">${u.name}</td>
+      <td>${u.phone}</td>
+      <td>${u.pillar}</td>
+      <td>${u.day}</td>
+      <td>${u.streak}</td>
+      <td><span class="status-badge ${statusCls}">${u.status}</span></td>
+      <td style="color:var(--gold)">${u.rank}</td>
+      <td>${lastActive}</td>
+    </tr>`;
+  }).join('');
+
+  // Export link
+  document.getElementById('export-btn').href = '/api/admin/export?pw=' + encodeURIComponent(adminPw);
+}
+
+function openDetail(phone) {
+  selectedPhone = phone;
+  fetch('/api/admin/user/' + phone, { headers: { 'x-admin-password': adminPw } })
+    .then(r => r.json())
+    .then(user => {
+      document.getElementById('detail-name').textContent = user.name + ' — ' + user.phone;
+      
+      let html = '';
+      html += `<div class="detail-section"><div class="detail-label">Status</div><div class="detail-value">${user.status} · ${user.subscriptionStatus}</div></div>`;
+      html += `<div class="detail-section"><div class="detail-label">Rank</div><div class="detail-value">${user.rank}</div></div>`;
+      html += `<div class="detail-section"><div class="detail-label">Day</div><div class="detail-value">${user.day} / 7 · Streak: ${user.streak}</div></div>`;
+      html += `<div class="detail-section"><div class="detail-label">Words Learned</div><div class="detail-value">${user.wordsLearned ? user.wordsLearned.length : 0}</div></div>`;
+      html += `<div class="detail-section"><div class="detail-label">Token</div><div class="detail-value" style="font-size:0.72rem;word-break:break-all;">${user.token}</div></div>`;
+      html += `<div class="detail-section"><div class="detail-label">Enrolled</div><div class="detail-value">${new Date(user.enrolledAt).toLocaleDateString('en-IN')}</div></div>`;
+      
+      document.getElementById('detail-content').innerHTML = html;
+
+      // Chart
+      if (user.scores && user.scores.length > 0) {
+        renderChart(user.scores);
+      }
+
+      document.getElementById('detail-panel').classList.add('open');
+    });
+}
+
+function closeDetail() {
+  document.getElementById('detail-panel').classList.remove('open');
+  selectedPhone = '';
+}
+
+function renderChart(scores) {
+  const ctx = document.getElementById('score-chart');
+  if (scoreChart) scoreChart.destroy();
+
+  scoreChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: scores.map(s => 'Day ' + s.day),
+      datasets: [
+        { label: 'Fluency', data: scores.map(s => s.fluency), borderColor: '#C9A84C', tension: 0.3, pointRadius: 3 },
+        { label: 'Confidence', data: scores.map(s => s.confidenceTone), borderColor: '#4ADE80', tension: 0.3, pointRadius: 3 },
+        { label: 'Vocabulary', data: scores.map(s => s.vocabularyRange), borderColor: '#60A5FA', tension: 0.3, pointRadius: 3 },
+        { label: 'Structure', data: scores.map(s => s.structure), borderColor: '#F472B6', tension: 0.3, pointRadius: 3 },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { min: 0, max: 100, ticks: { color: '#6B665C', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        x: { ticks: { color: '#6B665C', font: { size: 10 } }, grid: { display: false } },
+      },
+      plugins: { legend: { labels: { color: '#A09B8E', font: { size: 11 } } } },
+    },
+  });
+}
+
+function sendCustomMsg() {
+  const msg = document.getElementById('msg-input').value.trim();
+  if (!msg || !selectedPhone) return;
+
+  fetch('/api/admin/send-message', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw },
+    body: JSON.stringify({ phone: selectedPhone, message: msg }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      document.getElementById('msg-input').value = '';
+      alert('Message sent.');
+    }
+  });
+}
+
+function doBroadcast() {
+  const msg = document.getElementById('broadcast-msg').value.trim();
+  const filter = document.getElementById('broadcast-filter').value;
+  if (!msg) return;
+
+  if (!confirm(`Send this message to ${filter} users?`)) return;
+
+  document.getElementById('broadcast-status').textContent = 'Sending...';
+
+  fetch('/api/admin/broadcast', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw },
+    body: JSON.stringify({ message: msg, filter }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById('broadcast-status').textContent = `Sent: ${data.sent} · Failed: ${data.failed}`;
+    document.getElementById('broadcast-msg').value = '';
+  });
+}
+</script>
+
+</body>
+</html>

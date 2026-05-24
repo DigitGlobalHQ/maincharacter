@@ -1092,7 +1092,7 @@ button:focus-visible {
     <span class="nav__diamond">◆</span>
     <span>MAINCHARACTER</span>
   </a>
-  <a href="/audit" class="nav__cta">Begin Your Arc →</a>
+  <a href="/start" class="nav__cta">Begin Your Arc →</a>
 </nav>
 
 <!-- ═══════════════════════════════════════════
@@ -1103,7 +1103,7 @@ button:focus-visible {
   <h1 class="hero__headline">Become the Main Character</h1>
   <p class="hero__sub">Most people know who they want to be. They just can't see the gap clearly enough to close it. MainCharacter makes the gap visible, measurable, and closable — one deliberate ritual at a time.</p>
   <div class="hero__ctas">
-    <a href="/audit" class="btn--primary">Begin Your Arc →</a>
+    <a href="/start" class="btn--primary">Begin Your Arc →</a>
     <a href="#gap" class="btn--ghost">See How It Works ↓</a>
   </div>
   <div class="hero__scroll" aria-hidden="true">↓</div>
@@ -1135,7 +1135,7 @@ button:focus-visible {
 
     <div class="pillars__grid reveal-stagger" id="pillar-cards">
       <!-- ORATOR -->
-      <div class="pcard pcard--orator">
+      <div class="pcard pcard--orator" onclick="window.location.href='/start'" style="cursor:pointer;">
         <div class="pcard__bar"></div>
         <div class="pcard__glow"></div>
         <div class="pcard__body">
@@ -1150,7 +1150,7 @@ button:focus-visible {
       </div>
 
       <!-- AESTHETIC -->
-      <div class="pcard pcard--aesthetic">
+      <div class="pcard pcard--aesthetic" onclick="openComingSoon('aesthetic')" style="cursor:pointer;">
         <div class="pcard__bar"></div>
         <div class="pcard__glow"></div>
         <div class="pcard__body">
@@ -1160,12 +1160,12 @@ button:focus-visible {
           <div class="pcard__stat-bar"><div class="pcard__stat-fill"></div></div>
           <p class="pcard__hook">"The room reads you before you speak."</p>
           <p class="pcard__promise">By Day 7 you will see the version of you the camera has been waiting to capture.</p>
-          <div class="pcard__cta">Accept the Quest <span>→</span></div>
+          <div class="pcard__cta">Coming Soon <span>◆</span></div>
         </div>
       </div>
 
       <!-- SAGE -->
-      <div class="pcard pcard--sage">
+      <div class="pcard pcard--sage" onclick="openComingSoon('sage')" style="cursor:pointer;">
         <div class="pcard__bar"></div>
         <div class="pcard__glow"></div>
         <div class="pcard__body">
@@ -1175,7 +1175,7 @@ button:focus-visible {
           <div class="pcard__stat-bar"><div class="pcard__stat-fill"></div></div>
           <p class="pcard__hook">"The mind beneath the voice and the face."</p>
           <p class="pcard__promise">By Day 7 you will think with sharper language and steadier nerves.</p>
-          <div class="pcard__cta">Accept the Quest <span>→</span></div>
+          <div class="pcard__cta">Coming Soon <span>◆</span></div>
         </div>
       </div>
     </div>
@@ -1379,7 +1379,7 @@ button:focus-visible {
     <div class="reveal">
       <h2>Your arc begins with one question.</h2>
       <p class="cta-close__question">"In a room full of your peers, do you feel like the protagonist — or a spectator?"</p>
-      <a href="/audit" class="btn--primary">Answer It →</a>
+      <a href="/start" class="btn--primary">Answer It →</a>
     </div>
   </div>
 </section>
@@ -1461,7 +1461,63 @@ button:focus-visible {
     });
   });
 
+  // ——— COMING SOON MODAL ———
+  window.openComingSoon = function(pillar) {
+    var names = { aesthetic: 'The Aesthetic', sage: 'The Sage' };
+    document.getElementById('cs-pillar-name').textContent = names[pillar] || pillar;
+    document.getElementById('cs-pillar-input').value = '';
+    document.getElementById('cs-pillar-data').value = pillar;
+    document.getElementById('cs-success').style.display = 'none';
+    document.getElementById('cs-form').style.display = 'block';
+    document.getElementById('coming-soon-modal').classList.add('open');
+  };
+
+  window.closeComingSoon = function() {
+    document.getElementById('coming-soon-modal').classList.remove('open');
+  };
+
+  window.submitWaitlist = function() {
+    var phone = document.getElementById('cs-pillar-input').value.trim();
+    var pillar = document.getElementById('cs-pillar-data').value;
+    if (!phone || phone.length < 10) return;
+    fetch('/api/waitlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: phone, pillar: pillar })
+    }).then(function() {
+      document.getElementById('cs-form').style.display = 'none';
+      document.getElementById('cs-success').style.display = 'block';
+    });
+  };
+
+  // Close on backdrop click
+  document.getElementById('coming-soon-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeComingSoon();
+  });
+
 })();
 </script>
+
+<!-- COMING SOON MODAL -->
+<div id="coming-soon-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(7,7,8,0.85);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+  <div style="background:#0f0f12;border:1px solid rgba(232,184,75,0.25);border-radius:12px;max-width:420px;width:90%;padding:40px 32px;text-align:center;position:relative;">
+    <button onclick="closeComingSoon()" style="position:absolute;top:14px;right:18px;background:none;border:none;color:#5c5a54;font-size:1.3rem;cursor:pointer;">✕</button>
+    <div style="color:#e8b84b;font-size:0.72rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:16px;">◆ <span id="cs-pillar-name">The Aesthetic</span> · Coming Soon</div>
+    <p style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;color:#f4f1ea;line-height:1.4;margin-bottom:12px;">This pillar is being forged.</p>
+    <p style="font-size:0.85rem;color:#9b988f;margin-bottom:28px;line-height:1.6;">The Consultant is preparing something precise.<br>Join the waitlist — you'll be the first to know.</p>
+    <div id="cs-form">
+      <input type="hidden" id="cs-pillar-data" value="aesthetic">
+      <input type="tel" id="cs-pillar-input" placeholder="+91 · Your WhatsApp number" style="width:100%;padding:14px 18px;background:#16161A;border:1px solid rgba(232,184,75,0.2);border-radius:8px;color:#f4f1ea;font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;margin-bottom:14px;" maxlength="10">
+      <button onclick="submitWaitlist()" style="width:100%;padding:14px;background:transparent;border:1px solid #e8b84b;border-radius:8px;color:#e8b84b;font-family:'DM Sans',sans-serif;font-weight:600;font-size:0.85rem;letter-spacing:0.1em;cursor:pointer;">Join the Waitlist →</button>
+    </div>
+    <div id="cs-success" style="display:none;">
+      <p style="color:#e8b84b;font-family:'Cormorant Garamond',serif;font-size:1.1rem;">You're on the list. We'll reach out when it opens.</p>
+    </div>
+  </div>
+</div>
+<style>
+  #coming-soon-modal.open { display: flex !important; }
+</style>
+
 </body>
 </html>

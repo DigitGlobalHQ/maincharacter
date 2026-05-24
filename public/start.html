@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Begin The Orator Protocol — MainCharacter</title>
+<meta name="description" content="7 days. One voice note each morning. The Consultant tracks five parameters, delivers your score every evening, and on Day 7 — you hear the difference yourself.">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0E0E10;
+    --bg-card: #16161A;
+    --gold: #C9A84C;
+    --gold-bright: #E0C068;
+    --gold-dim: rgba(201,168,76,0.15);
+    --gold-glow: rgba(201,168,76,0.08);
+    --text: #F5F0E8;
+    --text-dim: #A09B8E;
+    --text-faint: #6B665C;
+    --border: rgba(201,168,76,0.2);
+    --radius: 8px;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+    line-height: 1.6;
+  }
+
+  /* Radial glow at top */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 500px;
+    background: radial-gradient(ellipse, rgba(201,168,76,0.06), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 520px;
+    width: 100%;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Logo */
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    letter-spacing: 0.15em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 60px;
+    text-decoration: none;
+  }
+  .logo span.diamond { font-size: 0.7rem; }
+
+  /* Eyebrow */
+  .eyebrow {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 16px;
+  }
+
+  /* Main heading */
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    font-size: 2.4rem;
+    line-height: 1.2;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-bottom: 40px;
+  }
+
+  /* Quote block */
+  .quote {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 1.35rem;
+    color: var(--gold-bright);
+    line-height: 1.5;
+    margin-bottom: 32px;
+    padding-left: 20px;
+    border-left: 2px solid var(--gold-dim);
+  }
+
+  /* Description */
+  .desc {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+    margin-bottom: 48px;
+  }
+
+  /* Form */
+  .form-group {
+    margin-bottom: 24px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 14px 18px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.3s var(--ease);
+  }
+  .form-input:focus {
+    border-color: var(--gold);
+  }
+  .form-input::placeholder {
+    color: var(--text-faint);
+  }
+
+  /* Phone input wrapper */
+  .phone-wrapper {
+    display: flex;
+    gap: 10px;
+  }
+  .phone-prefix {
+    width: 72px;
+    flex-shrink: 0;
+    text-align: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.05em;
+  }
+  .phone-wrapper .form-input { flex: 1; }
+
+  /* Time select */
+  select.form-input {
+    appearance: none;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='7' viewBox='0 0 12 7' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23A09B8E' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 40px;
+  }
+  select.form-input option {
+    background: var(--bg-card);
+    color: var(--text);
+  }
+
+  /* Submit button */
+  .btn-submit {
+    display: block;
+    width: 100%;
+    padding: 16px 32px;
+    background: transparent;
+    border: 1px solid var(--gold);
+    border-radius: var(--radius);
+    color: var(--gold);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.88rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.4s var(--ease);
+    margin-top: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-submit::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.05));
+    opacity: 0;
+    transition: opacity 0.4s var(--ease);
+  }
+  .btn-submit:hover::before { opacity: 1; }
+  .btn-submit:hover {
+    border-color: var(--gold-bright);
+    color: var(--gold-bright);
+    transform: translateY(-1px);
+  }
+  .btn-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Fine print */
+  .fine-print {
+    text-align: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 0.82rem;
+    color: var(--text-faint);
+    margin-top: 16px;
+  }
+
+  /* Loading state */
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(14,14,16,0.95);
+    z-index: 100;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+  }
+  .loading-overlay.active { display: flex; }
+  .loading-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 1.3rem;
+    color: var(--gold);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--gold-dim);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  /* Error */
+  .error-msg {
+    color: #E85D5D;
+    font-size: 0.82rem;
+    margin-top: 8px;
+    display: none;
+  }
+  .error-msg.show { display: block; }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    body { padding: 24px 16px; }
+    h1 { font-size: 1.9rem; }
+    .quote { font-size: 1.15rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <a href="/" class="logo">
+    <span class="diamond">◆</span>
+    <span>MAINCHARACTER</span>
+  </a>
+
+  <div class="eyebrow">The Orator Protocol · 7 Days · Free</div>
+
+  <h1>The Orator Protocol</h1>
+  <p class="subtitle">7 Days · Free · No card required</p>
+
+  <p class="quote">"Your voice is the first thing a room decides about you."</p>
+
+  <p class="desc">
+    Seven days. One voice note each morning. 
+    The Consultant tracks five parameters, delivers your score every evening, 
+    and on Day 7 — you hear the difference yourself.
+  </p>
+
+  <form id="enroll-form" onsubmit="handleEnroll(event)">
+    <div class="form-group">
+      <label class="form-label" for="name-input">Your name</label>
+      <input type="text" class="form-input" id="name-input" placeholder="e.g. Aarav" required autocomplete="name">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="phone-input">WhatsApp number</label>
+      <div class="phone-wrapper">
+        <div class="phone-prefix">+91</div>
+        <input type="tel" class="form-input" id="phone-input" placeholder="10-digit number" required pattern="[0-9]{10}" maxlength="10" autocomplete="tel">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="time-input">Preferred time for daily message</label>
+      <select class="form-input" id="time-input">
+        <option value="06:00">6:00 AM</option>
+        <option value="06:30">6:30 AM</option>
+        <option value="07:00">7:00 AM</option>
+        <option value="07:30">7:30 AM</option>
+        <option value="07:45">7:45 AM</option>
+        <option value="08:00" selected>8:00 AM</option>
+        <option value="08:30">8:30 AM</option>
+        <option value="09:00">9:00 AM</option>
+        <option value="09:30">9:30 AM</option>
+        <option value="10:00">10:00 AM</option>
+        <option value="18:00">6:00 PM</option>
+        <option value="19:00">7:00 PM</option>
+        <option value="20:00">8:00 PM</option>
+        <option value="21:00">9:00 PM</option>
+      </select>
+    </div>
+
+    <div class="error-msg" id="error-msg"></div>
+
+    <button type="submit" class="btn-submit" id="submit-btn">
+      Begin My Free Trial →
+    </button>
+
+    <p class="fine-print">No spam. No payment. Just the work.</p>
+  </form>
+</div>
+
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">The Consultant is preparing your baseline...</div>
+</div>
+
+<script>
+async function handleEnroll(e) {
+  e.preventDefault();
+
+  const name = document.getElementById('name-input').value.trim();
+  const phone = document.getElementById('phone-input').value.trim();
+  const time = document.getElementById('time-input').value;
+  const errorEl = document.getElementById('error-msg');
+  const btn = document.getElementById('submit-btn');
+
+  // Validate
+  if (!name || name.length < 2) {
+    errorEl.textContent = 'Please enter your name.';
+    errorEl.classList.add('show');
+    return;
+  }
+  if (!/^[0-9]{10}$/.test(phone)) {
+    errorEl.textContent = 'Please enter a valid 10-digit phone number.';
+    errorEl.classList.add('show');
+    return;
+  }
+
+  errorEl.classList.remove('show');
+  btn.disabled = true;
+  btn.textContent = 'Enrolling...';
+
+  // Show loading
+  document.getElementById('loading-overlay').classList.add('active');
+
+  try {
+    const res = await fetch('/api/enroll', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        phone: '91' + phone,
+        preferredTime: time,
+        pillar: 'orator',
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      // Wait for dramatic effect
+      setTimeout(() => {
+        window.location.href = `/welcome?name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&time=${encodeURIComponent(time)}`;
+      }, 1500);
+    } else {
+      throw new Error(data.error || 'Enrollment failed');
+    }
+  } catch (err) {
+    document.getElementById('loading-overlay').classList.remove('active');
+    errorEl.textContent = err.message || 'Something went wrong. Please try again.';
+    errorEl.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'Begin My Free Trial →';
+  }
+}
+</script>
+
+</body>
+</html>

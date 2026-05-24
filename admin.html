@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAINCHARACTER — Admin Dashboard</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: #070708; color: #f4f1ea; font-family: system-ui, -apple-system, sans-serif; }
+  body { min-height: 100vh; }
+  #root { min-height: 100vh; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0f0f12; }
+  ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+  ::selection { background: rgba(232,184,75,0.3); }
+  @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes toastIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes toastOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(120%); opacity: 0; } }
+  @keyframes barGrow { from { width: 0; } }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ═══════════════════════════════════════════
+// DESIGN TOKENS
+// ═══════════════════════════════════════════
+const T = {
+  obsidian: '#070708',
+  char: '#0f0f12',
+  char2: '#161619',
+  surface: '#1c1c21',
+  surface2: '#222228',
+  surface3: '#2a2a31',
+  ink: '#f4f1ea',
+  inkDim: '#9b988f',
+  inkFaint: '#5c5a54',
+  inkGhost: '#3d3b37',
+  gold: '#e8b84b',
+  goldBright: '#f5d07a',
+  goldGlow: 'rgba(232,184,75,0.18)',
+  goldDeep: '#8a6f31',
+  orator: '#f0a500',
+  oratorGlow: 'rgba(240,165,0,0.15)',
+  aesthetic: '#b06fd8',
+  aestheticGlow: 'rgba(176,111,216,0.15)',
+  sage: '#3dbfa0',
+  sageGlow: 'rgba(61,191,160,0.15)',
+  border: 'rgba(255,255,255,0.07)',
+  borderHover: 'rgba(255,255,255,0.12)',
+  red: '#e74c3c',
+  redGlow: 'rgba(231,76,60,0.12)',
+  radius: '8px',
+  radiusLg: '12px',
+  transition: 'all 0.25s cubic-bezier(0.16,1,0.3,1)',
+};
+
+const pillarColor = (p) => p === 'orator' ? T.orator : p === 'aesthetic' ? T.aesthetic : T.sage;
+const pillarGlow = (p) => p === 'orator' ? T.oratorGlow : p === 'aesthetic' ? T.aestheticGlow : T.sageGlow;
+const pillarLabel = (p) => p === 'orator' ? 'Orator' : p === 'aesthetic' ? 'Aesthetic' : 'Sage';
+
+// ═══════════════════════════════════════════
+// SAMPLE DATA
+// ═══════════════════════════════════════════
+const users = [
+  { id:1, name:"Aarav Mehta", phone:"9198765XXXXX", joinDate:"2026-05-17", pillar:"orator",
+    rank:2, rankName:"The Seeker", streak:5, lastActive:"today",
+    fluency:[67,71,74,74,78], fillers:[51,58,62,62,68],
+    activeQuests:["Record 60s on new prompt","Hold 2s pause before replies"],
+    paid:false, tier:"trial", dayInTrial:5, notes:"Very consistent. Strong candidate for conversion." },
+  { id:2, name:"Priya Sharma", phone:"9187654XXXXX", joinDate:"2026-05-16", pillar:"aesthetic",
+    rank:1, rankName:"The Unawakened", streak:3, lastActive:"yesterday",
+    auraScores:[{s:5,p:4,v:6},{s:6,p:5,v:6}],
+    activeQuests:["Barber appointment","Morning skincare routine"],
+    paid:true, tier:"pro", dayInTrial:6, notes:"Paid on Day 5. Highly engaged." },
+  { id:3, name:"Rohan Das", phone:"9176543XXXXX", joinDate:"2026-05-18", pillar:"sage",
+    rank:1, rankName:"The Unawakened", streak:2, lastActive:"2 days ago",
+    wisdomNodes:["The Observer Principle","The Discipline Paradox"],
+    paid:false, tier:"trial", dayInTrial:2, notes:"Went quiet Day 2. May need nudge." },
+  { id:4, name:"Ananya Singh", phone:"9165432XXXXX", joinDate:"2026-05-17", pillar:"orator",
+    rank:2, rankName:"The Seeker", streak:5, lastActive:"today",
+    fluency:[62,66,70,73,77], fillers:[45,52,58,61,66],
+    activeQuests:["Monday stand-up recording"],
+    paid:false, tier:"trial", dayInTrial:5, notes:"" },
+  { id:5, name:"Vikram Nair", phone:"9154321XXXXX", joinDate:"2026-05-15", pillar:"orator",
+    rank:3, rankName:"The Ascendant", streak:7, lastActive:"today",
+    fluency:[71,75,79,82,84,87,90], fillers:[],
+    activeQuests:[],
+    paid:true, tier:"pro", dayInTrial:7, notes:"Day 7 done. Paid immediately after report." },
+  { id:6, name:"Kavya Reddy", phone:"9143210XXXXX", joinDate:"2026-05-19", pillar:"aesthetic",
+    rank:1, rankName:"The Unawakened", streak:1, lastActive:"today",
+    auraScores:[{s:7,p:6,v:8}],
+    activeQuests:["Full-length mirror check","Choose one signature outfit"],
+    paid:false, tier:"trial", dayInTrial:1, notes:"" },
+  { id:7, name:"Arjun Patel", phone:"9132109XXXXX", joinDate:"2026-05-16", pillar:"sage",
+    rank:2, rankName:"The Seeker", streak:4, lastActive:"yesterday",
+    wisdomNodes:["The Observer Principle","The Discipline Paradox","The Composure Principle"],
+    activeQuests:["Read 10 pages of chosen book"],
+    paid:false, tier:"trial", dayInTrial:4, notes:"" },
+  { id:8, name:"Meera Joshi", phone:"9121098XXXXX", joinDate:"2026-05-15", pillar:"orator",
+    rank:2, rankName:"The Seeker", streak:6, lastActive:"today",
+    fluency:[65,69,72,76,79,82], fillers:[48,54,59,63,67,72],
+    activeQuests:["Physiological sigh before stand-up"],
+    paid:true, tier:"annual", dayInTrial:6, notes:"Went straight to annual. High intent." }
+];
+
+const rankCeremony = {
+  1: { name: "The Unawakened", text: "You have taken the first step. The path is now visible. Most people never even open their eyes to it. You did.\n\nYour rank: The Unawakened.\n\nThis is not an insult. It is where every transformation begins — in the moment you realise the gap exists.\n\n— Your Consultant" },
+  2: { name: "The Seeker", text: "You have moved beyond awareness. You are now actively seeking change — not wishing for it, not hoping, but showing up and doing the work.\n\nYour rank: The Seeker.\n\nThe Seeker does not have the answers yet. But they have something more important — the discipline to keep asking.\n\n— Your Consultant" },
+  3: { name: "The Ascendant", text: "The data is undeniable. Your scores are climbing. Your consistency is holding. The gap between who you were and who you are becoming is now measurable.\n\nYour rank: The Ascendant.\n\nYou are no longer seeking. You are ascending. The room can feel it.\n\n— Your Consultant" },
+  4: { name: "The Sovereign", text: "Sovereignty is not given. It is earned — through seven days of silence before your first sentence, through quests completed without being reminded, through the slow, patient accumulation of evidence that you are who you said you wanted to be.\n\nYour rank: The Sovereign.\n\nThe Consultant does not congratulate. But the Consultant notices. And what you have done is noticed.\n\n— Your Consultant" },
+  5: { name: "The Architect", text: "You have mastered the protocol. Your voice, your presence, your mind — they are no longer aspirational. They are operational.\n\nYour rank: The Architect.\n\nThe Architect does not follow the protocol. The Architect builds their own. You are now teaching the system what it could not teach itself.\n\n— Your Consultant" },
+};
+
+// ═══════════════════════════════════════════
+// TOAST SYSTEM
+// ═══════════════════════════════════════════
+function ToastContainer({ toasts, onDismiss }) {
+  return (
+    <div style={{ position:'fixed', bottom:24, right:24, zIndex:9999, display:'flex', flexDirection:'column', gap:8 }}>
+      {toasts.map(t => (
+        <div key={t.id} style={{
+          background: T.surface, border:`1px solid ${T.gold}40`, borderRadius:T.radius,
+          padding:'12px 20px', color:T.ink, fontSize:13, fontWeight:500,
+          boxShadow:`0 8px 32px rgba(0,0,0,0.4), 0 0 20px ${T.goldGlow}`,
+          animation: t.leaving ? 'toastOut 0.3s ease forwards' : 'toastIn 0.4s cubic-bezier(0.16,1,0.3,1)',
+          display:'flex', alignItems:'center', gap:10, minWidth:240,
+        }}>
+          <span style={{ color:T.gold, fontSize:16 }}>◆</span>
+          {t.message}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════════
+function Modal({ open, onClose, title, children, width }) {
+  if (!open) return null;
+  return (
+    <div onClick={onClose} style={{
+      position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', backdropFilter:'blur(8px)',
+      zIndex:8000, display:'flex', alignItems:'center', justifyContent:'center',
+      animation:'fadeIn 0.2s ease',
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background:T.char, border:`1px solid ${T.border}`, borderRadius:T.radiusLg,
+        width: width || 520, maxWidth:'90vw', maxHeight:'80vh', overflow:'auto',
+        boxShadow:'0 24px 80px rgba(0,0,0,0.6)',
+      }}>
+        <div style={{ padding:'20px 24px', borderBottom:`1px solid ${T.border}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <span style={{ fontSize:16, fontWeight:600, color:T.ink }}>{title}</span>
+          <button onClick={onClose} style={{ background:'none', border:'none', color:T.inkDim, cursor:'pointer', fontSize:18, padding:4 }}>✕</button>
+        </div>
+        <div style={{ padding:24 }}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// METRIC CARD
+// ═══════════════════════════════════════════
+function MetricCard({ label, value, color, icon }) {
+  return (
+    <div style={{
+      background:T.char, border:`1px solid ${T.border}`, borderRadius:T.radiusLg,
+      padding:'20px 24px', flex:1, minWidth:160,
+      transition:T.transition,
+    }}>
+      <div style={{ fontSize:11, fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', color:T.inkDim, marginBottom:8 }}>
+        {icon && <span style={{ marginRight:6 }}>{icon}</span>}{label}
+      </div>
+      <div style={{ fontSize:32, fontWeight:700, color, letterSpacing:'-0.02em' }}>{value}</div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// PILLAR PILL
+// ═══════════════════════════════════════════
+function PillarPill({ pillar, small }) {
+  const c = pillarColor(pillar);
+  return (
+    <span style={{
+      background: `${c}18`, color: c, border: `1px solid ${c}30`,
+      padding: small ? '2px 8px' : '3px 10px',
+      borderRadius: 20, fontSize: small ? 10 : 11,
+      fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase',
+      whiteSpace: 'nowrap',
+    }}>
+      {pillarLabel(pillar)}
+    </span>
+  );
+}
+
+// ═══════════════════════════════════════════
+// STATUS BADGE
+// ═══════════════════════════════════════════
+function StatusBadge({ tier }) {
+  const colors = { trial: { bg: `${T.inkFaint}20`, c: T.inkDim, label:'Trial' }, pro: { bg: `${T.gold}18`, c: T.gold, label:'Pro' }, annual: { bg: `${T.gold}25`, c: T.goldBright, label:'Annual' } };
+  const s = colors[tier] || colors.trial;
+  return (
+    <span style={{
+      background: s.bg, color: s.c, padding:'3px 10px', borderRadius:20,
+      fontSize:11, fontWeight:600, letterSpacing:'0.04em',
+    }}>{s.label}</span>
+  );
+}
+
+// ═══════════════════════════════════════════
+// CSS BAR CHART (no library)
+// ═══════════════════════════════════════════
+function BarChart({ data, max, color, label, height }) {
+  const h = height || 120;
+  const mx = max || Math.max(...data, 1);
+  return (
+    <div>
+      {label && <div style={{ fontSize:11, color:T.inkDim, marginBottom:8, fontWeight:600, letterSpacing:'0.06em', textTransform:'uppercase' }}>{label}</div>}
+      <div style={{ display:'flex', alignItems:'flex-end', gap:4, height:h }}>
+        {data.map((v, i) => (
+          <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'flex-end', height:'100%' }}>
+            <div style={{
+              width:'100%', background:color || T.gold, borderRadius:'4px 4px 0 0',
+              height:`${(v / mx) * 100}%`, minHeight:2, opacity: 0.8 + (i / data.length) * 0.2,
+              animation:`barGrow 0.6s cubic-bezier(0.16,1,0.3,1) ${i * 0.05}s both`,
+            }}/>
+            <div style={{ fontSize:9, color:T.inkFaint, marginTop:4 }}>{v}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LineChart({ datasets, labels, height }) {
+  const h = height || 140;
+  const allVals = datasets.flatMap(d => d.data);
+  const max = Math.max(...allVals, 1);
+  const min = Math.min(...allVals, 0);
+  const range = max - min || 1;
+
+  return (
+    <div>
+      <div style={{ display:'flex', gap:16, marginBottom:8 }}>
+        {datasets.map((ds, i) => (
+          <div key={i} style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, color:T.inkDim }}>
+            <div style={{ width:12, height:3, background:ds.color, borderRadius:2 }}/>
+            {ds.label}
+          </div>
+        ))}
+      </div>
+      <div style={{ position:'relative', height:h, borderLeft:`1px solid ${T.border}`, borderBottom:`1px solid ${T.border}` }}>
+        {datasets.map((ds, di) => (
+          <svg key={di} style={{ position:'absolute', inset:0, width:'100%', height:'100%' }} viewBox={`0 0 ${(ds.data.length - 1) * 100} ${h}`} preserveAspectRatio="none">
+            <polyline
+              fill="none"
+              stroke={ds.color}
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              points={ds.data.map((v, i) => `${i * 100},${h - ((v - min) / range) * (h - 16) - 8}`).join(' ')}
+            />
+            {ds.data.map((v, i) => (
+              <circle key={i} cx={i * 100} cy={h - ((v - min) / range) * (h - 16) - 8} r="4" fill={ds.color} />
+            ))}
+          </svg>
+        ))}
+        {labels && (
+          <div style={{ position:'absolute', bottom:-18, left:0, right:0, display:'flex', justifyContent:'space-between' }}>
+            {labels.map((l, i) => <span key={i} style={{ fontSize:9, color:T.inkFaint }}>{l}</span>)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// USERS TAB
+// ═══════════════════════════════════════════
+function UsersTab({ onViewUser, toast }) {
+  const [filter, setFilter] = useState('all');
+
+  const filtered = users.filter(u => {
+    if (filter === 'all') return true;
+    if (filter === 'orator' || filter === 'aesthetic' || filter === 'sage') return u.pillar === filter;
+    if (filter === 'paid') return u.paid;
+    if (filter === 'trial') return !u.paid;
+    if (filter === 'atrisk') return u.streak < 3;
+    return true;
+  });
+
+  const totalUsers = users.length;
+  const activeToday = users.filter(u => u.lastActive === 'today').length;
+  const paid = users.filter(u => u.paid).length;
+  const trialEnding = users.filter(u => u.dayInTrial >= 6 && !u.paid).length;
+
+  const filters = [
+    { key:'all', label:'All' }, { key:'orator', label:'Orator' },
+    { key:'aesthetic', label:'Aesthetic' }, { key:'sage', label:'Sage' },
+    { key:'paid', label:'Paid' }, { key:'trial', label:'Trial' }, { key:'atrisk', label:'At Risk' },
+  ];
+
+  const [nudgeModal, setNudgeModal] = useState(null);
+  const [nudgeText, setNudgeText] = useState('');
+  const [promoteModal, setPromoteModal] = useState(null);
+  const [payModal, setPayModal] = useState(null);
+
+  const isAtRisk = (u) => u.lastActive !== 'today' && u.lastActive !== 'yesterday' && !u.paid;
+  const isDay7 = (u) => u.dayInTrial >= 7 && !u.paid;
+
+  const getRowBorder = (u) => {
+    if (u.paid) return `3px solid ${T.gold}40`;
+    if (isDay7(u)) return `3px solid ${T.aesthetic}60`;
+    if (isAtRisk(u)) return `3px solid ${T.red}40`;
+    return `3px solid transparent`;
+  };
+
+  return (
+    <div style={{ animation:'fadeIn 0.3s ease' }}>
+      {/* Metric Cards */}
+      <div style={{ display:'flex', gap:16, marginBottom:28 }}>
+        <MetricCard label="Total Users" value={totalUsers} color={T.gold} icon="◆" />
+        <MetricCard label="Active Today" value={activeToday} color={T.sage} icon="●" />
+        <MetricCard label="Paid" value={paid} color={T.orator} icon="★" />
+        <MetricCard label="Trial Ending" value={trialEnding} color={T.aesthetic} icon="⏳" />
+      </div>
+
+      {/* Filter Pills */}
+      <div style={{ display:'flex', gap:8, marginBottom:20, flexWrap:'wrap' }}>
+        {filters.map(f => (
+          <button key={f.key} onClick={() => setFilter(f.key)} style={{
+            background: filter === f.key ? `${T.gold}20` : T.surface,
+            border: `1px solid ${filter === f.key ? T.gold + '50' : T.border}`,
+            color: filter === f.key ? T.gold : T.inkDim,
+            padding:'6px 16px', borderRadius:20, fontSize:12, fontWeight:500,
+            cursor:'pointer', transition:T.transition, letterSpacing:'0.02em',
+          }}>
+            {f.label}
+            {f.key !== 'all' && <span style={{ marginLeft:6, opacity:0.6 }}>
+              {f.key === 'atrisk' ? users.filter(u => u.streak < 3).length : users.filter(u => f.key === 'paid' ? u.paid : f.key === 'trial' ? !u.paid : u.pillar === f.key).length}
+            </span>}
+          </button>
+        ))}
+      </div>
+
+      {/* Table */}
+      <div style={{ background:T.char, border:`1px solid ${T.border}`, borderRadius:T.radiusLg, overflow:'hidden' }}>
+        {/* Header */}
+        <div style={{
+          display:'grid', gridTemplateColumns:'2fr 100px 60px 80px 90px 100px 1fr',
+          padding:'12px 20px', borderBottom:`1px solid ${T.border}`,
+          fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:T.inkFaint,
+        }}>
+          <span>Name</span><span>Pillar</span><span>Day</span><span>Streak</span>
+          <span>Status</span><span>Last Active</span><span style={{ textAlign:'right' }}>Actions</span>
+        </div>
+
+        {/* Rows */}
+        {filtered.map((u, i) => (
+          <div key={u.id} style={{
+            display:'grid', gridTemplateColumns:'2fr 100px 60px 80px 90px 100px 1fr',
+            padding:'14px 20px', borderBottom:`1px solid ${T.border}`,
+            borderLeft: getRowBorder(u),
+            alignItems:'center', fontSize:13,
+            transition:T.transition, animation:`fadeIn 0.3s ease ${i * 0.03}s both`,
+            background: isAtRisk(u) ? T.redGlow : 'transparent',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = isAtRisk(u) ? 'rgba(231,76,60,0.08)' : T.surface}
+          onMouseLeave={e => e.currentTarget.style.background = isAtRisk(u) ? T.redGlow : 'transparent'}
+          >
+            <div>
+              <div style={{ fontWeight:600, color:T.ink }}>{u.name}</div>
+              <div style={{ fontSize:11, color:T.inkFaint, marginTop:2 }}>{u.rankName}</div>
+            </div>
+            <div><PillarPill pillar={u.pillar} /></div>
+            <div style={{ fontWeight:600, color:T.ink }}>D{u.dayInTrial}</div>
+            <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+              <span style={{ fontSize:14 }}>🔥</span>
+              <span style={{ fontWeight:600, color: u.streak >= 5 ? T.orator : u.streak >= 3 ? T.ink : T.red }}>{u.streak}</span>
+            </div>
+            <div><StatusBadge tier={u.tier} /></div>
+            <div style={{ fontSize:12, color: u.lastActive === 'today' ? T.sage : u.lastActive === 'yesterday' ? T.inkDim : T.red }}>
+              {u.lastActive}
+            </div>
+            <div style={{ display:'flex', gap:6, justifyContent:'flex-end', flexWrap:'wrap' }}>
+              <ActionBtn label="View" onClick={() => onViewUser(u)} />
+              <ActionBtn label="Nudge" color={T.sage} onClick={() => { setNudgeModal(u); setNudgeText(`Good morning ${u.name.split(' ')[0]}. The Consultant is ready. Five minutes is enough.`); }} />
+              <ActionBtn label="Promote" color={T.aesthetic} onClick={() => setPromoteModal(u)} />
+              {!u.paid && <ActionBtn label="Pay Link" color={T.orator} onClick={() => setPayModal(u)} />}
+            </div>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div style={{ padding:40, textAlign:'center', color:T.inkFaint, fontSize:13 }}>No users match this filter.</div>
+        )}
+      </div>
+
+      {/* Nudge Modal */}
+      <Modal open={!!nudgeModal} onClose={() => setNudgeModal(null)} title={`Nudge — ${nudgeModal?.name}`}>
+        <textarea value={nudgeText} onChange={e => setNudgeText(e.target.value)} style={{
+          width:'100%', height:120, background:T.surface, border:`1px solid ${T.border}`,
+          borderRadius:T.radius, padding:14, color:T.ink, fontSize:13, resize:'vertical',
+          fontFamily:'inherit', lineHeight:1.6,
+        }}/>
+        <div style={{ marginTop:16, display:'flex', gap:10, justifyContent:'flex-end' }}>
+          <button onClick={() => setNudgeModal(null)} style={cancelBtnStyle}>Cancel</button>
+          <button onClick={() => { toast(`Nudge sent to ${nudgeModal.name.split(' ')[0]}`); setNudgeModal(null); }} style={primaryBtnStyle}>
+            Send via WhatsApp
+          </button>
+        </div>
+      </Modal>
+
+      {/* Promote Modal */}
+      <Modal open={!!promoteModal} onClose={() => setPromoteModal(null)} title={`Promote — ${promoteModal?.name}`} width={580}>
+        {promoteModal && (
+          <div>
+            <div style={{ fontSize:12, color:T.inkDim, marginBottom:8 }}>Current Rank: <span style={{ color:T.ink }}>{promoteModal.rankName}</span></div>
+            <div style={{ fontSize:12, color:T.inkDim, marginBottom:16 }}>Promote to:</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {Object.entries(rankCeremony).filter(([k]) => Number(k) > promoteModal.rank).map(([k, v]) => (
+                <div key={k} style={{
+                  background:T.surface, border:`1px solid ${T.border}`, borderRadius:T.radius,
+                  padding:16, cursor:'pointer', transition:T.transition,
+                }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = T.gold + '50'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
+                >
+                  <div style={{ fontWeight:600, color:T.gold, marginBottom:8, fontSize:14 }}>Rank {k} — {v.name}</div>
+                  <div style={{ fontSize:12, color:T.inkDim, lineHeight:1.6, whiteSpace:'pre-line', maxHeight:80, overflow:'auto' }}>{v.text}</div>
+                  <div style={{ marginTop:12, display:'flex', gap:8 }}>
+                    <button onClick={() => { navigator.clipboard.writeText(v.text); toast('Ceremony text copied'); }} style={{ ...cancelBtnStyle, fontSize:11 }}>Copy Text</button>
+                    <button onClick={() => { toast(`${promoteModal.name.split(' ')[0]} promoted to ${v.name}`); setPromoteModal(null); }} style={{ ...primaryBtnStyle, fontSize:11 }}>Confirm Promotion</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Payment Link Modal */}
+      <Modal open={!!payModal} onClose={() => setPayModal(null)} title={`Send Payment Link — ${payModal?.name}`}>
+        {payModal && (
+          <div>
+            <div style={{ background:T.surface, borderRadius:T.radius, padding:16, marginBottom:16, border:`1px solid ${T.border}` }}>
+              <div style={{ fontSize:12, color:T.inkDim, marginBottom:4 }}>Message preview:</div>
+              <div style={{ fontSize:13, color:T.ink, lineHeight:1.6, whiteSpace:'pre-line' }}>
+{`Your payment link is ready.
+
+*The ASCEND Protocol — ${pillarLabel(payModal.pillar)} + Full Access*
+₹1,499 / month · or ₹12,499/year (save 30%)
+
+Complete your upgrade here:
+https://rzp.io/l/maincharacter-ascend
+
+Once payment is confirmed, your Day 8 quest arrives within minutes.`}
+              </div>
+            </div>
+            <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
+              <button onClick={() => setPayModal(null)} style={cancelBtnStyle}>Cancel</button>
+              <button onClick={() => { toast(`Payment link sent to ${payModal.name.split(' ')[0]}`); setPayModal(null); }} style={primaryBtnStyle}>Send Link</button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+function ActionBtn({ label, onClick, color }) {
+  const c = color || T.inkDim;
+  return (
+    <button onClick={onClick} style={{
+      background:'transparent', border:`1px solid ${c}40`, color:c,
+      padding:'4px 10px', borderRadius:6, fontSize:10, fontWeight:600,
+      cursor:'pointer', transition:T.transition, letterSpacing:'0.03em',
+      whiteSpace:'nowrap',
+    }}
+    onMouseEnter={e => { e.currentTarget.style.background = `${c}15`; e.currentTarget.style.borderColor = `${c}70`; }}
+    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = `${c}40`; }}
+    >
+      {label}
+    </button>
+  );
+}
+
+// ═══════════════════════════════════════════
+// USER PROFILE (Slide-in Panel)
+// ═══════════════════════════════════════════
+function UserProfile({ user, onClose, toast }) {
+  const [notes, setNotes] = useState(user.notes || '');
+  const [quests, setQuests] = useState((user.activeQuests || []).map(q => ({ text: q, done: false })));
+
+  const pc = pillarColor(user.pillar);
+
+  return (
+    <div style={{
+      position:'fixed', top:0, right:0, bottom:0, width:520, maxWidth:'100vw',
+      background:T.char, borderLeft:`1px solid ${T.border}`, zIndex:7000,
+      animation:'slideIn 0.4s cubic-bezier(0.16,1,0.3,1)',
+      display:'flex', flexDirection:'column', overflow:'auto',
+      boxShadow:'-20px 0 80px rgba(0,0,0,0.5)',
+    }}>
+      {/* Header */}
+      <div style={{ padding:'24px 28px', borderBottom:`1px solid ${T.border}`, flexShrink:0 }}>
+        <button onClick={onClose} style={{ background:'none', border:'none', color:T.inkDim, cursor:'pointer', fontSize:12, marginBottom:16, display:'flex', alignItems:'center', gap:6 }}>
+          ← Back to Users
+        </button>
+        <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:8 }}>
+          <div style={{
+            width:48, height:48, borderRadius:'50%', background:`${pc}20`,
+            display:'flex', alignItems:'center', justifyContent:'center',
+            fontSize:20, fontWeight:700, color:pc, border:`2px solid ${pc}40`,
+          }}>
+            {user.name.charAt(0)}
+          </div>
+          <div>
+            <div style={{ fontSize:20, fontWeight:700, color:T.ink }}>{user.name}</div>
+            <div style={{ display:'flex', gap:8, alignItems:'center', marginTop:4 }}>
+              <PillarPill pillar={user.pillar} small />
+              <span style={{ fontSize:11, color:T.inkDim }}>{user.rankName}</span>
+              <span style={{ fontSize:11, color:T.inkFaint }}>·</span>
+              <span style={{ fontSize:11, color:T.inkFaint }}>Day {user.dayInTrial}</span>
+            </div>
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:16, marginTop:12, fontSize:12, color:T.inkDim }}>
+          <span>Joined: {user.joinDate}</span>
+          <span>🔥 Streak: {user.streak}</span>
+          <span>Last: {user.lastActive}</span>
+          <StatusBadge tier={user.tier} />
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ padding:28, flex:1, overflow:'auto' }}>
+        {/* Progress Charts */}
+        <SectionLabel>Progress</SectionLabel>
+
+        {user.pillar === 'orator' && user.fluency && (
+          <div style={{ marginBottom:24 }}>
+            <LineChart
+              datasets={[
+                { label: 'Fluency', data: user.fluency, color: T.orator },
+                ...(user.fillers && user.fillers.length ? [{ label: 'Filler Control', data: user.fillers, color: T.gold }] : []),
+              ]}
+              labels={user.fluency.map((_, i) => `D${i + 1}`)}
+              height={140}
+            />
+          </div>
+        )}
+
+        {user.pillar === 'aesthetic' && user.auraScores && (
+          <div style={{ display:'flex', gap:12, marginBottom:24, flexWrap:'wrap' }}>
+            {user.auraScores.map((sc, i) => (
+              <div key={i} style={{
+                background:T.surface, border:`1px solid ${T.border}`, borderRadius:T.radius,
+                padding:16, minWidth:120, flex:1,
+              }}>
+                <div style={{ fontSize:10, color:T.inkFaint, marginBottom:8, fontWeight:600, letterSpacing:'0.06em' }}>SCAN {i + 1}</div>
+                <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                  <ScoreLine label="Sharpness" value={sc.s} max={10} color={T.aesthetic} />
+                  <ScoreLine label="Presence" value={sc.p} max={10} color={T.sage} />
+                  <ScoreLine label="Vibe" value={sc.v} max={10} color={T.orator} />
+                </div>
+                <div style={{ marginTop:8, fontSize:12, fontWeight:700, color:T.ink }}>Total: {sc.s + sc.p + sc.v}/30</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {user.pillar === 'sage' && user.wisdomNodes && (
+          <div style={{ marginBottom:24 }}>
+            {user.wisdomNodes.map((node, i) => (
+              <div key={i} style={{
+                display:'flex', alignItems:'center', gap:10, padding:'8px 0',
+                borderBottom:`1px solid ${T.border}`,
+              }}>
+                <div style={{
+                  width:20, height:20, borderRadius:'50%', background:`${T.sage}30`,
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  fontSize:10, color:T.sage,
+                }}>✓</div>
+                <span style={{ fontSize:13, color:T.ink }}>{node}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Active Quests */}
+        <SectionLabel>Active Quests</SectionLabel>
+        <div style={{ marginBottom:24 }}>
+          {quests.length === 0 && <div style={{ fontSize:12, color:T.inkFaint }}>No active quests.</div>}
+          {quests.map((q, i) => (
+            <div key={i} style={{
+              display:'flex', alignItems:'center', gap:10, padding:'10px 0',
+              borderBottom:`1px solid ${T.border}`,
+            }}>
+              <div onClick={() => {
+                const nq = [...quests]; nq[i] = { ...nq[i], done: !nq[i].done }; setQuests(nq);
+                if (!nq[i].done) return;
+                toast(`Quest marked complete`);
+              }} style={{
+                width:18, height:18, borderRadius:4, border:`2px solid ${q.done ? T.sage : T.inkFaint}`,
+                background: q.done ? `${T.sage}30` : 'transparent', cursor:'pointer',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                transition:T.transition, fontSize:10, color:T.sage,
+              }}>
+                {q.done && '✓'}
+              </div>
+              <span style={{ fontSize:13, color: q.done ? T.inkFaint : T.ink, textDecoration: q.done ? 'line-through' : 'none' }}>{q.text}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Notes */}
+        <SectionLabel>Consultant Notes</SectionLabel>
+        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Add notes about this user..." style={{
+          width:'100%', height:80, background:T.surface, border:`1px solid ${T.border}`,
+          borderRadius:T.radius, padding:12, color:T.ink, fontSize:13, resize:'vertical',
+          fontFamily:'inherit', lineHeight:1.5, marginBottom:24,
+        }}/>
+
+        {/* Next Scheduled Message */}
+        <SectionLabel>Next Scheduled Message</SectionLabel>
+        <div style={{
+          background:T.surface, border:`1px solid ${T.border}`, borderRadius:T.radius,
+          padding:14, marginBottom:24, fontSize:12, color:T.inkDim, lineHeight:1.6,
+        }}>
+          <div style={{ fontSize:10, color:pc, fontWeight:600, marginBottom:6, letterSpacing:'0.06em' }}>
+            {user.dayInTrial < 7 ? `DAY ${user.dayInTrial + 1} · 7:45 AM` : 'DAY 7 · EVOLUTION REPORT'}
+          </div>
+          {user.dayInTrial < 7
+            ? `Tomorrow's quest prompt is scheduled. ${user.pillar === 'orator' ? 'Recording prompt + micro-quest.' : user.pillar === 'aesthetic' ? 'Photo re-scan invitation.' : 'Wisdom node unlock.'}`
+            : 'Weekly Evolution Report with full before/after stats and paywall card.'}
+        </div>
+
+        {/* Quick Actions */}
+        <SectionLabel>Quick Actions</SectionLabel>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+          <button onClick={() => toast(`Message sent to ${user.name.split(' ')[0]}`)} style={{ ...primaryBtnStyle, fontSize:12 }}>Send Message</button>
+          <button onClick={() => toast(`${user.name.split(' ')[0]} promoted`)} style={{ ...cancelBtnStyle, fontSize:12, borderColor:`${T.aesthetic}50`, color:T.aesthetic }}>Promote Rank</button>
+          {!user.paid && <button onClick={() => toast('Payment link sent')} style={{ ...cancelBtnStyle, fontSize:12, borderColor:`${T.orator}50`, color:T.orator }}>Send Pay Link</button>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScoreLine({ label, value, max, color }) {
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+      <span style={{ fontSize:10, color:T.inkDim, width:60 }}>{label}</span>
+      <div style={{ flex:1, height:6, background:T.surface2, borderRadius:3, overflow:'hidden' }}>
+        <div style={{ width:`${(value / max) * 100}%`, height:'100%', background:color, borderRadius:3, animation:'barGrow 0.6s ease' }}/>
+      </div>
+      <span style={{ fontSize:11, fontWeight:600, color, width:24, textAlign:'right' }}>{value}</span>
+    </div>
+  );
+}
+
+function SectionLabel({ children }) {
+  return (
+    <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:T.inkFaint, marginBottom:12 }}>
+      {children}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// BROADCAST TAB
+// ═══════════════════════════════════════════
+function BroadcastTab({ toast }) {
+  const [target, setTarget] = useState('all');
+  const [message, setMessage] = useState('');
+  const [ceremonyModal, setCeremonyModal] = useState(null);
+
+  const targets = [
+    { key:'all', label:`All Users (${users.length})` },
+    { key:'orator', label:`Orators (${users.filter(u => u.pillar === 'orator').length})` },
+    { key:'aesthetic', label:`Aesthetics (${users.filter(u => u.pillar === 'aesthetic').length})` },
+    { key:'sage', label:`Sages (${users.filter(u => u.pillar === 'sage').length})` },
+    { key:'trial', label:`Trial Only (${users.filter(u => !u.paid).length})` },
+    { key:'paid', label:`Paid Only (${users.filter(u => u.paid).length})` },
+    { key:'day7', label:`Day 7 Users (${users.filter(u => u.dayInTrial >= 7 && !u.paid).length})` },
+  ];
+
+  const templates = [
+    ...Object.entries(rankCeremony).map(([k, v]) => ({
+      label: `Rank ${k}: ${v.name}`,
+      color: [T.inkFaint, T.sage, T.orator, T.gold, T.goldBright][k - 1] || T.inkDim,
+      text: v.text,
+    })),
+    { label: '7-Day Consistency Crest', color: T.gold, text: 'Seven days. Seven recordings. Zero skipped.\n\nYou have earned the 7-Day Consistency Crest — a distinction given only to those who showed up every single day of the trial.\n\nThis crest does not appear on your profile. It does not come with a certificate. What it comes with is evidence: seven data points that prove you are capable of the discipline this protocol demands.\n\nThat is worth more than any badge.\n\n— Your Consultant' },
+    { label: 'Day 7 Paywall', color: T.aesthetic, text: 'Your Day 8 quest is already prepared. To receive it, and to unlock:\n\n• All three pillars — Orator, Aesthetic, Sage\n• The full Wisdom skill tree (60+ nodes remain)\n• Weekly Evolution Reports, indefinitely\n• Your Consultant, every morning, on this line\n\n*The Protocol* — ₹1,499 / month\nor 30% off annual · ₹12,499/year\n\nReply *PAY* to receive your payment link.\n\n_If you do nothing, your Consultant goes quiet at midnight tonight. We do not chase. We do not discount._' },
+  ];
+
+  return (
+    <div style={{ animation:'fadeIn 0.3s ease' }}>
+      {/* Ceremony Templates */}
+      <SectionLabel>Quick-Send Ceremony Templates</SectionLabel>
+      <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:32 }}>
+        {templates.map((t, i) => (
+          <button key={i} onClick={() => setCeremonyModal(t)} style={{
+            background:T.surface, border:`1px solid ${t.color}30`, color:t.color,
+            padding:'8px 16px', borderRadius:T.radius, fontSize:12, fontWeight:500,
+            cursor:'pointer', transition:T.transition, letterSpacing:'0.02em',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = `${t.color}12`; e.currentTarget.style.borderColor = `${t.color}50`; }}
+          onMouseLeave={e => { e.currentTarget.style.background = T.surface; e.currentTarget.style.borderColor = `${t.color}30`; }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Compose */}
+      <SectionLabel>Compose Broadcast</SectionLabel>
+      <div style={{ background:T.char, border:`1px solid ${T.border}`, borderRadius:T.radiusLg, padding:24 }}>
+        <div style={{ marginBottom:16 }}>
+          <div style={{ fontSize:12, color:T.inkDim, marginBottom:8 }}>Target Segment</div>
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+            {targets.map(t => (
+              <button key={t.key} onClick={() => setTarget(t.key)} style={{
+                background: target === t.key ? `${T.gold}18` : T.surface,
+                border: `1px solid ${target === t.key ? T.gold + '40' : T.border}`,
+                color: target === t.key ? T.gold : T.inkDim,
+                padding:'5px 14px', borderRadius:20, fontSize:11, fontWeight:500,
+                cursor:'pointer', transition:T.transition,
+              }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <textarea value={message} onChange={e => setMessage(e.target.value)}
+          placeholder="Write your message here. Use *bold* for WhatsApp formatting..."
+          style={{
+            width:'100%', height:160, background:T.surface, border:`1px solid ${T.border}`,
+            borderRadius:T.radius, padding:16, color:T.ink, fontSize:13, resize:'vertical',
+            fontFamily:'inherit', lineHeight:1.6,
+          }}
+        />
+
+        <div style={{ marginTop:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <span style={{ fontSize:11, color:T.inkFaint }}>{message.length} chars · WhatsApp limit: 4096</span>
+          <button onClick={() => {
+            if (!message.trim()) return;
+            toast(`Broadcast sent to ${target === 'all' ? 'all users' : target}`);
+            setMessage('');
+          }} style={{ ...primaryBtnStyle, opacity: message.trim() ? 1 : 0.4 }}>
+            Send Broadcast
+          </button>
+        </div>
+      </div>
+
+      {/* Ceremony Modal */}
+      <Modal open={!!ceremonyModal} onClose={() => setCeremonyModal(null)} title={ceremonyModal?.label || ''} width={540}>
+        {ceremonyModal && (
+          <div>
+            <div style={{
+              background:T.surface, borderRadius:T.radius, padding:16, marginBottom:16,
+              border:`1px solid ${T.border}`, maxHeight:300, overflow:'auto',
+              fontSize:13, color:T.ink, lineHeight:1.7, whiteSpace:'pre-line',
+            }}>
+              {ceremonyModal.text}
+            </div>
+            <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
+              <button onClick={() => { navigator.clipboard.writeText(ceremonyModal.text); toast('Copied to clipboard'); }} style={cancelBtnStyle}>Copy Text</button>
+              <button onClick={() => { toast(`${ceremonyModal.label} sent`); setCeremonyModal(null); }} style={primaryBtnStyle}>Send to Segment</button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// ANALYTICS TAB
+// ═══════════════════════════════════════════
+function AnalyticsTab() {
+  // Simulated last 7 days active users
+  const dailyActive = [3, 5, 6, 4, 5, 7, 5];
+  const dayLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+  const funnel = [
+    { label: 'Started Trial', value: 8, pct: 100 },
+    { label: 'Active Day 4', value: 6, pct: 75 },
+    { label: 'Reached Day 7', value: 4, pct: 50 },
+    { label: 'Paid', value: 3, pct: 37.5 },
+  ];
+
+  const pillarBreakdown = [
+    { label: 'Orator', value: 4, pct: 50, color: T.orator },
+    { label: 'Aesthetic', value: 2, pct: 25, color: T.aesthetic },
+    { label: 'Sage', value: 2, pct: 25, color: T.sage },
+  ];
+
+  const mrr = 3 * 1499; // 3 paid users
+  const arr = 1 * 12499 + 2 * 1499 * 12; // 1 annual + 2 monthly
+
+  return (
+    <div style={{ animation:'fadeIn 0.3s ease' }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20, marginBottom:24 }}>
+        {/* Daily Active */}
+        <div style={{ background:T.char, border:`1px solid ${T.border}`, borderRadius:T.radiusLg, padding:24 }}>
+          <SectionLabel>Daily Active Users (Last 7 Days)</SectionLabel>
+          <div style={{ display:'flex', alignItems:'flex-end', gap:8, height:140, marginTop:8 }}>
+            {dailyActive.map((v, i) => (
+              <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'flex-end', height:'100%' }}>
+                <div style={{ fontSize:12, fontWeight:600, color:T.ink, marginBottom:4 }}>{v}</div>
+                <div style={{
+                  width:'100%', borderRadius:'6px 6px 0 0',
+                  height:`${(v / 8) * 100}%`, minHeight:8,
+                  background: `linear-gradient(to top, ${T.gold}60, ${T.gold})`,
+                  animation:`barGrow 0.6s cubic-bezier(0.16,1,0.3,1) ${i * 0.08}s both`,
+                }}/>
+                <div style={{ fontSize:10, color:T.inkFaint, marginTop:6 }}>{dayLabels[i]}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Revenue */}
+        <div style={{ background:T.char, border:`1px solid ${T.border}`, borderRadius:T.radiusLg, padding:24 }}>
+          <SectionLabel>Revenue</SectionLabel>
+          <div style={{ marginTop:8 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:16 }}>
+              <div>
+                <div style={{ fontSize:10, color:T.inkDim, marginBottom:4 }}>Current MRR</div>
+                <div style={{ fontSize:32, fontWeight:700, color:T.gold }}>₹{mrr.toLocaleString('en-IN')}</div>
+              </div>
+              <div style={{ textAlign:'right' }}>
+                <div style={{ fontSize:10, color:T.inkDim, marginBottom:4 }}>Projected ARR</div>
+                <div style={{ fontSize:20, fontWeight:600, color:T.goldBright }}>₹{arr.toLocaleString('en-IN')}</div>
+              </div>
+            </div>
+            <div style={{ display:'flex', gap:12 }}>
+              <div style={{ background:T.surface, borderRadius:T.radius, padding:'10px 14px', flex:1, textAlign:'center' }}>
+                <div style={{ fontSize:10, color:T.inkFaint }}>Monthly</div>
+                <div style={{ fontSize:14, fontWeight:600, color:T.ink }}>2 users</div>
+                <div style={{ fontSize:11, color:T.inkDim }}>₹1,499/ea</div>
+              </div>
+              <div style={{ background:T.surface, borderRadius:T.radius, padding:'10px 14px', flex:1, textAlign:'center' }}>
+                <div style={{ fontSize:10, color:T.inkFaint }}>Annual</div>
+                <div style={{ fontSize:14, fontWeight:600, color:T.goldBright }}>1 user</div>
+                <div style={{ fontSize:11, color:T.inkDim }}>₹12,499</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Conversion Funnel */}
+      <div style={{ background:T.char, border:`1px solid ${T.border}`, borderRadius:T.radiusLg, padding:24, marginBottom:24 }}>
+        <SectionLabel>Conversion Funnel</SectionLabel>
+        <div style={{ display:'flex', gap:4, marginTop:12, alignItems:'stretch', minHeight:100 }}>
+          {funnel.map((step, i) => {
+            const colors = [T.inkDim, T.sage, T.aesthetic, T.gold];
+            const width = `${step.pct}%`;
+            return (
+              <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center' }}>
+                <div style={{
+                  width:'100%', background:`${colors[i]}18`, border:`1px solid ${colors[i]}30`,
+                  borderRadius:T.radius, padding:'16px 8px', textAlign:'center',
+                  minHeight:80, display:'flex', flexDirection:'column', justifyContent:'center',
+                  transition:T.transition,
+                }}>
+                  <div style={{ fontSize:28, fontWeight:700, color:colors[i] }}>{step.value}</div>
+                  <div style={{ fontSize:10, color:T.inkDim, marginTop:4 }}>{step.label}</div>
+                </div>
+                {i < funnel.length - 1 && (
+                  <div style={{ display:'flex', alignItems:'center', padding:'4px 0' }}>
+                    <span style={{ fontSize:10, color:T.inkFaint }}>
+                      {Math.round((funnel[i + 1].value / step.value) * 100)}% →
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+        {/* Retention */}
+        <div style={{ background:T.char, border:`1px solid ${T.border}`, borderRadius:T.radiusLg, padding:24 }}>
+          <SectionLabel>Retention</SectionLabel>
+          <div style={{ marginTop:8 }}>
+            <div style={{ fontSize:40, fontWeight:700, color:T.sage, marginBottom:4 }}>75%</div>
+            <div style={{ fontSize:13, color:T.inkDim }}>Day-7 retention rate</div>
+            <div style={{ marginTop:12, padding:'8px 12px', background:`${T.sage}12`, borderRadius:T.radius, border:`1px solid ${T.sage}25` }}>
+              <span style={{ fontSize:12, color:T.sage }}>Target: 40%+ — </span>
+              <span style={{ fontSize:12, color:T.ink, fontWeight:600 }}>Exceeding target by 35pts</span>
+            </div>
+            <div style={{ marginTop:16 }}>
+              <ScoreLine label="D1→D3" value={87} max={100} color={T.sage} />
+              <div style={{ height:6 }}/>
+              <ScoreLine label="D3→D5" value={75} max={100} color={T.orator} />
+              <div style={{ height:6 }}/>
+              <ScoreLine label="D5→D7" value={67} max={100} color={T.aesthetic} />
+            </div>
+          </div>
+        </div>
+
+        {/* Pillar Breakdown */}
+        <div style={{ background:T.char, border:`1px solid ${T.border}`, borderRadius:T.radiusLg, padding:24 }}>
+          <SectionLabel>Pillar Breakdown</SectionLabel>
+          <div style={{ display:'flex', justifyContent:'center', marginTop:8, marginBottom:20 }}>
+            {/* CSS Pie chart using conic-gradient */}
+            <div style={{
+              width:140, height:140, borderRadius:'50%',
+              background:`conic-gradient(${T.orator} 0% 50%, ${T.aesthetic} 50% 75%, ${T.sage} 75% 100%)`,
+              position:'relative',
+            }}>
+              <div style={{
+                position:'absolute', inset:20, borderRadius:'50%', background:T.char,
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontSize:12, fontWeight:600, color:T.inkDim, flexDirection:'column',
+              }}>
+                <div style={{ fontSize:20, fontWeight:700, color:T.ink }}>{users.length}</div>
+                <div>users</div>
+              </div>
+            </div>
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            {pillarBreakdown.map(p => (
+              <div key={p.label} style={{ display:'flex', alignItems:'center', gap:10 }}>
+                <div style={{ width:10, height:10, borderRadius:2, background:p.color }}/>
+                <span style={{ fontSize:12, color:T.ink, flex:1 }}>{p.label}</span>
+                <span style={{ fontSize:12, fontWeight:600, color:p.color }}>{p.value}</span>
+                <span style={{ fontSize:11, color:T.inkFaint, width:36, textAlign:'right' }}>{p.pct}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// SHARED BUTTON STYLES
+// ═══════════════════════════════════════════
+const primaryBtnStyle = {
+  background:`${T.gold}20`, border:`1px solid ${T.gold}50`, color:T.gold,
+  padding:'8px 20px', borderRadius:T.radius, fontSize:13, fontWeight:600,
+  cursor:'pointer', transition:T.transition, letterSpacing:'0.02em',
+};
+
+const cancelBtnStyle = {
+  background:'transparent', border:`1px solid ${T.border}`, color:T.inkDim,
+  padding:'8px 20px', borderRadius:T.radius, fontSize:13, fontWeight:500,
+  cursor:'pointer', transition:T.transition,
+};
+
+// ═══════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════
+function App() {
+  const [tab, setTab] = useState('users');
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [toasts, setToasts] = useState([]);
+  const toastIdRef = useRef(0);
+
+  const toast = useCallback((message) => {
+    const id = ++toastIdRef.current;
+    setToasts(prev => [...prev, { id, message }]);
+    setTimeout(() => {
+      setToasts(prev => prev.map(t => t.id === id ? { ...t, leaving: true } : t));
+      setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 300);
+    }, 2000);
+  }, []);
+
+  const tabs = [
+    { key:'users', label:'Users', icon:'◆' },
+    { key:'broadcast', label:'Broadcast', icon:'◇' },
+    { key:'analytics', label:'Analytics', icon:'▪' },
+  ];
+
+  return (
+    <div style={{ minHeight:'100vh', background:T.obsidian }}>
+      {/* Top Nav */}
+      <nav style={{
+        position:'fixed', top:0, left:0, right:0, zIndex:6000, height:56,
+        background:'rgba(7,7,8,0.85)', backdropFilter:'blur(20px)',
+        borderBottom:`1px solid ${T.border}`,
+        display:'flex', alignItems:'center', justifyContent:'space-between',
+        padding:'0 28px',
+      }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <span style={{ color:T.gold, fontSize:14 }}>◆</span>
+          <span style={{ fontWeight:700, fontSize:14, letterSpacing:'0.12em', color:T.ink }}>MAINCHARACTER</span>
+          <span style={{
+            fontSize:9, fontWeight:700, letterSpacing:'0.1em', color:T.obsidian,
+            background:T.gold, padding:'2px 8px', borderRadius:10, marginLeft:4,
+          }}>ADMIN</span>
+        </div>
+
+        <div style={{ display:'flex', gap:4 }}>
+          {tabs.map(t => (
+            <button key={t.key} onClick={() => { setTab(t.key); setSelectedUser(null); }} style={{
+              background: tab === t.key ? `${T.gold}15` : 'transparent',
+              border: `1px solid ${tab === t.key ? T.gold + '30' : 'transparent'}`,
+              color: tab === t.key ? T.gold : T.inkDim,
+              padding:'7px 18px', borderRadius:T.radius, fontSize:12, fontWeight:500,
+              cursor:'pointer', transition:T.transition, display:'flex', alignItems:'center', gap:6,
+              letterSpacing:'0.03em',
+            }}>
+              <span style={{ fontSize:8 }}>{t.icon}</span> {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ fontSize:11, color:T.inkFaint, display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ width:6, height:6, borderRadius:'50%', background:'#4ade80', animation:'pulse 2s infinite' }}/>
+          Live · {users.filter(u => u.lastActive === 'today').length} active
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main style={{ paddingTop:80, paddingBottom:40, paddingLeft:28, paddingRight: selectedUser ? 548 : 28, transition:'padding 0.4s cubic-bezier(0.16,1,0.3,1)' }}>
+        {tab === 'users' && <UsersTab onViewUser={setSelectedUser} toast={toast} />}
+        {tab === 'broadcast' && <BroadcastTab toast={toast} />}
+        {tab === 'analytics' && <AnalyticsTab />}
+      </main>
+
+      {/* User Profile Slide-in */}
+      {selectedUser && (
+        <>
+          <div onClick={() => setSelectedUser(null)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.3)', zIndex:6500 }}/>
+          <UserProfile user={selectedUser} onClose={() => setSelectedUser(null)} toast={toast} />
+        </>
+      )}
+
+      {/* Toasts */}
+      <ToastContainer toasts={toasts} />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

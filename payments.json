@@ -1,0 +1,26 @@
+{
+  "payments": [
+    {
+      "id": "pay_1779586851729",
+      "createdAt": "2026-05-24T01:40:51.729Z",
+      "orderId": "order_mock_1779586851729",
+      "userPhone": "919999000001",
+      "userName": "Test",
+      "amount": 149900,
+      "tier": "pro",
+      "billingPeriod": "monthly",
+      "status": "pending"
+    },
+    {
+      "id": "pay_1779586851753",
+      "createdAt": "2026-05-24T01:40:51.753Z",
+      "orderId": "order_mock_1779586851753",
+      "userPhone": "919999000001",
+      "userName": "Test",
+      "amount": 1249900,
+      "tier": "pro",
+      "billingPeriod": "annual",
+      "status": "pending"
+    }
+  ]
+}

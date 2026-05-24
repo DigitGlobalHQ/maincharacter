@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAINCHARACTER — Your Protocol Continues</title>
+<meta name="description" content="Payment confirmed. Your MainCharacter Protocol continues.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --obsidian: #070708;
+    --char: #0f0f12;
+    --ink: #f4f1ea;
+    --ink-dim: #9b988f;
+    --ink-faint: #5c5a54;
+    --gold: #e8b84b;
+    --gold-bright: #f5d07a;
+    --gold-glow: rgba(232,184,75,0.18);
+    --orator: #f0a500;
+    --aesthetic: #b06fd8;
+    --sage: #3dbfa0;
+    --border: rgba(255,255,255,0.07);
+    --serif: 'Cormorant Garamond', Georgia, serif;
+    --sans: 'Sora', system-ui, sans-serif;
+  }
+
+  html {
+    background: var(--obsidian);
+    color: var(--ink);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Grain */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* Gold glow behind checkmark */
+  .glow-bg {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -60%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(232,184,75,0.06) 0%, transparent 60%);
+    pointer-events: none;
+    animation: pulseGlow 4s ease-in-out infinite;
+  }
+
+  /* ─── Container ─── */
+  .container {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    max-width: 520px;
+    padding: 0 24px;
+  }
+
+  /* ─── Checkmark ─── */
+  .checkmark-wrap {
+    width: 88px;
+    height: 88px;
+    margin: 0 auto 40px;
+    position: relative;
+  }
+
+  .checkmark-ring {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    border: 3px solid var(--gold);
+    position: absolute;
+    inset: 0;
+    animation: ringDraw 0.8s cubic-bezier(0.16,1,0.3,1) 0.3s both;
+    opacity: 0;
+  }
+
+  .checkmark-ring::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    border: 1px solid rgba(232,184,75,0.15);
+    animation: ringPulse 2s ease-in-out 1.5s infinite;
+  }
+
+  .checkmark-icon {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .checkmark-svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .checkmark-svg path {
+    fill: none;
+    stroke: var(--gold);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 50;
+    stroke-dashoffset: 50;
+    animation: drawCheck 0.5s cubic-bezier(0.16,1,0.3,1) 0.9s forwards;
+  }
+
+  /* ─── Typography ─── */
+  .headline {
+    font-family: var(--serif);
+    font-size: clamp(32px, 7vw, 48px);
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.15;
+    margin-bottom: 20px;
+    animation: fadeUp 0.6s ease 1.2s both;
+  }
+
+  .subtext {
+    font-size: 15px;
+    color: var(--ink-dim);
+    line-height: 1.6;
+    margin-bottom: 12px;
+    animation: fadeUp 0.6s ease 1.5s both;
+  }
+
+  .signature {
+    font-family: var(--serif);
+    font-size: 15px;
+    font-style: italic;
+    color: var(--ink-faint);
+    margin-bottom: 48px;
+    animation: fadeUp 0.6s ease 1.7s both;
+  }
+
+  /* ─── Unlocked Items ─── */
+  .unlocked {
+    animation: fadeUp 0.6s ease 2s both;
+  }
+
+  .unlocked-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 16px;
+  }
+
+  .unlocked-grid {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .unlock-card {
+    background: var(--char);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 16px;
+    flex: 1;
+    max-width: 160px;
+    transition: all 0.3s ease;
+  }
+  .unlock-card:hover {
+    border-color: rgba(255,255,255,0.12);
+    transform: translateY(-2px);
+  }
+
+  .unlock-icon {
+    font-size: 24px;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .unlock-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+
+  .unlock-desc {
+    font-size: 11px;
+    color: var(--ink-faint);
+    line-height: 1.4;
+  }
+
+  /* Pillar-specific icon colors */
+  .unlock-card.aesthetic .unlock-icon { color: var(--aesthetic); }
+  .unlock-card.sage .unlock-icon { color: var(--sage); }
+  .unlock-card.reports .unlock-icon { color: var(--gold); }
+
+  /* ─── Confetti particles ─── */
+  .particle {
+    position: fixed;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: particleFall linear forwards;
+  }
+
+  /* ─── Animations ─── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes ringDraw {
+    from { opacity: 0; transform: scale(0.3); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes ringPulse {
+    0%, 100% { transform: scale(1); opacity: 0.3; }
+    50% { transform: scale(1.08); opacity: 0.1; }
+  }
+
+  @keyframes drawCheck {
+    to { stroke-dashoffset: 0; }
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% { opacity: 0.6; transform: translate(-50%, -60%) scale(1); }
+    50% { opacity: 1; transform: translate(-50%, -60%) scale(1.05); }
+  }
+
+  @keyframes particleFall {
+    0% { opacity: 1; transform: translateY(0) rotate(0deg); }
+    100% { opacity: 0; transform: translateY(100vh) rotate(720deg); }
+  }
+
+  @media (max-width: 520px) {
+    .unlocked-grid { flex-direction: column; align-items: center; }
+    .unlock-card { max-width: 280px; width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="glow-bg"></div>
+
+<div class="container">
+
+  <!-- Animated Checkmark -->
+  <div class="checkmark-wrap">
+    <div class="checkmark-ring"></div>
+    <div class="checkmark-icon">
+      <svg class="checkmark-svg" viewBox="0 0 36 36">
+        <path d="M8 18 L15 25 L28 11"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Headline -->
+  <h1 class="headline">Your Protocol Continues.</h1>
+
+  <!-- Subtext -->
+  <p class="subtext">Your Day 8 quest arrives tomorrow at 7:45am.</p>
+
+  <!-- Signature -->
+  <p class="signature">— Your Consultant</p>
+
+  <!-- Unlocked Items -->
+  <div class="unlocked">
+    <div class="unlocked-label">You've Unlocked</div>
+    <div class="unlocked-grid">
+      <div class="unlock-card aesthetic">
+        <span class="unlock-icon">◇</span>
+        <div class="unlock-name">Aesthetic Pillar</div>
+        <div class="unlock-desc">Aura Scores, grooming quests, photo analysis</div>
+      </div>
+      <div class="unlock-card sage">
+        <span class="unlock-icon">▣</span>
+        <div class="unlock-name">Sage Pillar</div>
+        <div class="unlock-desc">60+ wisdom nodes, Chronicle, mastery system</div>
+      </div>
+      <div class="unlock-card reports">
+        <span class="unlock-icon">◆</span>
+        <div class="unlock-name">Evolution Reports</div>
+        <div class="unlock-desc">Weekly before/after data, indefinitely</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ═══════════════════════════════════════════════════════════════
+  // SUBTLE GOLD PARTICLES
+  // ═══════════════════════════════════════════════════════════════
+
+  const colors = ['#e8b84b', '#f5d07a', '#f0a500', '#b06fd8', '#3dbfa0'];
+
+  function createParticle() {
+    const particle = document.createElement('div');
+    particle.className = 'particle';
+
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const x = Math.random() * window.innerWidth;
+    const size = 2 + Math.random() * 4;
+    const duration = 3 + Math.random() * 4;
+
+    particle.style.cssText = `
+      left: ${x}px;
+      top: -10px;
+      width: ${size}px;
+      height: ${size}px;
+      background: ${color};
+      animation-duration: ${duration}s;
+      opacity: ${0.3 + Math.random() * 0.5};
+    `;
+
+    document.body.appendChild(particle);
+    setTimeout(() => particle.remove(), duration * 1000);
+  }
+
+  // Initial burst
+  setTimeout(() => {
+    for (let i = 0; i < 20; i++) {
+      setTimeout(createParticle, i * 80);
+    }
+  }, 1500);
+
+  // Ongoing subtle particles
+  setInterval(createParticle, 600);
+
+  // ═══════════════════════════════════════════════════════════════
+  // PERSONALIZATION FROM URL PARAMS
+  // ═══════════════════════════════════════════════════════════════
+
+  const params = new URLSearchParams(window.location.search);
+  const name = params.get('name');
+
+  if (name) {
+    // Could personalize the headline, but the current design is clean without it
+    document.title = `MAINCHARACTER — ${name}, Your Protocol Continues`;
+  }
+</script>
+</body>
+</html>

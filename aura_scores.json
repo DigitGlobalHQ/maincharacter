@@ -1,0 +1,32 @@
+{
+  "users": {
+    "+919876543210": {
+      "phone": "+919876543210",
+      "createdAt": "2026-05-23T02:55:52.299Z",
+      "scans": [
+        {
+          "scanNumber": 1,
+          "timestamp": "2026-05-23T02:55:52.299Z",
+          "scores": {
+            "sharpness": 6,
+            "presence": 5,
+            "vibe": 5,
+            "total": 16
+          },
+          "notes": {
+            "sharpnessNote": "Grooming is considered but not yet sharp — the hairline is clean but the overall definition could be more intentional.",
+            "presenceNote": "Shoulders are slightly forward and the gaze is indirect — the body is not yet occupying the frame with confidence.",
+            "vibeNote": "The individual elements are decent but they are not speaking the same language — style, grooming, and expression feel like separate conversations."
+          },
+          "dominantStrength": "sharpness",
+          "primaryOpportunity": "presence",
+          "quests": {
+            "sharpnessQuest": "Spend fifteen minutes this week on one grooming detail you have been ignoring — whether that is skin texture, eyebrow shape, or the state of your nails. One detail, done properly.",
+            "presenceQuest": "Before you walk into any room this week, pause at the threshold for two seconds. Plant your feet, lift your sternum one inch, and enter. Notice what changes when you give the room a moment to receive you.",
+            "vibeQuest": "Ask one person you trust: \"If you had to describe my style in three words, what would they be?\" Do not explain why you are asking. Just listen to what they see."
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAINCHARACTER — Become the Main Character</title>
+<meta name="description" content="Most people know who they want to be. MainCharacter makes the gap visible, measurable, and closable — one deliberate ritual at a time. Three pillars. Seven days. Five minutes a day.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=Sora:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   DESIGN TOKENS
+   ═══════════════════════════════════════════ */
+:root {
+  --obsidian: #070708;
+  --char: #0f0f12;
+  --char-2: #161619;
+  --surface: #1c1c21;
+  --surface-2: #222228;
+  --surface-3: #2a2a31;
+
+  --ink: #f4f1ea;
+  --ink-dim: #9b988f;
+  --ink-faint: #5c5a54;
+  --ink-ghost: #3d3b37;
+
+  --gold: #e8b84b;
+  --gold-bright: #f5d07a;
+  --gold-glow: rgba(232, 184, 75, 0.18);
+  --gold-deep: #8a6f31;
+  --gold-subtle: rgba(232, 184, 75, 0.06);
+
+  --orator: #f0a500;
+  --orator-glow: rgba(240, 165, 0, 0.14);
+  --orator-dim: #7a5200;
+
+  --aesthetic: #b06fd8;
+  --aesthetic-glow: rgba(176, 111, 216, 0.14);
+  --aesthetic-dim: #6a3d8a;
+
+  --sage: #3dbfa0;
+  --sage-glow: rgba(61, 191, 160, 0.14);
+  --sage-dim: #1a6e5e;
+
+  --line: rgba(255, 255, 255, 0.07);
+  --line-2: rgba(255, 255, 255, 0.12);
+  --line-3: rgba(255, 255, 255, 0.18);
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+  --radius: 6px;
+
+  --font-serif: 'Cormorant Garamond', 'Georgia', serif;
+  --font-sans: 'Sora', 'Helvetica Neue', sans-serif;
+}
+
+/* ═══════════════════════════════════════════
+   RESET & BASE
+   ═══════════════════════════════════════════ */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-weight: 300;
+  background: var(--obsidian);
+  color: var(--ink);
+  line-height: 1.7;
+  letter-spacing: 0.04em;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--gold);
+  color: var(--obsidian);
+}
+
+img { max-width: 100%; display: block; }
+a { color: inherit; text-decoration: none; }
+
+body::-webkit-scrollbar { width: 4px; }
+body::-webkit-scrollbar-track { background: var(--obsidian); }
+body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
+
+/* ═══════════════════════════════════════════
+   GRAIN OVERLAY
+   ═══════════════════════════════════════════ */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px;
+}
+
+/* ═══════════════════════════════════════════
+   TYPOGRAPHY
+   ═══════════════════════════════════════════ */
+h1, h2, h3, h4 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.serif { font-family: var(--font-serif); }
+.serif-i { font-family: var(--font-serif); font-style: italic; font-weight: 500; }
+
+.eyebrow {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.68rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 1rem;
+}
+
+/* ═══════════════════════════════════════════
+   LAYOUT
+   ═══════════════════════════════════════════ */
+.container {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 clamp(1.4rem, 5vw, 3rem);
+}
+
+.container--narrow {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 0 clamp(1.4rem, 5vw, 3rem);
+}
+
+.section {
+  padding: clamp(5rem, 12vw, 9rem) 0;
+  position: relative;
+}
+
+.section--compact {
+  padding: clamp(3.5rem, 8vw, 6rem) 0;
+}
+
+/* ═══════════════════════════════════════════
+   REVEAL ON SCROLL
+   ═══════════════════════════════════════════ */
+.reveal {
+  opacity: 0;
+  transform: translateY(36px);
+  transition: opacity 0.9s var(--ease), transform 0.9s var(--ease);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* stagger children */
+.reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
+}
+
+.reveal-stagger.is-visible > *:nth-child(1) { transition-delay: 0s; opacity: 1; transform: translateY(0); }
+.reveal-stagger.is-visible > *:nth-child(2) { transition-delay: 0.1s; opacity: 1; transform: translateY(0); }
+.reveal-stagger.is-visible > *:nth-child(3) { transition-delay: 0.2s; opacity: 1; transform: translateY(0); }
+.reveal-stagger.is-visible > *:nth-child(4) { transition-delay: 0.15s; opacity: 1; transform: translateY(0); }
+.reveal-stagger.is-visible > *:nth-child(5) { transition-delay: 0.25s; opacity: 1; transform: translateY(0); }
+
+/* ═══════════════════════════════════════════
+   NAV BAR
+   ═══════════════════════════════════════════ */
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 clamp(1.4rem, 4vw, 2.8rem);
+  height: 60px;
+  background: rgba(7, 7, 8, 0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.5s var(--ease);
+}
+
+.nav.scrolled {
+  border-bottom-color: var(--line-2);
+}
+
+.nav__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.28em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.nav__diamond {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.nav__cta {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 8px 20px;
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  color: var(--gold);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.5s var(--ease);
+  text-decoration: none;
+}
+
+.nav__cta:hover {
+  background: var(--gold-glow);
+  box-shadow: 0 0 24px var(--gold-glow);
+}
+
+/* ═══════════════════════════════════════════
+   HERO
+   ═══════════════════════════════════════════ */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 80px clamp(1.4rem, 5vw, 3rem) 60px;
+  overflow: hidden;
+}
+
+/* Radial glow from top */
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -180px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 900px;
+  height: 600px;
+  background: radial-gradient(ellipse 60% 55% at center, rgba(232, 184, 75, 0.10), rgba(232, 184, 75, 0.03) 50%, transparent 80%);
+  pointer-events: none;
+}
+
+.hero__eyebrow {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.58rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--gold);
+  padding: 7px 22px;
+  border: 1px solid rgba(232, 184, 75, 0.25);
+  border-radius: 100px;
+  margin-bottom: 3rem;
+  background: rgba(232, 184, 75, 0.04);
+}
+
+.hero__headline {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-style: normal;
+  font-size: clamp(2.8rem, 7.5vw, 6rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  line-height: 1.05;
+  margin-bottom: 2rem;
+  max-width: 14ch;
+}
+
+.hero__sub {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-sans);
+  font-weight: 300;
+  font-size: clamp(0.88rem, 1.6vw, 1.05rem);
+  color: var(--ink-dim);
+  max-width: 560px;
+  line-height: 1.8;
+  margin-bottom: 3rem;
+}
+
+.hero__ctas {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.btn--primary {
+  display: inline-block;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 15px 40px;
+  background: var(--gold);
+  color: var(--obsidian);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.5s var(--ease);
+  text-decoration: none;
+}
+
+.btn--primary:hover {
+  background: var(--gold-bright);
+  box-shadow: 0 4px 40px rgba(232, 184, 75, 0.25);
+  transform: translateY(-1px);
+}
+
+.btn--ghost {
+  display: inline-block;
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  padding: 12px 30px;
+  background: transparent;
+  color: var(--gold);
+  border: 1px solid rgba(232, 184, 75, 0.3);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.5s var(--ease);
+  text-decoration: none;
+}
+
+.btn--ghost:hover {
+  border-color: var(--gold);
+  background: var(--gold-glow);
+}
+
+.hero__scroll {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  animation: scrollFloat 2.5s ease-in-out infinite;
+  color: var(--ink-faint);
+  font-size: 1.2rem;
+}
+
+@keyframes scrollFloat {
+  0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.5; }
+  50% { transform: translateX(-50%) translateY(8px); opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════
+   THE GAP
+   ═══════════════════════════════════════════ */
+.gap {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.gap__text {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(1.35rem, 3vw, 1.85rem);
+  line-height: 1.65;
+  color: var(--ink);
+  max-width: 680px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.gap__text + .gap__text {
+  margin-top: 2.5rem;
+  color: var(--ink-dim);
+  font-size: clamp(1.1rem, 2.2vw, 1.35rem);
+}
+
+/* ═══════════════════════════════════════════
+   PILLAR CARDS
+   ═══════════════════════════════════════════ */
+.pillars__header {
+  text-align: center;
+  margin-bottom: clamp(2.5rem, 5vw, 4rem);
+}
+
+.pillars__header h2 {
+  font-style: italic;
+  font-size: clamp(1.6rem, 3.5vw, 2.6rem);
+  color: var(--ink);
+}
+
+.pillars__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+
+@media (max-width: 860px) {
+  .pillars__grid { grid-template-columns: 1fr; max-width: 480px; margin: 0 auto; }
+}
+
+.pcard {
+  position: relative;
+  background: var(--char);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color 0.5s var(--ease), transform 0.5s var(--ease), box-shadow 0.5s var(--ease);
+}
+
+.pcard:hover {
+  transform: translateY(-4px);
+}
+
+/* Top bar */
+.pcard__bar {
+  height: 3px;
+  width: 100%;
+}
+
+.pcard--orator .pcard__bar { background: var(--orator); }
+.pcard--aesthetic .pcard__bar { background: var(--aesthetic); }
+.pcard--sage .pcard__bar { background: var(--sage); }
+
+.pcard:hover.pcard--orator { border-color: rgba(240, 165, 0, 0.3); box-shadow: 0 12px 50px var(--orator-glow); }
+.pcard:hover.pcard--aesthetic { border-color: rgba(176, 111, 216, 0.3); box-shadow: 0 12px 50px var(--aesthetic-glow); }
+.pcard:hover.pcard--sage { border-color: rgba(61, 191, 160, 0.3); box-shadow: 0 12px 50px var(--sage-glow); }
+
+/* Radial glow behind card */
+.pcard__glow {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  height: 200px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0.5;
+  transition: opacity 0.5s var(--ease);
+}
+
+.pcard:hover .pcard__glow { opacity: 1; }
+
+.pcard--orator .pcard__glow { background: radial-gradient(ellipse, var(--orator-glow), transparent 70%); }
+.pcard--aesthetic .pcard__glow { background: radial-gradient(ellipse, var(--aesthetic-glow), transparent 70%); }
+.pcard--sage .pcard__glow { background: radial-gradient(ellipse, var(--sage-glow), transparent 70%); }
+
+.pcard__body {
+  position: relative;
+  z-index: 1;
+  padding: 2rem 1.8rem 1.6rem;
+}
+
+.pcard__number {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 0.95rem;
+  margin-bottom: 0.3rem;
+}
+
+.pcard--orator .pcard__number { color: var(--orator); }
+.pcard--aesthetic .pcard__number { color: var(--aesthetic); }
+.pcard--sage .pcard__number { color: var(--sage); }
+
+.pcard__name {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.65rem;
+  margin-bottom: 0.2rem;
+}
+
+.pcard__tag {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 0.6rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin-bottom: 1.4rem;
+}
+
+/* Stat bar */
+.pcard__stat-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-2);
+  margin-bottom: 1.6rem;
+  overflow: hidden;
+}
+
+.pcard__stat-fill {
+  height: 100%;
+  border-radius: 2px;
+  width: 0%;
+  transition: width 1.2s var(--ease) 0.3s;
+}
+
+.is-visible .pcard__stat-fill { width: 72%; }
+
+.pcard--orator .pcard__stat-fill { background: var(--orator); }
+.pcard--aesthetic .pcard__stat-fill { background: var(--aesthetic); }
+.pcard--sage .pcard__stat-fill { background: var(--sage); }
+
+.pcard__hook {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--ink);
+  margin-bottom: 1rem;
+  line-height: 1.45;
+}
+
+.pcard__promise {
+  font-family: var(--font-sans);
+  font-weight: 300;
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+  line-height: 1.65;
+  margin-bottom: 1.6rem;
+}
+
+.pcard__cta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--line);
+  transition: gap 0.4s var(--ease);
+}
+
+.pcard:hover .pcard__cta { gap: 12px; }
+
+.pcard--orator .pcard__cta { color: var(--orator); }
+.pcard--aesthetic .pcard__cta { color: var(--aesthetic); }
+.pcard--sage .pcard__cta { color: var(--sage); }
+
+/* ═══════════════════════════════════════════
+   HOW IT WORKS — TIMELINE
+   ═══════════════════════════════════════════ */
+.timeline__header {
+  text-align: center;
+  margin-bottom: clamp(3rem, 6vw, 5rem);
+}
+
+.timeline__header h2 {
+  font-style: italic;
+  font-size: clamp(1.5rem, 3.2vw, 2.4rem);
+  color: var(--ink);
+}
+
+.timeline {
+  position: relative;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* Connecting line */
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 28px;
+  top: 10px;
+  bottom: 10px;
+  width: 1px;
+  background: linear-gradient(to bottom, var(--line), var(--gold-deep) 30%, var(--gold-deep) 70%, var(--line));
+}
+
+.tl-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 28px;
+  padding: 20px 0;
+  position: relative;
+}
+
+.tl-row__num {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1px solid var(--line-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 1.1rem;
+  background: var(--char);
+  position: relative;
+  z-index: 1;
+  transition: border-color 0.5s var(--ease), color 0.5s var(--ease);
+}
+
+/* Pillar-colour cycling for day numbers */
+.tl-row:nth-child(1) .tl-row__num,
+.tl-row:nth-child(4) .tl-row__num,
+.tl-row:nth-child(7) .tl-row__num { color: var(--orator); border-color: var(--orator-dim); }
+
+.tl-row:nth-child(2) .tl-row__num,
+.tl-row:nth-child(5) .tl-row__num { color: var(--aesthetic); border-color: var(--aesthetic-dim); }
+
+.tl-row:nth-child(3) .tl-row__num,
+.tl-row:nth-child(6) .tl-row__num { color: var(--sage); border-color: var(--sage-dim); }
+
+.tl-row__content {
+  padding-top: 4px;
+}
+
+.tl-row__label {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 0.4rem;
+}
+
+.tl-row__text {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.08rem;
+  color: var(--ink-dim);
+  line-height: 1.55;
+}
+
+/* ═══════════════════════════════════════════
+   PAYWALL MOMENT
+   ═══════════════════════════════════════════ */
+.paywall {
+  background: var(--char);
+  border-top: 1px solid var(--line-2);
+  border-bottom: 1px solid var(--line-2);
+  position: relative;
+  overflow: hidden;
+}
+
+.paywall::before {
+  content: '';
+  position: absolute;
+  top: -120px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 700px;
+  height: 400px;
+  background: radial-gradient(ellipse, rgba(232, 184, 75, 0.06), transparent 70%);
+  pointer-events: none;
+}
+
+.paywall__inner {
+  position: relative;
+  z-index: 1;
+  max-width: 700px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.paywall h2 {
+  font-style: italic;
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  color: var(--ink);
+  margin-bottom: 1.5rem;
+}
+
+.paywall__body {
+  font-size: 0.92rem;
+  color: var(--ink-dim);
+  line-height: 1.75;
+  margin-bottom: 2.5rem;
+}
+
+/* Stats card */
+.stats-preview {
+  background: var(--surface);
+  border: 1px solid var(--gold-deep);
+  border-radius: var(--radius);
+  padding: 1.6rem 2rem;
+  max-width: 400px;
+  margin: 0 auto 2rem;
+  text-align: left;
+}
+
+.stats-preview__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.82rem;
+}
+
+.stats-preview__row:last-child { border-bottom: none; }
+
+.stats-preview__label {
+  color: var(--ink-dim);
+}
+
+.stats-preview__val {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.stats-preview__delta {
+  color: var(--gold);
+  font-weight: 500;
+  margin-left: 8px;
+  font-size: 0.78rem;
+}
+
+.paywall__fine {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.88rem;
+  color: var(--ink-faint);
+  line-height: 1.6;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* ═══════════════════════════════════════════
+   VOICE COMPARISON
+   ═══════════════════════════════════════════ */
+.voice__header {
+  text-align: center;
+  margin-bottom: clamp(2.5rem, 5vw, 4rem);
+}
+
+.voice__header h2 {
+  font-style: italic;
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+}
+
+.voice-table {
+  max-width: 820px;
+  margin: 0 auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.voice-table__head {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--char-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.voice-table__head > div {
+  padding: 14px 24px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.voice-table__head > div:first-child {
+  color: var(--ink-faint);
+  border-right: 1px solid var(--line);
+}
+
+.voice-table__head > div:last-child {
+  color: var(--gold);
+}
+
+.voice-table__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--line);
+  transition: background 0.3s var(--ease);
+}
+
+.voice-table__row:last-child { border-bottom: none; }
+
+.voice-table__row:hover { background: rgba(255,255,255,0.015); }
+
+.voice-table__cell {
+  padding: 18px 24px;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.voice-table__cell:first-child {
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: var(--ink-faint);
+  border-right: 1px solid var(--line);
+}
+
+.voice-table__cell:last-child {
+  font-family: var(--font-sans);
+  font-weight: 300;
+  color: var(--ink);
+}
+
+@media (max-width: 600px) {
+  .voice-table__head,
+  .voice-table__row {
+    grid-template-columns: 1fr;
+  }
+  .voice-table__cell:first-child {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 10px;
+  }
+  .voice-table__cell:last-child {
+    padding-top: 10px;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   FIVE RANKS
+   ═══════════════════════════════════════════ */
+.ranks__header {
+  text-align: center;
+  margin-bottom: clamp(2.5rem, 5vw, 4rem);
+}
+
+.ranks__header h2 {
+  font-style: italic;
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  color: var(--ink);
+}
+
+.ranks-ladder {
+  position: relative;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+/* Connecting line */
+.ranks-ladder::before {
+  content: '';
+  position: absolute;
+  left: 22px;
+  top: 24px;
+  bottom: 24px;
+  width: 1px;
+  background: linear-gradient(to bottom, var(--ink-faint), var(--gold-deep) 40%, var(--gold) 80%, var(--gold-bright));
+}
+
+.rank-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 18px 0;
+  position: relative;
+}
+
+.rank-row__marker {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--line-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 0.95rem;
+  background: var(--char);
+  position: relative;
+  z-index: 1;
+  transition: all 0.5s var(--ease);
+}
+
+.rank-row__info {
+  flex: 1;
+}
+
+.rank-row__name {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.15rem;
+  margin-bottom: 0.15rem;
+}
+
+.rank-row__virtue {
+  font-family: var(--font-sans);
+  font-weight: 300;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+}
+
+/* Rank colour states */
+.rank-row--1 .rank-row__marker { color: var(--ink-faint); border-color: var(--ink-ghost); }
+.rank-row--1 .rank-row__name { color: var(--ink-faint); }
+.rank-row--1 .rank-row__virtue { color: var(--ink-ghost); }
+
+.rank-row--2 .rank-row__marker { color: #6b8aaf; border-color: rgba(107,138,175,0.35); }
+.rank-row--2 .rank-row__name { color: #8aa8c8; }
+.rank-row--2 .rank-row__virtue { color: rgba(107,138,175,0.5); }
+
+.rank-row--3 .rank-row__marker { color: var(--sage); border-color: var(--sage-dim); }
+.rank-row--3 .rank-row__name { color: var(--sage); }
+.rank-row--3 .rank-row__virtue { color: var(--sage-dim); }
+
+.rank-row--4 .rank-row__marker { color: var(--gold); border-color: var(--gold-deep); }
+.rank-row--4 .rank-row__name { color: var(--gold); }
+.rank-row--4 .rank-row__virtue { color: var(--gold-deep); }
+
+.rank-row--5 .rank-row__marker {
+  color: var(--gold-bright);
+  border-color: var(--gold);
+  box-shadow: 0 0 20px var(--gold-glow), 0 0 40px rgba(232, 184, 75, 0.06);
+}
+.rank-row--5 .rank-row__name { color: var(--gold-bright); }
+.rank-row--5 .rank-row__virtue { color: var(--gold); }
+
+.ranks__rule {
+  text-align: center;
+  margin-top: 3rem;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--ink-faint);
+}
+
+/* ═══════════════════════════════════════════
+   CTA CLOSE
+   ═══════════════════════════════════════════ */
+.cta-close {
+  background: var(--char);
+  border-top: 1px solid var(--line);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-close::before {
+  content: '';
+  position: absolute;
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 350px;
+  background: radial-gradient(ellipse, rgba(232, 184, 75, 0.05), transparent 70%);
+  pointer-events: none;
+}
+
+.cta-close h2 {
+  position: relative;
+  z-index: 1;
+  font-style: italic;
+  font-size: clamp(1.6rem, 3.5vw, 2.6rem);
+  color: var(--ink);
+  margin-bottom: 2rem;
+}
+
+.cta-close__question {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(1.15rem, 2.5vw, 1.55rem);
+  color: var(--gold);
+  line-height: 1.5;
+  max-width: 560px;
+  margin: 0 auto 2.5rem;
+}
+
+/* ═══════════════════════════════════════════
+   FOOTER
+   ═══════════════════════════════════════════ */
+.footer {
+  border-top: 1px solid var(--line);
+  padding: 3.5rem 0;
+  text-align: center;
+}
+
+.footer__brand {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 0.6rem;
+}
+
+.footer__tagline {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--ink-dim);
+  margin-bottom: 1.8rem;
+}
+
+.footer__links {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  margin-bottom: 1.8rem;
+}
+
+.footer__links a {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  transition: color 0.4s var(--ease);
+}
+
+.footer__links a:hover { color: var(--ink-dim); }
+
+.footer__copy {
+  font-size: 0.65rem;
+  color: var(--ink-ghost);
+  letter-spacing: 0.06em;
+}
+
+/* ═══════════════════════════════════════════
+   FOCUS / A11Y
+   ═══════════════════════════════════════════ */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+/* ═══════════════════════════════════════════
+   DIVIDERS
+   ═══════════════════════════════════════════ */
+.divider {
+  width: 60px;
+  height: 1px;
+  background: var(--gold-deep);
+  margin: 0 auto;
+}
+
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     NAV
+     ═══════════════════════════════════════════ -->
+<nav class="nav" id="nav" role="navigation" aria-label="Main navigation">
+  <a href="#hero" class="nav__brand" aria-label="MAINCHARACTER home">
+    <span class="nav__diamond">◆</span>
+    <span>MAINCHARACTER</span>
+  </a>
+  <a href="index.html" class="nav__cta">Begin Your Arc →</a>
+</nav>
+
+<!-- ═══════════════════════════════════════════
+     HERO
+     ═══════════════════════════════════════════ -->
+<section class="hero" id="hero">
+  <div class="hero__eyebrow">Personal Growth · Redesigned</div>
+  <h1 class="hero__headline">Become the Main Character</h1>
+  <p class="hero__sub">Most people know who they want to be. They just can't see the gap clearly enough to close it. MainCharacter makes the gap visible, measurable, and closable — one deliberate ritual at a time.</p>
+  <div class="hero__ctas">
+    <a href="index.html" class="btn--primary">Begin Your Arc →</a>
+    <a href="#gap" class="btn--ghost">See How It Works ↓</a>
+  </div>
+  <div class="hero__scroll" aria-hidden="true">↓</div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     THE GAP
+     ═══════════════════════════════════════════ -->
+<section class="section gap" id="gap">
+  <div class="container--narrow">
+    <div class="reveal">
+      <p class="gap__text">You already know who you want to be. You've known for a while. The problem has never been the vision. The problem is that the gap between that person and today has no edges — it's vague, invisible, and so it stays.</p>
+    </div>
+    <div class="reveal">
+      <p class="gap__text">MainCharacter gives the gap a shape. Three scores. Five ranks. Daily evidence. The work is real. The change shows.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     THREE PILLARS
+     ═══════════════════════════════════════════ -->
+<section class="section" id="pillars">
+  <div class="container">
+    <div class="pillars__header reveal">
+      <div class="eyebrow">Three Quests · One Protocol</div>
+      <h2>You may only choose one this week.</h2>
+    </div>
+
+    <div class="pillars__grid reveal-stagger" id="pillar-cards">
+      <!-- ORATOR -->
+      <div class="pcard pcard--orator">
+        <div class="pcard__bar"></div>
+        <div class="pcard__glow"></div>
+        <div class="pcard__body">
+          <div class="pcard__number">I</div>
+          <h3 class="pcard__name">The Orator</h3>
+          <div class="pcard__tag">Communication</div>
+          <div class="pcard__stat-bar"><div class="pcard__stat-fill"></div></div>
+          <p class="pcard__hook">"The way you sound when it matters."</p>
+          <p class="pcard__promise">By Day 7 you will hear the difference in your own voice.</p>
+          <div class="pcard__cta">Accept the Quest <span>→</span></div>
+        </div>
+      </div>
+
+      <!-- AESTHETIC -->
+      <div class="pcard pcard--aesthetic">
+        <div class="pcard__bar"></div>
+        <div class="pcard__glow"></div>
+        <div class="pcard__body">
+          <div class="pcard__number">II</div>
+          <h3 class="pcard__name">The Aesthetic</h3>
+          <div class="pcard__tag">Physical Presence</div>
+          <div class="pcard__stat-bar"><div class="pcard__stat-fill"></div></div>
+          <p class="pcard__hook">"The room reads you before you speak."</p>
+          <p class="pcard__promise">By Day 7 you will see the version of you the camera has been waiting to capture.</p>
+          <div class="pcard__cta">Accept the Quest <span>→</span></div>
+        </div>
+      </div>
+
+      <!-- SAGE -->
+      <div class="pcard pcard--sage">
+        <div class="pcard__bar"></div>
+        <div class="pcard__glow"></div>
+        <div class="pcard__body">
+          <div class="pcard__number">III</div>
+          <h3 class="pcard__name">The Sage</h3>
+          <div class="pcard__tag">Wisdom &amp; Mindset</div>
+          <div class="pcard__stat-bar"><div class="pcard__stat-fill"></div></div>
+          <p class="pcard__hook">"The mind beneath the voice and the face."</p>
+          <p class="pcard__promise">By Day 7 you will think with sharper language and steadier nerves.</p>
+          <div class="pcard__cta">Accept the Quest <span>→</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     HOW IT WORKS — TIMELINE
+     ═══════════════════════════════════════════ -->
+<section class="section" id="protocol">
+  <div class="container">
+    <div class="timeline__header reveal">
+      <div class="eyebrow">The Protocol</div>
+      <h2>Seven days. Five minutes a day. One voice note at 7:45am.</h2>
+    </div>
+
+    <div class="timeline reveal-stagger" id="timeline">
+      <div class="tl-row">
+        <div class="tl-row__num">1</div>
+        <div class="tl-row__content">
+          <div class="tl-row__label">Day One</div>
+          <div class="tl-row__text">Baseline sealed. Your Consultant records where you start.</div>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-row__num">2</div>
+        <div class="tl-row__content">
+          <div class="tl-row__label">Day Two</div>
+          <div class="tl-row__text">First delta. Small wins arrive early — by design.</div>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-row__num">3</div>
+        <div class="tl-row__content">
+          <div class="tl-row__label">Day Three</div>
+          <div class="tl-row__text">Borrowed technique. A taste of what the other pillars hold.</div>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-row__num">4</div>
+        <div class="tl-row__content">
+          <div class="tl-row__label">Day Four</div>
+          <div class="tl-row__text">The halfway mark. Most people quit here. You won't.</div>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-row__num">5</div>
+        <div class="tl-row__content">
+          <div class="tl-row__label">Day Five</div>
+          <div class="tl-row__text">The real room. Your recording now aims at the situation that matters most.</div>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-row__num">6</div>
+        <div class="tl-row__content">
+          <div class="tl-row__label">Day Six</div>
+          <div class="tl-row__text">The set-up. Don't listen to your baseline. Let tomorrow surprise you.</div>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-row__num">7</div>
+        <div class="tl-row__content">
+          <div class="tl-row__label">Day Seven</div>
+          <div class="tl-row__text">The Weekly Evolution Report. Your Day 1 voice. Your Day 7 voice. The numbers. The offer.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     PAYWALL MOMENT
+     ═══════════════════════════════════════════ -->
+<section class="section paywall" id="paywall">
+  <div class="container">
+    <div class="paywall__inner reveal">
+      <h2>"On Day 7, you will hear yourself — and you will already know."</h2>
+      <p class="paywall__body">The Weekly Evolution Report isn't a sales pitch. It's a measurement. You either hear a meaningful change in your voice, or you don't. Most people hear it clearly.</p>
+
+      <div class="stats-preview">
+        <div class="stats-preview__row">
+          <span class="stats-preview__label">Fluency Score</span>
+          <span>
+            <span class="stats-preview__val">67 → 81</span>
+            <span class="stats-preview__delta">(+14)</span>
+          </span>
+        </div>
+        <div class="stats-preview__row">
+          <span class="stats-preview__label">Filler Frequency</span>
+          <span>
+            <span class="stats-preview__val">51 → 74</span>
+            <span class="stats-preview__delta">(+23)</span>
+          </span>
+        </div>
+        <div class="stats-preview__row">
+          <span class="stats-preview__label">Confidence Tone</span>
+          <span>
+            <span class="stats-preview__val">60 → 79</span>
+            <span class="stats-preview__delta">(+19)</span>
+          </span>
+        </div>
+      </div>
+
+      <p class="paywall__fine">"These are real numbers from a seven-day run. Your baseline will be different. Your delta will be yours."</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     VOICE COMPARISON
+     ═══════════════════════════════════════════ -->
+<section class="section" id="voice">
+  <div class="container">
+    <div class="voice__header reveal">
+      <div class="eyebrow">The Voice</div>
+      <h2>This is not another motivational app.</h2>
+    </div>
+
+    <div class="voice-table reveal">
+      <div class="voice-table__head">
+        <div>What other apps say</div>
+        <div>What MainCharacter says</div>
+      </div>
+      <div class="voice-table__row">
+        <div class="voice-table__cell">"Keep going! You're doing great! 🎉"</div>
+        <div class="voice-table__cell">"You did the work. Tomorrow's quest at 7:45."</div>
+      </div>
+      <div class="voice-table__row">
+        <div class="voice-table__cell">"Don't break your streak!"</div>
+        <div class="voice-table__cell">"Most people quit on Day 4. You did not. The work is starting to show."</div>
+      </div>
+      <div class="voice-table__row">
+        <div class="voice-table__cell">"New content available!"</div>
+        <div class="voice-table__cell">"Imagine you're opening that Monday stand-up. Go. Don't perform. Speak."</div>
+      </div>
+      <div class="voice-table__row">
+        <div class="voice-table__cell">"Reminder: complete your daily task"</div>
+        <div class="voice-table__cell">"7:45am. Be somewhere you can listen with headphones."</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     FIVE RANKS
+     ═══════════════════════════════════════════ -->
+<section class="section" id="ranks">
+  <div class="container">
+    <div class="ranks__header reveal">
+      <div class="eyebrow">The Ascent</div>
+      <h2>Every rank is a name you earn for the person you have already become.</h2>
+    </div>
+
+    <div class="ranks-ladder reveal-stagger" id="ranks-ladder">
+      <div class="rank-row rank-row--1">
+        <div class="rank-row__marker">I</div>
+        <div class="rank-row__info">
+          <div class="rank-row__name">The Unawakened</div>
+          <div class="rank-row__virtue">Curiosity</div>
+        </div>
+      </div>
+      <div class="rank-row rank-row--2">
+        <div class="rank-row__marker">II</div>
+        <div class="rank-row__info">
+          <div class="rank-row__name">The Seeker</div>
+          <div class="rank-row__virtue">Momentum</div>
+        </div>
+      </div>
+      <div class="rank-row rank-row--3">
+        <div class="rank-row__marker">III</div>
+        <div class="rank-row__info">
+          <div class="rank-row__name">The Ascendant</div>
+          <div class="rank-row__virtue">Recognition</div>
+        </div>
+      </div>
+      <div class="rank-row rank-row--4">
+        <div class="rank-row__marker">IV</div>
+        <div class="rank-row__info">
+          <div class="rank-row__name">The Luminary</div>
+          <div class="rank-row__virtue">Confidence</div>
+        </div>
+      </div>
+      <div class="rank-row rank-row--5">
+        <div class="rank-row__marker">V</div>
+        <div class="rank-row__info">
+          <div class="rank-row__name">The Sovereign</div>
+          <div class="rank-row__virtue">Sovereignty</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ranks__rule reveal">Ranks are never lost. Return is always welcomed.</div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     CTA CLOSE
+     ═══════════════════════════════════════════ -->
+<section class="section cta-close" id="cta-close">
+  <div class="container--narrow">
+    <div class="reveal">
+      <h2>Your arc begins with one question.</h2>
+      <p class="cta-close__question">"In a room full of your peers, do you feel like the protagonist — or a spectator?"</p>
+      <a href="index.html" class="btn--primary">Answer It →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     FOOTER
+     ═══════════════════════════════════════════ -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer__brand">◆ MAINCHARACTER</div>
+    <div class="footer__tagline">Become the Main Character.</div>
+    <div class="footer__links">
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">Contact</a>
+    </div>
+    <div class="footer__copy">© 2026 MainCharacter by Digit Global Services. All rights reserved.</div>
+  </div>
+</footer>
+
+<!-- ═══════════════════════════════════════════
+     JAVASCRIPT
+     ═══════════════════════════════════════════ -->
+<script>
+(function() {
+  'use strict';
+
+  // ——— NAV SCROLL EFFECT ———
+  const nav = document.getElementById('nav');
+  let lastScroll = 0;
+
+  function onScroll() {
+    const y = window.scrollY;
+    if (y > 40) {
+      nav.classList.add('scrolled');
+    } else {
+      nav.classList.remove('scrolled');
+    }
+    lastScroll = y;
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // ——— INTERSECTION OBSERVER — REVEAL ON SCROLL ———
+  const revealEls = document.querySelectorAll('.reveal, .reveal-stagger');
+
+  const observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-visible');
+        // Once revealed, no need to observe again
+        observer.unobserve(entry.target);
+      }
+    });
+  }, {
+    threshold: 0.12,
+    rootMargin: '0px 0px -40px 0px'
+  });
+
+  revealEls.forEach(function(el) {
+    observer.observe(el);
+  });
+
+  // ——— PILLAR STAT BAR ANIMATION ———
+  // The stat bars animate via CSS when parent gets .is-visible
+  // Already handled by the reveal-stagger observer on #pillar-cards
+
+  // ——— SMOOTH ANCHOR SCROLL ———
+  document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
+    anchor.addEventListener('click', function(e) {
+      const targetId = this.getAttribute('href');
+      if (targetId === '#') return;
+      const target = document.querySelector(targetId);
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+
+})();
+</script>
+</body>
+</html>

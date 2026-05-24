@@ -18,37 +18,9 @@ function log(tag, msg) {
  * Wati requires messageText as a query parameter.
  */
 async function sendMessage(phone, text) {
-  if (!WATI_API_KEY || !WATI_BASE_URL) {
-    log('DRY-RUN', `Would send to ${phone}: ${text.substring(0, 80)}...`);
-    return { result: 'dry-run' };
-  }
-
-  // Normalise phone
-  phone = phone.replace(/[\s+\-]/g, '');
-  if (phone.length === 10) phone = '91' + phone;
-
-  try {
-    const url = `${WATI_BASE_URL}/api/v1/sendSessionMessage/${phone}?messageText=${encodeURIComponent(text)}`;
-    const response = await axios.post(url, {}, {
-      headers: {
-        'Authorization': `Bearer ${WATI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      timeout: 15000,
-    });
-
-    log('SENT', `→ ${phone} (${text.length} chars) status=${response.status}`);
-    return response.data;
-  } catch (err) {
-    log('ERROR', `Failed to send to ${phone}: ${err.message}`);
-    
-    // If session expired, try template message
-    if (err.response && err.response.status === 400) {
-      log('INFO', 'Session may have expired. Try sending a template message to re-engage.');
-    }
-    
-    throw err;
-  }
+  // EMERGENCY KILL SWITCH — no messages sent until spam is resolved
+  log('BLOCKED', `Would send to ${phone}: ${text.substring(0, 80)}...`);
+  return { result: 'blocked' };
 }
 
 /**

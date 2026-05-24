@@ -71,76 +71,62 @@ router.post('/webhook/wati', async (req, res) => {
   try {
     const body = req.body;
     
-    // DEBUG: Log the FULL raw payload from Wati
-    log('RAW-PAYLOAD', JSON.stringify(body).substring(0, 2000));
+    // Log raw payload for debugging (truncated)
+    log('RAW', JSON.stringify(body).substring(0, 500));
 
-    // Extract message data — handle ALL known Wati webhook formats
-    // Wati v2 nests under different structures depending on event type
-    let phone = '';
-    let text = '';
-    let msgType = 'text';
-    let senderName = '';
-
-    // Format 1: Direct top-level fields
-    phone = body.waId || body.from || body.senderPhoneNumber || body.whatsappNumber || '';
-    text = (body.text || body.message || body.messageText || '').trim();
-    msgType = body.type || body.messageType || 'text';
-    senderName = body.senderName || body.pushName || body.contactName || '';
-
-    // Format 2: Wati sometimes nests under body.data
-    if (!phone && body.data) {
-      phone = body.data.waId || body.data.from || body.data.senderPhoneNumber || body.data.whatsappNumber || '';
-      text = (body.data.text || body.data.message || body.data.messageText || text).trim();
-      msgType = body.data.type || body.data.messageType || msgType;
-      senderName = body.data.senderName || body.data.pushName || body.data.contactName || senderName;
-    }
-
-    // Format 3: Wati v2 webhook can nest under body.messages[0]
-    if (!phone && body.messages && body.messages.length > 0) {
-      const m = body.messages[0];
-      phone = m.waId || m.from || m.senderPhoneNumber || '';
-      text = (m.text || m.message || m.messageText || '').trim();
-      msgType = m.type || m.messageType || 'text';
-      senderName = m.senderName || m.pushName || '';
-    }
-
-    // After extracting fields, ignore non‑message events (e.g., status updates)
-    if (msgType && msgType !== 'text' && !text) {
-      log('WEBHOOK', `Ignored non‑text event type: ${msgType}`);
-      return;
-    }
-    // Additionally, some Wati payloads include a 'status' field for delivery/read updates
-    if (body.status || body.messageStatus) {
-      log('WEBHOOK', `Ignored status update event`);
+    // ═══════════════════════════════════════════════════════════════
+    // CRITICAL: Filter out non-incoming-message events FIRST
+    // Wati fires webhooks for EVERYTHING: sent, delivered, read, etc.
+    // owner=true means the BOT sent this message — ignore it
+    // ═══════════════════════════════════════════════════════════════
+    if (body.owner === true || body.isOwner === true) {
+      log('SKIP', 'Ignored: bot-sent message (owner=true)');
       return;
     }
 
-    // If text is empty after all extraction, skip processing (no actual user message)
-    if (!text) {
-      log('WEBHOOK', 'Ignored empty text payload');
+    // Ignore delivery/read status updates
+    const eventType = (body.eventType || body.event_type || body.event || '').toLowerCase();
+    if (eventType && !eventType.includes('message_received') && eventType !== 'message') {
+      // Allow 'message' and 'message_received' events only
+      if (eventType.includes('delivered') || eventType.includes('read') || 
+          eventType.includes('sent') || eventType.includes('replied') ||
+          eventType.includes('failed') || eventType.includes('status') ||
+          eventType.includes('payment') || eventType.includes('clicked')) {
+        log('SKIP', `Ignored event: ${eventType}`);
+        return;
+      }
+    }
+
+    // Ignore status-type payloads
+    const statusString = (body.statusString || '').toUpperCase();
+    if (statusString === 'SENT' || statusString === 'DELIVERED' || 
+        statusString === 'READ' || statusString === 'REPLIED') {
+      log('SKIP', `Ignored status: ${statusString}`);
       return;
     }
 
-    // Format 4: Wati contact-based format
-    if (!phone && body.contact) {
-      phone = body.contact.waId || body.contact.phone || body.contact.whatsappNumber || '';
-      senderName = body.contact.name || body.contact.fullName || senderName;
-    }
+    // ═══════════════════════════════════════════════════════════════
+    // Extract message data from Wati payload
+    // ═══════════════════════════════════════════════════════════════
+    let phone = body.waId || body.from || body.senderPhoneNumber || body.whatsappNumber || '';
+    let text = (body.text || body.message || body.messageText || '').trim();
+    let senderName = body.senderName || body.pushName || body.contactName || '';
 
-    // Format 5: Nested text object (Wati sometimes sends text as {body: "..."})
+    // Handle nested text object
     if (!text && body.text && typeof body.text === 'object') {
       text = (body.text.body || '').trim();
     }
 
-    // Strip + from phone
+    // Strip non-digit chars from phone
     phone = phone.replace(/[+\s\-]/g, '');
 
-    if (!phone) {
-      log('WEBHOOK', 'No phone number found in any format. Full payload logged above.');
+    // Must have both phone AND text to proceed
+    if (!phone || !text) {
+      log('SKIP', `Missing phone(${!!phone}) or text(${!!text})`);
       return;
     }
 
-    log('WEBHOOK', `← ${phone} (${senderName}): "${text.substring(0, 100)}" [${msgType}]`);
+    log('WEBHOOK', `← ${phone} (${senderName}): "${text.substring(0, 100)}"`);
 
     const user = User.getUserByPhone(phone);
 

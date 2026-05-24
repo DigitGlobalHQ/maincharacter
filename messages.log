@@ -1,5 +1,0 @@
-[2026-05-24T01:40:25.488Z] [INIT] No GEMINI_API_KEY — media analysis will use fallback engines
-[2026-05-24T01:40:51.728Z] [PAYMENT] Creating order: Pro Monthly (₹1,499/month) for 919999000001
-[2026-05-24T01:40:51.729Z] [PAYMENT] [MOCK] Order created: order_mock_1779586851729
-[2026-05-24T01:40:51.753Z] [PAYMENT] Creating order: Pro Annual (₹12,499/year (save 30%)) for 919999000001
-[2026-05-24T01:40:51.753Z] [PAYMENT] [MOCK] Order created: order_mock_1779586851753

@@ -1,0 +1,10 @@
+node_modules/
+.env
+*.log
+audio_downloads/
+photo_uploads/
+users.json
+payments.json
+scores.json
+aura_scores.json
+.DS_Store

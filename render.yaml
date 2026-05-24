@@ -1,0 +1,31 @@
+# render.yaml — Blueprint for Render.com deployment
+# Use this for auto-deploy OR configure manually in the Render dashboard
+
+services:
+  - type: web
+    name: maincharacter
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: WATI_API_KEY
+        sync: false
+      - key: WATI_BASE_URL
+        sync: false
+      - key: ADMIN_PHONE
+        sync: false
+      - key: UPGRADE_BASE_URL
+        value: https://maincharacter.digitglobalservices.com

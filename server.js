@@ -331,7 +331,7 @@ async function sendMessage(phone, text, retryCount = 0) {
   }
 
   try {
-    const url = `${WATI_BASE_URL}/api/v1/sendSessionMessage/${phone}`;
+    const url = `${WATI_BASE_URL}/api/v1/sendSessionMessage/${phone}?messageText=${encodeURIComponent(text)}`;
 
     const response = await axios({
       method: 'POST',
@@ -340,7 +340,7 @@ async function sendMessage(phone, text, retryCount = 0) {
         'Authorization': `Bearer ${WATI_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      data: { messageText: text },
+      data: {},
       timeout: 15000,
     });
 

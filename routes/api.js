@@ -104,6 +104,23 @@ router.post('/webhook/wati', async (req, res) => {
       senderName = m.senderName || m.pushName || '';
     }
 
+    // After extracting fields, ignore non‑message events (e.g., status updates)
+    if (msgType && msgType !== 'text' && !text) {
+      log('WEBHOOK', `Ignored non‑text event type: ${msgType}`);
+      return;
+    }
+    // Additionally, some Wati payloads include a 'status' field for delivery/read updates
+    if (body.status || body.messageStatus) {
+      log('WEBHOOK', `Ignored status update event`);
+      return;
+    }
+
+    // If text is empty after all extraction, skip processing (no actual user message)
+    if (!text) {
+      log('WEBHOOK', 'Ignored empty text payload');
+      return;
+    }
+
     // Format 4: Wati contact-based format
     if (!phone && body.contact) {
       phone = body.contact.waId || body.contact.phone || body.contact.whatsappNumber || '';

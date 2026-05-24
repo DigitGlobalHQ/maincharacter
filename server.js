@@ -93,18 +93,15 @@ app.use('/api/admin', adminRoutes);
 // Backward compatibility — old webhook path maps to /api/webhook/wati
 // The Wati dashboard still points to /webhook, so we duplicate the route here
 app.post('/webhook', async (req, res) => {
-  // Re-use the same handler logic by importing routes/api internals
-  // Simply forward to /api/webhook/wati
   res.json({ status: 'received' });
 
-  // Process the webhook asynchronously using the same logic
-  const body = req.body;
-  const phone = body.waId || body.from || body.senderPhoneNumber || '';
-  if (phone) {
-    console.log(`[${new Date().toISOString()}] [COMPAT] /webhook → forwarded from ${phone}`);
-    // Trigger a synthetic internal request
+  // ALWAYS forward to /api/webhook/wati — don't try to parse phone here
+  console.log(`[${new Date().toISOString()}] [COMPAT] /webhook → forwarding to /api/webhook/wati`);
+  console.log(`[${new Date().toISOString()}] [COMPAT:RAW] ${JSON.stringify(req.body).substring(0, 1000)}`);
+
+  try {
     const http = require('http');
-    const data = JSON.stringify(body);
+    const data = JSON.stringify(req.body);
     const options = {
       hostname: 'localhost',
       port: PORT,
@@ -112,9 +109,16 @@ app.post('/webhook', async (req, res) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
     };
-    const internalReq = http.request(options);
+    const internalReq = http.request(options, (internalRes) => {
+      console.log(`[${new Date().toISOString()}] [COMPAT] Forward response: ${internalRes.statusCode}`);
+    });
+    internalReq.on('error', (err) => {
+      console.log(`[${new Date().toISOString()}] [COMPAT:ERROR] Forward failed: ${err.message}`);
+    });
     internalReq.write(data);
     internalReq.end();
+  } catch (err) {
+    console.log(`[${new Date().toISOString()}] [COMPAT:ERROR] ${err.message}`);
   }
 });
 

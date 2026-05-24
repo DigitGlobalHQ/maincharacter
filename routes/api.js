@@ -71,14 +71,55 @@ router.post('/webhook/wati', async (req, res) => {
   try {
     const body = req.body;
     
-    // Extract message data — handle multiple Wati webhook formats
-    const phone = body.waId || body.from || body.senderPhoneNumber || '';
-    const text = (body.text || body.message || body.messageText || '').trim();
-    const msgType = body.type || body.messageType || 'text';
-    const senderName = body.senderName || body.pushName || '';
+    // DEBUG: Log the FULL raw payload from Wati
+    log('RAW-PAYLOAD', JSON.stringify(body).substring(0, 2000));
+
+    // Extract message data — handle ALL known Wati webhook formats
+    // Wati v2 nests under different structures depending on event type
+    let phone = '';
+    let text = '';
+    let msgType = 'text';
+    let senderName = '';
+
+    // Format 1: Direct top-level fields
+    phone = body.waId || body.from || body.senderPhoneNumber || body.whatsappNumber || '';
+    text = (body.text || body.message || body.messageText || '').trim();
+    msgType = body.type || body.messageType || 'text';
+    senderName = body.senderName || body.pushName || body.contactName || '';
+
+    // Format 2: Wati sometimes nests under body.data
+    if (!phone && body.data) {
+      phone = body.data.waId || body.data.from || body.data.senderPhoneNumber || body.data.whatsappNumber || '';
+      text = (body.data.text || body.data.message || body.data.messageText || text).trim();
+      msgType = body.data.type || body.data.messageType || msgType;
+      senderName = body.data.senderName || body.data.pushName || body.data.contactName || senderName;
+    }
+
+    // Format 3: Wati v2 webhook can nest under body.messages[0]
+    if (!phone && body.messages && body.messages.length > 0) {
+      const m = body.messages[0];
+      phone = m.waId || m.from || m.senderPhoneNumber || '';
+      text = (m.text || m.message || m.messageText || '').trim();
+      msgType = m.type || m.messageType || 'text';
+      senderName = m.senderName || m.pushName || '';
+    }
+
+    // Format 4: Wati contact-based format
+    if (!phone && body.contact) {
+      phone = body.contact.waId || body.contact.phone || body.contact.whatsappNumber || '';
+      senderName = body.contact.name || body.contact.fullName || senderName;
+    }
+
+    // Format 5: Nested text object (Wati sometimes sends text as {body: "..."})
+    if (!text && body.text && typeof body.text === 'object') {
+      text = (body.text.body || '').trim();
+    }
+
+    // Strip + from phone
+    phone = phone.replace(/[+\s\-]/g, '');
 
     if (!phone) {
-      log('WEBHOOK', 'No phone number in webhook payload');
+      log('WEBHOOK', 'No phone number found in any format. Full payload logged above.');
       return;
     }
 

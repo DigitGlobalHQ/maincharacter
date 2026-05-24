@@ -43,7 +43,7 @@ router.post('/enroll', async (req, res) => {
     log('ENROLL', `${user.name} (${user.phone}) enrolled in ${user.pillar}`);
 
     // Send welcome WhatsApp message
-    const welcomeMsg = `◆ MainCharacter\n\nWelcome, ${user.name}.\n\nI'm The Consultant.\n\nYour Orator Protocol is confirmed. Your first message arrives tomorrow at ${user.preferredTime}.\n\nBetween now and then — think about the last time you spoke in a room that mattered. What happened?\n\nTomorrow, we begin measuring.`;
+    const welcomeMsg = `◆ MainCharacter\n\nWelcome, ${user.name}.\n\nI'm The Consultant.\n\nYour Orator Protocol is confirmed.\n\nReply *START NOW* to begin your Day 1 immediately.\nOr sit with this: think about the last time you spoke in a room that mattered. What happened?\n\nWhen you're ready — reply START NOW.`;
 
     wati.sendMessageSafe(user.phone, welcomeMsg).catch(err => {
       log('ENROLL-WATI', `Failed to send welcome: ${err.message}`);
@@ -117,6 +117,7 @@ router.post('/webhook/wati', async (req, res) => {
     // Route the message
     const msg = text.toLowerCase().trim();
 
+    if (msg === 'start now' || msg === 'start' || msg === 'begin') return await handleStartNow(user);
     if (msg === 'continue') return await handleContinue(user);
     if (msg === 'stop') return await handleStop(user);
     if (msg === 'return') return await handleReturn(user);
@@ -134,11 +135,13 @@ router.post('/webhook/wati', async (req, res) => {
       wati.sendMessageSafe(ADMIN_PHONE, `◆ USER MESSAGE\n\nFrom: ${user.name} (${user.phone})\nDay: ${user.day}\nMessage: ${text.substring(0, 300)}`).catch(() => {});
     }
 
-    const defaultReply = user.day === 0
-      ? `The Consultant is preparing your Day 1 protocol. It arrives tomorrow at ${user.preferredTime}. ◆`
-      : `The Consultant is preparing your next message. It arrives at ${user.preferredTime}. ◆`;
-
-    await wati.sendMessageSafe(user.phone, defaultReply);
+    // If user hasn't started yet, prompt them
+    if (user.day === 0) {
+      await wati.sendMessageSafe(user.phone, `Reply *START NOW* to begin your Day 1 protocol. ◆`);
+    } else {
+      const defaultReply = `The Consultant is preparing your next message. It arrives at ${user.preferredTime}. ◆`;
+      await wati.sendMessageSafe(user.phone, defaultReply);
+    }
 
   } catch (err) {
     log('ERROR', `Webhook handler error: ${err.message}`);
@@ -148,6 +151,34 @@ router.post('/webhook/wati', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════
 // WEBHOOK HANDLERS
 // ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Handle START NOW command — immediately begin Day 1.
+ */
+async function handleStartNow(user) {
+  log('CMD', `START NOW from ${user.name} (current day: ${user.day})`);
+
+  // If user already started, don't restart
+  if (user.day >= 1) {
+    const msg = user.awaitingResponse
+      ? `You're on Day ${user.day}, ${user.name}. Reply with your response to the current challenge. ◆`
+      : `Your Day ${user.day + 1 <= 7 ? user.day + 1 : 7} protocol arrives at ${user.preferredTime}. ◆`;
+    return await wati.sendMessageSafe(user.phone, msg);
+  }
+
+  // Advance to Day 1
+  User.updateUser(user.phone, {
+    day: 1,
+    awaitingResponse: true,
+    status: 'active',
+  });
+
+  // Send Day 1 morning message
+  const morningMsg = buildMorningMessage(1, user.name);
+  await wati.sendMessageSafe(user.phone, morningMsg);
+
+  log('CMD', `${user.name} started Day 1 immediately`);
+}
 
 /**
  * Handle daily protocol response (user replied to morning message).

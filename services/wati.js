@@ -15,12 +15,27 @@ function log(tag, msg) {
 
 /**
  * Send a session message to a phone number.
- * Wati requires messageText as a query parameter.
  */
 async function sendMessage(phone, text) {
-  // EMERGENCY KILL SWITCH — no messages sent until spam is resolved
-  log('BLOCKED', `Would send to ${phone}: ${text.substring(0, 80)}...`);
-  return { result: 'blocked' };
+  if (!WATI_API_KEY || !WATI_BASE_URL) {
+    log('DRY-RUN', `Would send to ${phone}: ${text.substring(0, 80)}...`);
+    return { result: 'dry-run' };
+  }
+
+  phone = phone.replace(/[\s+\-]/g, '');
+  if (phone.length === 10) phone = '91' + phone;
+
+  const url = `${WATI_BASE_URL}/api/v1/sendSessionMessage/${phone}?messageText=${encodeURIComponent(text)}`;
+  const response = await axios.post(url, {}, {
+    headers: {
+      'Authorization': `Bearer ${WATI_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    timeout: 15000,
+  });
+
+  log('SENT', `→ ${phone} (${text.length} chars) status=${response.status}`);
+  return response.data;
 }
 
 /**
@@ -35,26 +50,21 @@ async function sendTemplateMessage(phone, templateName, parameters = []) {
   phone = phone.replace(/[\s+\-]/g, '');
   if (phone.length === 10) phone = '91' + phone;
 
-  try {
-    const url = `${WATI_BASE_URL}/api/v1/sendTemplateMessage/${phone}`;
-    const response = await axios.post(url, {
-      template_name: templateName,
-      broadcast_name: 'maincharacter_' + Date.now(),
-      parameters: parameters.map(p => ({ name: p.name, value: p.value })),
-    }, {
-      headers: {
-        'Authorization': `Bearer ${WATI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      timeout: 15000,
-    });
+  const url = `${WATI_BASE_URL}/api/v1/sendTemplateMessage/${phone}`;
+  const response = await axios.post(url, {
+    template_name: templateName,
+    broadcast_name: 'maincharacter_' + Date.now(),
+    parameters: parameters.map(p => ({ name: p.name, value: p.value })),
+  }, {
+    headers: {
+      'Authorization': `Bearer ${WATI_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    timeout: 15000,
+  });
 
-    log('TEMPLATE', `→ ${phone} template=${templateName} status=${response.status}`);
-    return response.data;
-  } catch (err) {
-    log('TEMPLATE-ERROR', `Failed template to ${phone}: ${err.message}`);
-    throw err;
-  }
+  log('TEMPLATE', `→ ${phone} template=${templateName} status=${response.status}`);
+  return response.data;
 }
 
 /**

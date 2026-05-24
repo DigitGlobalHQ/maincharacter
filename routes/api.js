@@ -66,68 +66,38 @@ router.post('/enroll', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════
 
 router.post('/webhook/wati', async (req, res) => {
-  res.json({ status: 'received' });
-  // EMERGENCY: All processing disabled to stop spam loop
-  const body = req.body;
-  const isOwner = body.owner === true || body.owner === 'true' || body.isOwner === true;
-  const eventType = (body.eventType || '').toLowerCase();
-  console.log(`[WEBHOOK-DEBUG] owner=${body.owner} eventType=${eventType} statusString=${body.statusString} text="${(body.text||'').substring(0,50)}"`);
-  
-  // ONLY process if: not owner AND has text AND not a status event
-  if (isOwner) { console.log('[SKIP] owner message'); return; }
-  if (body.statusString === 'SENT' || body.statusString === 'DELIVERED' || body.statusString === 'READ' || body.statusString === 'REPLIED') { console.log('[SKIP] status event'); return; }
-  if (!body.text || body.text.trim() === '') { console.log('[SKIP] no text'); return; }
-    log('RAW', JSON.stringify(body).substring(0, 500));
+  res.json({ status: 'received' }); // Respond to Wati immediately
 
-    // ═══════════════════════════════════════════════════════════════
-    // CRITICAL: Filter out non-incoming-message events FIRST
-    // Wati fires webhooks for EVERYTHING: sent, delivered, read, etc.
-    // owner=true means the BOT sent this message — ignore it
-    // ═══════════════════════════════════════════════════════════════
-    if (body.owner === true || body.isOwner === true) {
-      log('SKIP', 'Ignored: bot-sent message (owner=true)');
+  try {
+    const body = req.body;
+
+    // ── GATE 1: Ignore bot's own outgoing messages ──
+    if (body.owner === true || body.owner === 'true') {
       return;
     }
 
-    // Ignore delivery/read status updates
-    const eventType = (body.eventType || body.event_type || body.event || '').toLowerCase();
-    if (eventType && !eventType.includes('message_received') && eventType !== 'message') {
-      // Allow 'message' and 'message_received' events only
-      if (eventType.includes('delivered') || eventType.includes('read') || 
-          eventType.includes('sent') || eventType.includes('replied') ||
-          eventType.includes('failed') || eventType.includes('status') ||
-          eventType.includes('payment') || eventType.includes('clicked')) {
-        log('SKIP', `Ignored event: ${eventType}`);
-        return;
-      }
-    }
-
-    // Ignore status-type payloads
-    const statusString = (body.statusString || '').toUpperCase();
-    if (statusString === 'SENT' || statusString === 'DELIVERED' || 
-        statusString === 'READ' || statusString === 'REPLIED') {
-      log('SKIP', `Ignored status: ${statusString}`);
+    // ── GATE 2: Ignore delivery/read/sent status events ──
+    const eventType = (body.eventType || '').toLowerCase();
+    if (eventType.includes('delivered') || eventType.includes('read') ||
+        eventType.includes('sent') || eventType.includes('replied') ||
+        eventType.includes('failed') || eventType.includes('payment') ||
+        eventType.includes('clicked') || eventType.includes('status')) {
       return;
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // Extract message data from Wati payload
-    // ═══════════════════════════════════════════════════════════════
-    let phone = body.waId || body.from || body.senderPhoneNumber || body.whatsappNumber || '';
-    let text = (body.text || body.message || body.messageText || '').trim();
-    let senderName = body.senderName || body.pushName || body.contactName || '';
-
-    // Handle nested text object
-    if (!text && body.text && typeof body.text === 'object') {
-      text = (body.text.body || '').trim();
+    // ── GATE 3: Ignore status string updates ──
+    const status = (body.statusString || '').toUpperCase();
+    if (status === 'SENT' || status === 'DELIVERED' || status === 'READ' || status === 'REPLIED') {
+      return;
     }
 
-    // Strip non-digit chars from phone
-    phone = phone.replace(/[+\s\-]/g, '');
+    // ── Extract fields ──
+    const phone = (body.waId || body.from || body.senderPhoneNumber || '').replace(/[+\s\-]/g, '');
+    const text = (body.text || body.message || body.messageText || '').trim();
+    const senderName = body.senderName || body.pushName || body.contactName || '';
 
-    // Must have both phone AND text to proceed
+    // ── GATE 4: Must have phone AND non-empty text ──
     if (!phone || !text) {
-      log('SKIP', `Missing phone(${!!phone}) or text(${!!text})`);
       return;
     }
 
@@ -135,7 +105,7 @@ router.post('/webhook/wati', async (req, res) => {
 
     const user = User.getUserByPhone(phone);
 
-    // Unknown user — notify admin
+    // Unknown user — notify admin only
     if (!user) {
       log('WEBHOOK', `Unknown user: ${phone}`);
       if (ADMIN_PHONE) {
@@ -147,38 +117,27 @@ router.post('/webhook/wati', async (req, res) => {
     // Route the message
     const msg = text.toLowerCase().trim();
 
-    // ─── Special commands ───
-    if (msg === 'continue') {
-      return await handleContinue(user);
-    }
-    if (msg === 'stop') {
-      return await handleStop(user);
-    }
-    if (msg === 'return') {
-      return await handleReturn(user);
-    }
-    if (msg === 'pay' || msg === 'subscribe') {
-      return await handlePayment(user);
-    }
+    if (msg === 'continue') return await handleContinue(user);
+    if (msg === 'stop') return await handleStop(user);
+    if (msg === 'return') return await handleReturn(user);
+    if (msg === 'pay' || msg === 'subscribe') return await handlePayment(user);
 
-    // ─── Day-based routing ───
+    // Day-based routing
     if (user.awaitingResponse && user.day >= 1 && user.day <= 7) {
-      return await handleDailyResponse(user, text, msgType);
+      return await handleDailyResponse(user, text, 'text');
     }
 
-    // ─── Default ───
+    // Default response
     log('WEBHOOK', `Unhandled message from ${user.name}: "${msg}"`);
-    
-    // Forward to admin
+
     if (ADMIN_PHONE && phone !== ADMIN_PHONE) {
       wati.sendMessageSafe(ADMIN_PHONE, `◆ USER MESSAGE\n\nFrom: ${user.name} (${user.phone})\nDay: ${user.day}\nMessage: ${text.substring(0, 300)}`).catch(() => {});
     }
 
-    // Send gentle response
     const defaultReply = user.day === 0
       ? `The Consultant is preparing your Day 1 protocol. It arrives tomorrow at ${user.preferredTime}. ◆`
       : `The Consultant is preparing your next message. It arrives at ${user.preferredTime}. ◆`;
-    
+
     await wati.sendMessageSafe(user.phone, defaultReply);
 
   } catch (err) {

@@ -66,12 +66,17 @@ router.post('/enroll', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════
 
 router.post('/webhook/wati', async (req, res) => {
-  res.json({ status: 'received' }); // Respond immediately
-
-  try {
-    const body = req.body;
-    
-    // Log raw payload for debugging (truncated)
+  res.json({ status: 'received' });
+  // EMERGENCY: All processing disabled to stop spam loop
+  const body = req.body;
+  const isOwner = body.owner === true || body.owner === 'true' || body.isOwner === true;
+  const eventType = (body.eventType || '').toLowerCase();
+  console.log(`[WEBHOOK-DEBUG] owner=${body.owner} eventType=${eventType} statusString=${body.statusString} text="${(body.text||'').substring(0,50)}"`);
+  
+  // ONLY process if: not owner AND has text AND not a status event
+  if (isOwner) { console.log('[SKIP] owner message'); return; }
+  if (body.statusString === 'SENT' || body.statusString === 'DELIVERED' || body.statusString === 'READ' || body.statusString === 'REPLIED') { console.log('[SKIP] status event'); return; }
+  if (!body.text || body.text.trim() === '') { console.log('[SKIP] no text'); return; }
     log('RAW', JSON.stringify(body).substring(0, 500));
 
     // ═══════════════════════════════════════════════════════════════

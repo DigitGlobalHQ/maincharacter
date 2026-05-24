@@ -90,18 +90,22 @@ app.get('/admin', (req, res) => {
 app.use('/api', apiRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Backward compatibility — old webhook path maps to /api/webhook/wati
-// The Wati dashboard still points to /webhook, so we duplicate the route here
+// Backward compatibility — Wati calls /webhook
 app.post('/webhook', async (req, res) => {
   res.json({ status: 'received' });
-
-  // ALWAYS forward to /api/webhook/wati — don't try to parse phone here
-  console.log(`[${new Date().toISOString()}] [COMPAT] /webhook → forwarding to /api/webhook/wati`);
-  console.log(`[${new Date().toISOString()}] [COMPAT:RAW] ${JSON.stringify(req.body).substring(0, 1000)}`);
-
+  const body = req.body;
+  const isOwner = body.owner === true || body.owner === 'true' || body.isOwner === true;
+  console.log(`[${new Date().toISOString()}] [/webhook] owner=${body.owner} eventType=${body.eventType} statusString=${body.statusString}`);
+  
+  // STOP SPAM: Only forward genuine incoming user messages
+  if (isOwner) { console.log('[/webhook SKIP] owner=true'); return; }
+  if (!body.text || String(body.text).trim() === '') { console.log('[/webhook SKIP] no text'); return; }
+  if (body.statusString === 'SENT' || body.statusString === 'DELIVERED' || body.statusString === 'READ') { console.log('[/webhook SKIP] status update'); return; }
+  
+  // Forward to internal handler
   try {
     const http = require('http');
-    const data = JSON.stringify(req.body);
+    const data = JSON.stringify(body);
     const options = {
       hostname: 'localhost',
       port: PORT,
@@ -109,17 +113,11 @@ app.post('/webhook', async (req, res) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
     };
-    const internalReq = http.request(options, (internalRes) => {
-      console.log(`[${new Date().toISOString()}] [COMPAT] Forward response: ${internalRes.statusCode}`);
-    });
-    internalReq.on('error', (err) => {
-      console.log(`[${new Date().toISOString()}] [COMPAT:ERROR] Forward failed: ${err.message}`);
-    });
+    const internalReq = http.request(options);
+    internalReq.on('error', () => {});
     internalReq.write(data);
     internalReq.end();
-  } catch (err) {
-    console.log(`[${new Date().toISOString()}] [COMPAT:ERROR] ${err.message}`);
-  }
+  } catch (e) {}
 });
 
 // ═══════════════════════════════════════════════════════════════════

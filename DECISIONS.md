@@ -27,6 +27,19 @@ blocked by the allowlist guard above. Rationale: lets the Day-1 funnel be
 verified for real without any chance of messaging real trial users while the
 founder sleeps.
 
+### Rate limiting excludes webhook paths (deviates from brief's 30/min)
+Global 200/min, with 10/min on /enroll, /waitlist and /admin/login; webhook
+paths are skipped entirely. Rationale: all Wati and Razorpay webhook traffic
+originates from a single provider IP, so an IP-based limit there would drop
+legitimate user replies under load — the public enrol/login endpoints are the
+real abuse targets and carry the tight limits instead.
+
+### Helmet CSP disabled for v1
+helmet is enabled with contentSecurityPolicy:false. Rationale: the landing and
+admin pages rely on inline styles and CDN scripts (Chart.js, Google Fonts); a
+strict CSP would break rendering, so we ship the other helmet headers now and
+leave a proper CSP as a follow-up.
+
 ### Postgres migration drafted but NOT wired live
 P1.1 (Prisma/Supabase) requires a `DATABASE_URL` to test against, which is a
 founder action. Rationale: swapping the live persistence layer overnight with

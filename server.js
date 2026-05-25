@@ -21,6 +21,8 @@ sentry.init();
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { createLogger } = require('./lib/log');
 
 const slog = createLogger('SERVER');
@@ -36,7 +38,14 @@ const User = require('./models/User');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'maincharacter2026';
+
+// Render runs behind a proxy; trust the first hop so rate-limit sees real IPs.
+app.set('trust proxy', 1);
+
+// ─── Security headers (P4.5) ───
+// CSP disabled for v1: the landing/admin pages use inline styles + CDN scripts
+// (Chart.js, Google Fonts). Other helmet protections still apply.
+app.use(helmet({ contentSecurityPolicy: false }));
 
 // ─── Middleware ───
 // Capture the raw body so webhook signatures (Razorpay) can be verified.
@@ -49,6 +58,29 @@ app.use(
   })
 );
 app.use(express.urlencoded({ extended: true }));
+
+// ─── Rate limiting (P4.4) ───
+// Webhooks are excluded: all Wati/Razorpay traffic shares a provider IP, so an
+// IP limit there would drop legitimate user replies. Enrol/login/waitlist are
+// the public abuse targets and get tight limits.
+const skipWebhooks = (req) => req.originalUrl.includes('/webhook');
+const globalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: skipWebhooks,
+});
+const tightLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/enroll', tightLimiter);
+app.use('/api/waitlist', tightLimiter);
+app.use('/api/admin/login', tightLimiter);
+app.use('/api', globalLimiter);
 
 // Static files — /public directory
 app.use(express.static(path.join(__dirname, 'public')));

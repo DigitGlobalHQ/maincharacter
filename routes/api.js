@@ -5,6 +5,7 @@
  */
 
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const router = express.Router();
 const User = require('../models/User');
 const wati = require('../services/wati');
@@ -28,13 +29,22 @@ function log(tag, msg) {
 // POST /api/enroll — New user enrollment
 // ═══════════════════════════════════════════════════════════════════
 
-router.post('/enroll', async (req, res) => {
-  try {
-    const { name, phone, preferredTime, pillar } = req.body;
+const enrollValidators = [
+  body('name').isString().trim().isLength({ min: 1, max: 100 }),
+  body('phone')
+    .customSanitizer((p) => String(p || '').replace(/\D/g, ''))
+    .matches(/^\d{10,13}$/),
+  body('preferredTime').optional({ values: 'falsy' }).matches(/^\d{2}:\d{2}$/),
+  body('pillar').optional({ values: 'falsy' }).isIn(['orator', 'aesthetic', 'sage']),
+];
 
-    if (!name || !phone) {
-      return res.status(400).json({ error: 'Name and phone are required.' });
+router.post('/enroll', enrollValidators, async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ error: 'Invalid input', details: errors.array() });
     }
+    const { name, phone, preferredTime, pillar } = req.body;
 
     // ── Idempotency (P1.6): if this phone already enrolled, return success
     // WITHOUT re-sending the welcome message (prevents duplicate WhatsApps). ──

@@ -8,8 +8,10 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const USERS_FILE = path.join(__dirname, '..', 'data', 'users.json');
-const WAITLIST_FILE = path.join(__dirname, '..', 'data', 'waitlist.json');
+// Paths can be overridden via env (used by tests to avoid touching real data).
+const USERS_FILE = process.env.USERS_FILE_PATH || path.join(__dirname, '..', 'data', 'users.json');
+const WAITLIST_FILE =
+  process.env.WAITLIST_FILE_PATH || path.join(__dirname, '..', 'data', 'waitlist.json');
 
 // Ensure data directory and files exist
 function ensureFiles() {

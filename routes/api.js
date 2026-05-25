@@ -36,6 +36,19 @@ router.post('/enroll', async (req, res) => {
       return res.status(400).json({ error: 'Name and phone are required.' });
     }
 
+    // ── Idempotency (P1.6): if this phone already enrolled, return success
+    // WITHOUT re-sending the welcome message (prevents duplicate WhatsApps). ──
+    const existing = User.getUserByPhone(phone.trim());
+    if (existing) {
+      log('ENROLL', `Idempotent: ${existing.phone} already enrolled (no re-send)`);
+      return res.json({
+        success: true,
+        userId: existing.token,
+        alreadyEnrolled: true,
+        redirectTo: `/welcome?name=${encodeURIComponent(existing.name)}&phone=${encodeURIComponent(existing.phone)}&time=${encodeURIComponent(existing.preferredTime)}`,
+      });
+    }
+
     // Create user
     const user = User.createUser({
       name: name.trim(),
@@ -69,11 +82,22 @@ router.post('/enroll', async (req, res) => {
 // POST /api/webhook/wati — Incoming WhatsApp messages
 // ═══════════════════════════════════════════════════════════════════
 
-router.post('/webhook/wati', async (req, res) => {
+router.post('/webhook/wati', (req, res) => {
   res.json({ status: 'received' }); // Respond to Wati immediately
+  processWatiWebhook(req.body).catch((err) =>
+    log('ERROR', `Webhook handler error: ${err.message}`)
+  );
+});
 
+/**
+ * Process an incoming Wati webhook payload. Called directly (in-process) by
+ * both /api/webhook/wati and the legacy /webhook shim — no localhost re-POST.
+ * Never throws; logs and returns.
+ * @param {object} body raw Wati webhook body
+ */
+async function processWatiWebhook(body) {
   try {
-    const body = req.body;
+    body = body || {};
 
     // ── GATE 1: Ignore bot's own outgoing messages ──
     if (body.owner === true || body.owner === 'true') {
@@ -150,7 +174,7 @@ router.post('/webhook/wati', async (req, res) => {
   } catch (err) {
     log('ERROR', `Webhook handler error: ${err.message}`);
   }
-});
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // WEBHOOK HANDLERS
@@ -377,3 +401,4 @@ router.get('/payment/plans', (req, res) => {
 });
 
 module.exports = router;
+module.exports.processWatiWebhook = processWatiWebhook;

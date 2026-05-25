@@ -91,34 +91,12 @@ app.get('/admin', (req, res) => {
 app.use('/api', apiRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Backward compatibility — Wati calls /webhook
-app.post('/webhook', async (req, res) => {
+// Backward compatibility — Wati calls /webhook. Call the handler in-process
+// (P1.3) instead of re-POSTing to localhost. All spam-gating lives in the
+// handler, so there is a single source of truth for filtering.
+app.post('/webhook', (req, res) => {
   res.json({ status: 'received' });
-  const body = req.body;
-  const isOwner = body.owner === true || body.owner === 'true' || body.isOwner === true;
-  console.log(`[${new Date().toISOString()}] [/webhook] owner=${body.owner} eventType=${body.eventType} statusString=${body.statusString}`);
-  
-  // STOP SPAM: Only forward genuine incoming user messages
-  if (isOwner) { console.log('[/webhook SKIP] owner=true'); return; }
-  if (!body.text || String(body.text).trim() === '') { console.log('[/webhook SKIP] no text'); return; }
-  if (body.statusString === 'SENT' || body.statusString === 'DELIVERED' || body.statusString === 'READ') { console.log('[/webhook SKIP] status update'); return; }
-  
-  // Forward to internal handler
-  try {
-    const http = require('http');
-    const data = JSON.stringify(body);
-    const options = {
-      hostname: 'localhost',
-      port: PORT,
-      path: '/api/webhook/wati',
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
-    };
-    const internalReq = http.request(options);
-    internalReq.on('error', () => {});
-    internalReq.write(data);
-    internalReq.end();
-  } catch (e) {}
+  apiRoutes.processWatiWebhook(req.body);
 });
 
 // ═══════════════════════════════════════════════════════════════════

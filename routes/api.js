@@ -428,6 +428,56 @@ router.get('/payment/plans', (req, res) => {
   res.json(razorpay.PLANS);
 });
 
+// POST /api/payment/subscribe — create a recurring subscription (P4.3).
+// Body: { planKey? , pillars?[], phone, name?, email?, auditSessionToken? }.
+// Selecting both pillars resolves to the Aura++ bundle automatically.
+router.post('/payment/subscribe', async (req, res) => {
+  try {
+    const { planKey, pillars, phone, name, email, auditSessionToken } = req.body || {};
+    const cleanPhone = String(phone || '').replace(/\D/g, '');
+    if (!/^\d{10,13}$/.test(cleanPhone)) {
+      return res.status(400).json({ error: 'valid phone required' });
+    }
+
+    // Resolve the plan: explicit planKey wins; else derive from selected pillars.
+    const resolvedPlan =
+      (planKey && razorpay.PLANS[planKey] && planKey) ||
+      razorpay.resolvePlanForPillars(pillars || []);
+    if (!resolvedPlan) return res.status(400).json({ error: 'unknown plan / no pillars selected' });
+
+    const planPillars = razorpay.pillarsForPlan(resolvedPlan);
+
+    // Find or create the user (phone-primary, email optional — Night-2 #2).
+    let user = User.getUserByPhone(cleanPhone);
+    if (!user) {
+      const primaryPillar = planPillars.includes('orator') ? 'orator' : 'aesthetic';
+      user = User.createUser({ name: (name || 'Seeker').trim(), phone: cleanPhone, pillar: primaryPillar });
+    }
+    const updates = { pendingPlan: resolvedPlan, pendingPillars: planPillars };
+    if (email) updates.email = email;
+    if (auditSessionToken) updates.auditSessionId = auditSessionToken;
+    User.updateUser(cleanPhone, updates);
+
+    const sub = await razorpay.createSubscription(resolvedPlan, {
+      phone: cleanPhone,
+      name: user.name,
+      email: email || user.email || '',
+    });
+
+    log('PAYMENT', `subscribe ${cleanPhone} → ${resolvedPlan} [${planPillars.join(',')}]${sub.mock ? ' (mock)' : ''}`);
+    res.json({
+      success: true,
+      url: sub.short_url,
+      subscriptionId: sub.id,
+      planKey: resolvedPlan,
+      amount: razorpay.PLANS[resolvedPlan].amount,
+    });
+  } catch (err) {
+    log('ERROR', `subscribe failed: ${err.message}`);
+    res.status(500).json({ error: 'could not create subscription' });
+  }
+});
+
 // ═══════════════════════════════════════════════════════════════════
 // POST /api/payment/webhook — Razorpay → user upgrade (P1.2 / P2.2)
 // ═══════════════════════════════════════════════════════════════════
@@ -469,28 +519,46 @@ async function processPaymentEvent(event) {
     return { handled: false };
   }
 
+  // Which pillars this event touches: notes.pillars (csv) or derive from plan.
+  const pillars = notes.pillars
+    ? String(notes.pillars).split(',').map((s) => s.trim()).filter(Boolean)
+    : razorpay.pillarsForPlan(notes.plan);
+
   if (PAID_EVENTS.includes(evt)) {
     const updates = { subscriptionStatus: 'active' };
     if (!user.subscribedAt) updates.subscribedAt = new Date().toISOString();
     if (user.rank === 'unawakened') updates.rank = 'seeker';
+    if (pillars.includes('orator')) updates.oratorActive = true;
+    if (pillars.includes('lookmaxxing')) {
+      updates.lookmaxxingActive = true;
+      if (!user.lookmaxxingStartedAt) updates.lookmaxxingStartedAt = new Date().toISOString();
+    }
     User.updateUser(phone, updates);
-    log('PAYMENT', `${user.name} (${phone}) → active via ${evt}`);
+    const status = User.computeAuraStatus({ ...user, ...updates });
+    log('PAYMENT', `${user.name} (${phone}) → active via ${evt} [${pillars.join(',') || 'orator'}]${status.auraPlusPlus ? ' AURA++' : ''}`);
     // Copy supplied by founder in the autopilot brief (not invented).
     await wati.sendMessageSafe(
       phone,
       `◆ The Chamber is open, ${user.name}.\n\nDay 8 arrives tomorrow at your preferred time.\n\n◆ MainCharacter`
     );
-    return { handled: true, status: 'active' };
+    return { handled: true, status: 'active', auraPlusPlus: status.auraPlusPlus, pillars };
   }
 
   if (CANCEL_EVENTS.includes(evt)) {
-    User.updateUser(phone, { subscriptionStatus: 'cancelled' });
-    log('PAYMENT', `${user.name} (${phone}) → cancelled via ${evt}`);
+    const updates = {};
+    if (pillars.includes('orator')) updates.oratorActive = false;
+    if (pillars.includes('lookmaxxing')) updates.lookmaxxingActive = false;
+    // If we can't tell which pillar, fall back to fully pausing.
+    if (pillars.length === 0) updates.subscriptionStatus = 'cancelled';
+    const after = { ...user, ...updates };
+    if (!after.oratorActive && !after.lookmaxxingActive) updates.subscriptionStatus = 'cancelled';
+    User.updateUser(phone, updates);
+    log('PAYMENT', `${user.name} (${phone}) → cancelled via ${evt} [${pillars.join(',') || 'all'}]`);
     await wati.sendMessageSafe(
       phone,
       `◆ Your protocol pauses, ${user.name}.\n\nYour lexicon and rank remain yours. Reply RETURN when ready.\n\n◆ MainCharacter`
     );
-    return { handled: true, status: 'cancelled' };
+    return { handled: true, status: 'cancelled', pillars };
   }
 
   log('PAYMENT', `Ignored event ${evt}`);

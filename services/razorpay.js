@@ -21,7 +21,19 @@ if (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET) {
   log.info('INIT', 'Initialised');
 }
 
-// New pricing
+// P4.2 launch-time guard: subscriptions are on by default this run, but warn
+// loudly if the live keys aren't set (or look like test keys) so charges aren't
+// silently mock/test-mode in production.
+if (process.env.RAZORPAY_SUBSCRIPTIONS_ENABLED !== 'false') {
+  if (!razorpay) {
+    log.warn('SUBS', 'RAZORPAY_SUBSCRIPTIONS_ENABLED but no keys — subscriptions run in MOCK mode');
+  } else if (RAZORPAY_KEY_ID.startsWith('rzp_test')) {
+    log.warn('SUBS', 'subscriptions enabled with TEST keys — no real charges will occur');
+  }
+}
+
+// New pricing. `pillars` drives which subscription flags a plan activates
+// (Aura++ is a computed status — DECISIONS.md Night-2 #3).
 const PLANS = {
   seeker: {
     amount: 79900,     // ₹799 in paise
@@ -29,15 +41,53 @@ const PLANS = {
     period: 'monthly',
     display: '₹799/month',
     description: 'Daily Orator Protocol + Weekly Evolution Reports + Unlimited Consultant',
+    pillars: ['orator'],
   },
-  sovereign: {
+  lookmaxxing: {
     amount: 149900,    // ₹1,499 in paise
+    label: 'Lookmaxxing',
+    period: 'monthly',
+    display: '₹1,499/month',
+    description: 'Daily mirror + personalised protocol + hair tracker + weekly reveal',
+    pillars: ['lookmaxxing'],
+  },
+  auraplus: {
+    amount: 199900,    // ₹1,999 in paise — bundle, saves ₹299 vs separate
+    label: 'Aura++',
+    period: 'monthly',
+    display: '₹1,999/month',
+    description: 'Both pillars — The Orator Protocol and Lookmaxxing. The combined self.',
+    pillars: ['orator', 'lookmaxxing'],
+  },
+  // Legacy key retained for backward compatibility with older links.
+  sovereign: {
+    amount: 149900,
     label: 'The Sovereign Plan',
     period: 'monthly',
     display: '₹1,499/month',
     description: 'All three pillars + Personal Consultant session + Sovereign rank fast-track',
+    pillars: ['orator'],
   },
 };
+
+/** Pillars a plan activates. Unknown plans → []. */
+function pillarsForPlan(planKey) {
+  return (PLANS[planKey] && PLANS[planKey].pillars) || [];
+}
+
+/**
+ * Resolve the cheapest correct plan for a set of pillars. Choosing both pillars
+ * at checkout yields the Aura++ bundle (₹1,999) rather than the sum (₹2,298).
+ * @param {string[]} pillars
+ * @returns {string|null} plan key
+ */
+function resolvePlanForPillars(pillars = []) {
+  const set = new Set(pillars);
+  if (set.has('orator') && set.has('lookmaxxing')) return 'auraplus';
+  if (set.has('lookmaxxing')) return 'lookmaxxing';
+  if (set.has('orator')) return 'seeker';
+  return null;
+}
 
 /**
  * Create a Razorpay order.
@@ -137,11 +187,106 @@ async function createPaymentLink(planKey, phone, name) {
   }
 }
 
+// ── Subscriptions (P4.2) ──
+const fs = require('fs');
+const path = require('path');
+const PLAN_CACHE_FILE =
+  process.env.RAZORPAY_PLANS_FILE_PATH || path.join(__dirname, '..', 'data', 'razorpay-plans.json');
+
+function loadPlanCache() {
+  try {
+    return JSON.parse(fs.readFileSync(PLAN_CACHE_FILE, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+function savePlanCache(cache) {
+  try {
+    fs.mkdirSync(path.dirname(PLAN_CACHE_FILE), { recursive: true });
+    fs.writeFileSync(PLAN_CACHE_FILE, JSON.stringify(cache, null, 2));
+  } catch (err) {
+    log.warn('PLANCACHE', `could not persist plan cache: ${err.message}`);
+  }
+}
+
+/**
+ * Create (once) or fetch a cached Razorpay Plan id for a plan key. In mock mode
+ * (no live keys) returns a deterministic mock id so the flow is testable.
+ * @param {string} planKey
+ * @returns {Promise<string>} razorpay plan id
+ */
+async function createOrFetchPlan(planKey) {
+  const plan = PLANS[planKey];
+  if (!plan) throw new Error(`Unknown plan: ${planKey}`);
+
+  const cache = loadPlanCache();
+  if (cache[planKey]) return cache[planKey];
+
+  if (!razorpay) {
+    const mockId = `plan_mock_${planKey}`;
+    cache[planKey] = mockId;
+    savePlanCache(cache);
+    return mockId;
+  }
+
+  const created = await razorpay.plans.create({
+    period: 'monthly',
+    interval: 1,
+    item: { name: plan.label, amount: plan.amount, currency: 'INR', description: plan.description },
+    notes: { planKey },
+  });
+  cache[planKey] = created.id;
+  savePlanCache(cache);
+  log.info('PLAN', `created Razorpay plan ${created.id} for ${planKey}`);
+  return created.id;
+}
+
+/**
+ * Create a recurring subscription for a plan. Returns the checkout short_url.
+ * @param {string} planKey
+ * @param {{ phone: string, name?: string, email?: string }} customer
+ * @returns {Promise<{ id: string, short_url: string, mock?: boolean }>}
+ */
+async function createSubscription(planKey, customer = {}) {
+  const plan = PLANS[planKey];
+  if (!plan) throw new Error(`Unknown plan: ${planKey}`);
+  const planId = await createOrFetchPlan(planKey);
+
+  const notes = {
+    phone: customer.phone || '',
+    name: customer.name || '',
+    email: customer.email || '',
+    plan: planKey,
+    pillars: pillarsForPlan(planKey).join(','),
+  };
+
+  if (!razorpay) {
+    return {
+      id: `sub_mock_${planKey}_${Date.now()}`,
+      short_url: `${BASE_URL}/upgrade?status=success&plan=${planKey}&phone=${customer.phone || ''}`,
+      mock: true,
+    };
+  }
+
+  const sub = await razorpay.subscriptions.create({
+    plan_id: planId,
+    total_count: 12, // 12 monthly cycles
+    customer_notify: 1,
+    notes,
+  });
+  return { id: sub.id, short_url: sub.short_url };
+}
+
 module.exports = {
   PLANS,
+  pillarsForPlan,
+  resolvePlanForPillars,
   createOrder,
   verifyPayment,
   verifyWebhookSignature,
   createPaymentLink,
+  createOrFetchPlan,
+  createSubscription,
+  subscriptionsEnabled: process.env.RAZORPAY_SUBSCRIPTIONS_ENABLED !== 'false',
   razorpayKeyId: RAZORPAY_KEY_ID,
 };

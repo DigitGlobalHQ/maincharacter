@@ -6,7 +6,9 @@
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { getScoringPrompt } = require('../data/orator-content');
+const { createLogger } = require('../lib/log');
 
+const log = createLogger('GEMINI');
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 let genAI = null;
 let model = null;
@@ -14,9 +16,9 @@ let model = null;
 if (GEMINI_API_KEY) {
   genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
   model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-  console.log(`[${new Date().toISOString()}] [GEMINI] Initialised`);
+  log.info('INIT', 'Initialised');
 } else {
-  console.log(`[${new Date().toISOString()}] [GEMINI] No API key — fallback mode`);
+  log.info('INIT', 'No API key — fallback mode');
 }
 
 // Rate limiting — 10 RPM
@@ -40,7 +42,7 @@ function logCall() {
  */
 async function scoreUserResponse(userName, day, words, userResponse, previousScores) {
   if (!model || !canCallGemini()) {
-    console.log(`[GEMINI] Using fallback scoring (no API or rate limited)`);
+    log.warn('FALLBACK', 'Using fallback scoring (no API or rate limited)');
     return generateFallbackScoring(day, userName);
   }
 
@@ -54,7 +56,7 @@ async function scoreUserResponse(userName, day, words, userResponse, previousSco
     // Extract JSON from response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      console.log(`[GEMINI] Could not parse JSON from response`);
+      log.warn('PARSE', 'Could not parse JSON from response');
       return generateFallbackScoring(day, userName);
     }
 
@@ -72,7 +74,7 @@ async function scoreUserResponse(userName, day, words, userResponse, previousSco
       delta: parsed.delta || '',
     };
   } catch (err) {
-    console.log(`[GEMINI] Error: ${err.message}`);
+    log.error('ERROR', err.message);
     return generateFallbackScoring(day, userName);
   }
 }
@@ -109,7 +111,7 @@ Return ONLY the 3-4 sentence assessment text, no JSON.`;
     const result = await model.generateContent(prompt);
     return result.response.text().trim();
   } catch (err) {
-    console.log(`[GEMINI] Evolution assessment error: ${err.message}`);
+    log.error('ERROR', `Evolution assessment: ${err.message}`);
     return `${user.name}, seven days ago you began with scores that measured where you were. Today they measure something different — not just improvement, but intention. The gap between Day 1 and Day 7 is not about numbers. It is about the person who chose to show up, every single day, and speak.`;
   }
 }

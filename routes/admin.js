@@ -11,8 +11,12 @@ const wati = require('../services/wati');
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'maincharacter2026';
 
+let _log;
 function log(tag, msg) {
-  console.log(`[${new Date().toISOString()}] [ADMIN:${tag}] ${msg}`);
+  if (!_log) _log = require('../lib/log').createLogger('ADMIN');
+  if (/error|fail/i.test(tag)) return _log.error(tag, msg);
+  if (/warn/i.test(tag)) return _log.warn(tag, msg);
+  return _log.info(tag, msg);
 }
 
 // ─── Auth check (simple header-based) ───

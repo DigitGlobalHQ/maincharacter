@@ -13,8 +13,12 @@ const wati = require('./wati');
 const { DAYS, buildMorningMessage, buildEveningMessage, buildEvolutionReport } = require('../data/orator-content');
 const gemini = require('./gemini');
 
+let _log;
 function log(tag, msg) {
-  console.log(`[${new Date().toISOString()}] [SCHED:${tag}] ${msg}`);
+  if (!_log) _log = require('../lib/log').createLogger('SCHED');
+  if (/error|fail/i.test(tag)) return _log.error(tag, msg);
+  if (/warn/i.test(tag)) return _log.warn(tag, msg);
+  return _log.info(tag, msg);
 }
 
 /**

@@ -6,6 +6,9 @@
 
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const { createLogger } = require('../lib/log');
+
+const log = createLogger('RAZORPAY');
 
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || '';
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || '';
@@ -15,7 +18,7 @@ const BASE_URL = process.env.UPGRADE_BASE_URL || 'https://maincharacter.digitglo
 let razorpay = null;
 if (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET) {
   razorpay = new Razorpay({ key_id: RAZORPAY_KEY_ID, key_secret: RAZORPAY_KEY_SECRET });
-  console.log(`[${new Date().toISOString()}] [RAZORPAY] Initialised`);
+  log.info('INIT', 'Initialised');
 }
 
 // New pricing
@@ -121,7 +124,7 @@ async function createPaymentLink(planKey, phone, name) {
     });
     return link.short_url;
   } catch (err) {
-    console.log(`[RAZORPAY] Payment link error: ${err.message}`);
+    log.error('LINK', `Payment link error: ${err.message}`);
     return `${BASE_URL}/upgrade?plan=${planKey}&phone=${phone}`;
   }
 }

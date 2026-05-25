@@ -16,8 +16,12 @@ const ADMIN_PHONE = process.env.ADMIN_PHONE || '';
 const BASE_URL = process.env.UPGRADE_BASE_URL || 'https://maincharacter.digitglobalservices.com';
 const WHATSAPP_NUMBER = '919958533994'; // Wati Business number
 
+let _log;
 function log(tag, msg) {
-  console.log(`[${new Date().toISOString()}] [API:${tag}] ${msg}`);
+  if (!_log) _log = require('../lib/log').createLogger('API');
+  if (/error|fail/i.test(tag)) return _log.error(tag, msg);
+  if (/warn/i.test(tag)) return _log.warn(tag, msg);
+  return _log.info(tag, msg);
 }
 
 // ═══════════════════════════════════════════════════════════════════

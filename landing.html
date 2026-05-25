@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MAINCHARACTER — Become the Main Character</title>
-<meta name="description" content="Most people know who they want to be. MainCharacter makes the gap visible, measurable, and closable — one deliberate ritual at a time. Three pillars. Seven days. Five minutes a day.">
+<meta name="description" content="Most people know who they want to be. MainCharacter makes the gap visible, measurable, and closable — one deliberate ritual at a time. Two pillars. Seven days. Five minutes a day.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=Sora:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
@@ -1129,7 +1129,7 @@ button:focus-visible {
 <section class="section" id="pillars">
   <div class="container">
     <div class="pillars__header reveal">
-      <div class="eyebrow">Three Quests · One Protocol</div>
+      <div class="eyebrow">Two Quests · One Protocol</div>
       <h2>You may only choose one this week.</h2>
     </div>
 
@@ -1149,35 +1149,25 @@ button:focus-visible {
         </div>
       </div>
 
-      <!-- AESTHETIC -->
-      <div class="pcard pcard--aesthetic" onclick="openComingSoon('aesthetic')" style="cursor:pointer;">
+      <!-- LOOKMAXXING (formerly Aesthetic — violet pcard--aesthetic class retained) -->
+      <div class="pcard pcard--aesthetic" onclick="window.location.href='/audit'" style="cursor:pointer;">
         <div class="pcard__bar"></div>
         <div class="pcard__glow"></div>
         <div class="pcard__body">
           <div class="pcard__number">II</div>
-          <h3 class="pcard__name">The Aesthetic</h3>
+          <h3 class="pcard__name">Lookmaxxing</h3>
           <div class="pcard__tag">Physical Presence</div>
           <div class="pcard__stat-bar"><div class="pcard__stat-fill"></div></div>
           <p class="pcard__hook">"The room reads you before you speak."</p>
-          <p class="pcard__promise">By Day 7 you will see the version of you the camera has been waiting to capture.</p>
-          <div class="pcard__cta">Coming Soon <span>◆</span></div>
+          <p class="pcard__promise">By Day 30 you will see the version of you the camera has been waiting to capture.</p>
+          <div class="pcard__cta">Get Your Aura Reading <span>→</span></div>
         </div>
       </div>
+    </div>
 
-      <!-- SAGE -->
-      <div class="pcard pcard--sage" onclick="openComingSoon('sage')" style="cursor:pointer;">
-        <div class="pcard__bar"></div>
-        <div class="pcard__glow"></div>
-        <div class="pcard__body">
-          <div class="pcard__number">III</div>
-          <h3 class="pcard__name">The Sage</h3>
-          <div class="pcard__tag">Wisdom &amp; Mindset</div>
-          <div class="pcard__stat-bar"><div class="pcard__stat-fill"></div></div>
-          <p class="pcard__hook">"The mind beneath the voice and the face."</p>
-          <p class="pcard__promise">By Day 7 you will think with sharper language and steadier nerves.</p>
-          <div class="pcard__cta">Coming Soon <span>◆</span></div>
-        </div>
-      </div>
+    <!-- Sage moved out of the choosable quests for the 2-pillar launch -->
+    <div class="reveal" style="text-align:center;margin-top:32px;color:var(--ink-faint);font-size:0.82rem;letter-spacing:0.08em;">
+      ◆ The Sage · Wisdom &amp; Mindset · Coming after Aura++ launch
     </div>
   </div>
 </section>
@@ -1241,6 +1231,38 @@ button:focus-visible {
           <div class="tl-row__label">Day Seven</div>
           <div class="tl-row__text">The Weekly Evolution Report. Your Day 1 voice. Your Day 7 voice. The numbers. The offer.</div>
         </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     AURA++ REVEAL (the combined self)
+     ═══════════════════════════════════════════ -->
+<section class="section" id="aura-plus-plus">
+  <div class="container--narrow">
+    <div class="reveal" style="border:1px solid var(--gold);border-radius:18px;background:var(--surface);padding:48px 40px;box-shadow:0 20px 70px rgba(232,184,75,0.08);">
+      <div class="eyebrow" style="text-align:center;">The Combined Self</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:36px;margin-top:32px;">
+        <div style="text-align:center;">
+          <h3 style="font-family:var(--font-serif);font-style:italic;font-size:1.6rem;color:var(--ink);margin:0;">Your Voice</h3>
+          <div style="color:var(--gold);font-size:0.78rem;letter-spacing:0.14em;text-transform:uppercase;margin:10px 0 14px;">The Orator Protocol</div>
+          <p style="color:var(--ink-dim);font-size:0.96rem;line-height:1.6;margin:0;">The way you sound when it matters.</p>
+        </div>
+        <div style="text-align:center;">
+          <h3 style="font-family:var(--font-serif);font-style:italic;font-size:1.6rem;color:var(--ink);margin:0;">Your Presence</h3>
+          <div style="color:var(--gold);font-size:0.78rem;letter-spacing:0.14em;text-transform:uppercase;margin:10px 0 14px;">Lookmaxxing</div>
+          <p style="color:var(--ink-dim);font-size:0.96rem;line-height:1.6;margin:0;">The room reads you before you speak.</p>
+        </div>
+        <div style="text-align:center;">
+          <h3 style="font-family:var(--font-serif);font-style:italic;font-size:1.6rem;color:var(--gold);margin:0;">The Combined Self</h3>
+          <div style="color:var(--gold);font-size:0.78rem;letter-spacing:0.14em;text-transform:uppercase;margin:10px 0 14px;">Aura++</div>
+          <p style="color:var(--ink-dim);font-size:0.96rem;line-height:1.6;margin:0;">Most who walk both paths see the change in their voice and their face at the same time. The mirror nods. The room turns. This is what the work compounds into.</p>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:40px;padding-top:28px;border-top:1px solid var(--line);">
+        <p style="color:var(--ink-faint);font-size:0.9rem;letter-spacing:0.04em;margin:0 0 20px;">Orator ₹799 · Lookmaxxing ₹1,499 · Aura++ ₹1,999/mo (saves ₹299)</p>
+        <a href="/audit?intent=bundle" style="color:var(--gold);text-decoration:underline;text-underline-offset:5px;font-size:1rem;">Unlock both →</a>
       </div>
     </div>
   </div>

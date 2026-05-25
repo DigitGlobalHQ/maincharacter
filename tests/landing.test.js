@@ -1,0 +1,76 @@
+import { describe, it, expect } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const html = fs.readFileSync(path.join(__dirname, '..', 'landing.html'), 'utf8');
+
+describe('landing.html — locked copy (byte-identical guard)', () => {
+  // CLAUDE.md §2: hero, gap, rank ladder and CTA-close copy are untouchable.
+  const LOCKED = [
+    '<h1 class="hero__headline">Become the Main Character</h1>',
+    "Most people know who they want to be. They just can't see the gap clearly enough to close it.",
+    "You already know who you want to be. You've known for a while.",
+    '<div class="rank-row__name">The Unawakened</div>',
+    '<div class="rank-row__name">The Seeker</div>',
+    '<div class="rank-row__name">The Ascendant</div>',
+    '<div class="rank-row__name">The Luminary</div>',
+    '<div class="rank-row__name">The Sovereign</div>',
+    '<div class="ranks__rule reveal">Ranks are never lost. Return is always welcomed.</div>',
+    '<h2>Your arc begins with one question.</h2>',
+    '"In a room full of your peers, do you feel like the protagonist — or a spectator?"',
+  ];
+  for (const snippet of LOCKED) {
+    it(`preserves locked copy: ${snippet.slice(0, 48)}…`, () => {
+      expect(html).toContain(snippet);
+    });
+  }
+});
+
+describe('landing.html — 2-pillar update (P2.1)', () => {
+  it('Lookmaxxing card replaces the Aesthetic card and links to /audit', () => {
+    expect(html).toContain('<h3 class="pcard__name">Lookmaxxing</h3>');
+    expect(html).toContain("window.location.href='/audit'");
+    expect(html).toContain('Get Your Aura Reading');
+    // Day-30 promise (not Day-7) for Lookmaxxing.
+    expect(html).toContain('By Day 30 you will see the version of you the camera has been waiting to capture.');
+  });
+
+  it('no choosable Aesthetic or Sage pcard remains in the grid', () => {
+    expect(html).not.toContain('<h3 class="pcard__name">The Aesthetic</h3>');
+    expect(html).not.toContain('<h3 class="pcard__name">The Sage</h3>');
+  });
+
+  it('Sage is demoted to a footer strip', () => {
+    expect(html).toContain('◆ The Sage · Wisdom &amp; Mindset · Coming after Aura++ launch');
+  });
+});
+
+describe('landing.html — Aura++ reveal section (P2.2/P2.3)', () => {
+  it('has the #aura-plus-plus section', () => {
+    expect(html).toContain('id="aura-plus-plus"');
+  });
+
+  it('has the three column sub-headings', () => {
+    expect(html).toContain('The Orator Protocol');
+    expect(html).toContain('>Lookmaxxing</div>'); // the Aura++ column sub-label
+    expect(html).toContain('>Aura++</div>');
+  });
+
+  it('has the three column titles', () => {
+    expect(html).toContain('Your Voice');
+    expect(html).toContain('Your Presence');
+    expect(html).toContain('The Combined Self');
+  });
+
+  it('has the pricing strip and bundle CTA', () => {
+    expect(html).toContain('Orator ₹799 · Lookmaxxing ₹1,499 · Aura++ ₹1,999/mo (saves ₹299)');
+    expect(html).toContain('/audit?intent=bundle');
+    expect(html).toContain('Unlock both →');
+  });
+
+  it('introduces no new design tokens (uses existing var(--…) only)', () => {
+    // The section must not invent a --token; the only var() it references must
+    // be ones declared in :root. Guard against the earlier --ink-soft slip.
+    expect(html).not.toContain('--ink-soft');
+  });
+});

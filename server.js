@@ -30,6 +30,7 @@ const slog = createLogger('SERVER');
 // ─── Import routes & services ───
 const apiRoutes = require('./routes/api');
 const adminRoutes = require('./routes/admin');
+const auditRoutes = require('./routes/audit');
 const scheduler = require('./services/scheduler');
 const wati = require('./services/wati');
 const User = require('./models/User');
@@ -137,6 +138,7 @@ app.get('/admin', (req, res) => {
 
 app.use('/api', apiRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/audit', auditRoutes);
 
 // Backward compatibility — Wati calls /webhook. Call the handler in-process
 // (P1.3) instead of re-POSTing to localhost. All spam-gating lives in the

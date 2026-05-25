@@ -82,3 +82,14 @@ both strategies and let the founder pick by setting an env var — but we must n
 hard-reject today, or every real user reply would 401 in production before the
 secret is configured (the funnel would silently break). The boot banner prints
 the active guard mode so the gap is visible, and BACKLOG tracks setting the secret.
+
+### P0.3 — heavy/native deps (sharp, @aws-sdk/client-s3, web-push, ffmpeg) are lazy-required, NOT added to package.json yet
+`services/storage.js` (and later push/video) `require()` these inside try/catch
+and degrade gracefully: no `sharp` → store the original image without resize; no
+`@aws-sdk` or no `R2_*` → write to a local uploads dir; no `web-push` → push
+no-ops. Rationale: adding `sharp` to `package.json` makes it build natively on
+every Render deploy — if that build fails, `npm install` fails and the WHOLE app
+(including the working Orator funnel) stops deploying. We will not risk the live
+deploy overnight for storage features the founder must finish configuring anyway
+(R2 bucket, VAPID keys). The installs are queued as a single founder action in
+BACKLOG; until then the audit funnel works end-to-end against local storage.

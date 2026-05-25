@@ -1,6 +1,8 @@
 node_modules/
 .env
+.env.local
 *.log
+!PROGRESS.log
 audio_downloads/
 photo_uploads/
 users.json
@@ -9,4 +11,5 @@ scores.json
 aura_scores.json
 data/users.json
 data/waitlist.json
+coverage/
 .DS_Store

@@ -1,0 +1,4 @@
+# Progress Log
+# One line per step: [ISO8601] <task> — <what shipped>. Commit: <subject>
+
+[2026-05-25T18:50:03Z] AUTOPILOT START — read CLAUDE.md + investigated repo. Found: .env tracked w/ live secrets, scheduler sends on boot (spam risk via auto-deploy), Render auto-deploys main. Founder approved push-to-main + admin-only sends.

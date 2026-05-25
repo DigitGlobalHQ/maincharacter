@@ -32,7 +32,15 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'maincharacter2026';
 
 // ─── Middleware ───
-app.use(express.json({ limit: '10mb' }));
+// Capture the raw body so webhook signatures (Razorpay) can be verified.
+app.use(
+  express.json({
+    limit: '10mb',
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true }));
 
 // Static files — /public directory

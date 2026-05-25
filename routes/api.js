@@ -400,5 +400,86 @@ router.get('/payment/plans', (req, res) => {
   res.json(razorpay.PLANS);
 });
 
+// ═══════════════════════════════════════════════════════════════════
+// POST /api/payment/webhook — Razorpay → user upgrade (P1.2 / P2.2)
+// ═══════════════════════════════════════════════════════════════════
+
+const PAID_EVENTS = [
+  'payment_link.paid',
+  'payment.captured',
+  'subscription.activated',
+  'subscription.charged',
+];
+const CANCEL_EVENTS = ['subscription.cancelled', 'subscription.halted'];
+
+/** Pull the notes ({phone,name,plan}) off whichever entity the event carries. */
+function extractNotes(event) {
+  const p = (event && event.payload) || {};
+  const entity =
+    (p.payment_link && p.payment_link.entity) ||
+    (p.payment && p.payment.entity) ||
+    (p.subscription && p.subscription.entity) ||
+    {};
+  return entity.notes || {};
+}
+
+/**
+ * Apply a verified Razorpay event to the user record. Exported for tests.
+ * @param {object} event parsed Razorpay webhook body
+ */
+async function processPaymentEvent(event) {
+  const evt = event && event.event;
+  const notes = extractNotes(event);
+  const phone = notes.phone;
+  if (!phone) {
+    log('PAYMENT', `No phone in notes for event ${evt}`);
+    return { handled: false };
+  }
+  const user = User.getUserByPhone(phone);
+  if (!user) {
+    log('PAYMENT', `Unknown user ${phone} for event ${evt}`);
+    return { handled: false };
+  }
+
+  if (PAID_EVENTS.includes(evt)) {
+    const updates = { subscriptionStatus: 'active' };
+    if (!user.subscribedAt) updates.subscribedAt = new Date().toISOString();
+    if (user.rank === 'unawakened') updates.rank = 'seeker';
+    User.updateUser(phone, updates);
+    log('PAYMENT', `${user.name} (${phone}) → active via ${evt}`);
+    // Copy supplied by founder in the autopilot brief (not invented).
+    await wati.sendMessageSafe(
+      phone,
+      `◆ The Chamber is open, ${user.name}.\n\nDay 8 arrives tomorrow at your preferred time.\n\n◆ MainCharacter`
+    );
+    return { handled: true, status: 'active' };
+  }
+
+  if (CANCEL_EVENTS.includes(evt)) {
+    User.updateUser(phone, { subscriptionStatus: 'cancelled' });
+    log('PAYMENT', `${user.name} (${phone}) → cancelled via ${evt}`);
+    await wati.sendMessageSafe(
+      phone,
+      `◆ Your protocol pauses, ${user.name}.\n\nYour lexicon and rank remain yours. Reply RETURN when ready.\n\n◆ MainCharacter`
+    );
+    return { handled: true, status: 'cancelled' };
+  }
+
+  log('PAYMENT', `Ignored event ${evt}`);
+  return { handled: false };
+}
+
+router.post('/payment/webhook', (req, res) => {
+  const signature = req.headers['x-razorpay-signature'];
+  const raw = req.rawBody || Buffer.from(JSON.stringify(req.body || {}));
+  if (!razorpay.verifyWebhookSignature(raw, signature)) {
+    log('PAYMENT', 'Webhook rejected — invalid signature or RAZORPAY_WEBHOOK_SECRET unset');
+    return res.status(400).json({ error: 'invalid signature' });
+  }
+  res.json({ status: 'ok' });
+  processPaymentEvent(req.body).catch((err) => log('ERROR', `Payment webhook: ${err.message}`));
+});
+
 module.exports = router;
 module.exports.processWatiWebhook = processWatiWebhook;
+module.exports.processPaymentEvent = processPaymentEvent;

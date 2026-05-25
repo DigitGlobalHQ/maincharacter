@@ -84,17 +84,25 @@ function verifyPayment(orderId, paymentId, signature) {
 }
 
 /**
- * Verify Razorpay webhook signature.
+ * Verify a Razorpay webhook signature over the RAW request body.
+ * Returns false when the secret is unset or the signature is missing — we
+ * never accept an unverified webhook that mutates user/subscription state.
+ * @param {Buffer|string} rawBody exact bytes Razorpay signed
+ * @param {string} signature value of the x-razorpay-signature header
+ * @returns {boolean}
  */
-function verifyWebhookSignature(body, signature) {
-  if (!RAZORPAY_WEBHOOK_SECRET) return true; // Skip if no secret set
+function verifyWebhookSignature(rawBody, signature) {
+  if (!RAZORPAY_WEBHOOK_SECRET || !signature) return false;
 
-  const expectedSignature = crypto
+  const payload = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(String(rawBody));
+  const expected = crypto
     .createHmac('sha256', RAZORPAY_WEBHOOK_SECRET)
-    .update(body)
+    .update(payload)
     .digest('hex');
 
-  return expectedSignature === signature;
+  const a = Buffer.from(expected);
+  const b = Buffer.from(String(signature));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 /**

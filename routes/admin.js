@@ -8,8 +8,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const wati = require('../services/wati');
-
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'maincharacter2026';
+const auth = require('../lib/auth');
 
 let _log;
 function log(tag, msg) {
@@ -19,13 +18,33 @@ function log(tag, msg) {
   return _log.info(tag, msg);
 }
 
-// ─── Auth check (simple header-based) ───
-function requireAuth(req, res, next) {
-  const pw = req.headers['x-admin-password'] || req.query.pw;
-  if (pw !== ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Unauthorized' });
+// ─── Login → JWT (P1.4) ───
+router.post('/login', (req, res) => {
+  const { password } = req.body || {};
+  if (!auth.checkPassword(password)) {
+    log('LOGIN', 'Failed admin login attempt');
+    return res.status(401).json({ error: 'Invalid password' });
   }
-  next();
+  const token = auth.signAdminToken();
+  log('LOGIN', 'Admin authenticated');
+  res.json({ token, expiresIn: '12h' });
+});
+
+// ─── Auth middleware: Bearer JWT (or ?token=), with legacy header fallback
+// that is automatically disabled once ADMIN_PASSWORD_HASH is configured. ───
+function requireAuth(req, res, next) {
+  const header = req.headers['authorization'] || '';
+  const bearer = header.startsWith('Bearer ') ? header.slice(7) : null;
+  const token = bearer || req.query.token;
+  if (auth.verifyAdminToken(token)) return next();
+
+  // Legacy plaintext header — only honoured until a bcrypt hash is set.
+  if (!auth.hashConfigured()) {
+    const pw = req.headers['x-admin-password'] || req.query.pw;
+    if (auth.checkPassword(pw)) return next();
+  }
+
+  return res.status(401).json({ error: 'Unauthorized' });
 }
 
 // ─── Stats ───

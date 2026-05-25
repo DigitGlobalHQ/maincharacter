@@ -377,22 +377,31 @@
 </div>
 
 <script>
-let adminPw = '';
+let adminToken = '';
 let currentUsers = [];
 let selectedPhone = '';
 let scoreChart = null;
 
+function authHeaders(extra) {
+  return Object.assign({ 'Authorization': 'Bearer ' + adminToken }, extra || {});
+}
+
 function doLogin() {
-  adminPw = document.getElementById('pw-input').value;
-  fetch('/api/admin/stats?pw=' + encodeURIComponent(adminPw))
+  const password = document.getElementById('pw-input').value;
+  fetch('/api/admin/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  })
     .then(r => {
       if (!r.ok) throw new Error('bad');
       return r.json();
     })
     .then(data => {
+      adminToken = data.token;
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('admin-dashboard').style.display = 'block';
-      renderData(data);
+      loadData();
     })
     .catch(() => {
       document.getElementById('login-error').style.display = 'block';
@@ -400,7 +409,7 @@ function doLogin() {
 }
 
 function loadData() {
-  fetch('/api/admin/stats', { headers: { 'x-admin-password': adminPw } })
+  fetch('/api/admin/stats', { headers: authHeaders() })
     .then(r => r.json())
     .then(renderData)
     .catch(console.error);
@@ -436,12 +445,12 @@ function renderData(data) {
   }).join('');
 
   // Export link
-  document.getElementById('export-btn').href = '/api/admin/export?pw=' + encodeURIComponent(adminPw);
+  document.getElementById('export-btn').href = '/api/admin/export?token=' + encodeURIComponent(adminToken);
 }
 
 function openDetail(phone) {
   selectedPhone = phone;
-  fetch('/api/admin/user/' + phone, { headers: { 'x-admin-password': adminPw } })
+  fetch('/api/admin/user/' + phone, { headers: authHeaders() })
     .then(r => r.json())
     .then(user => {
       document.getElementById('detail-name').textContent = user.name + ' — ' + user.phone;
@@ -503,7 +512,7 @@ function sendCustomMsg() {
 
   fetch('/api/admin/send-message', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ phone: selectedPhone, message: msg }),
   })
   .then(r => r.json())
@@ -526,7 +535,7 @@ function doBroadcast() {
 
   fetch('/api/admin/broadcast', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ message: msg, filter }),
   })
   .then(r => r.json())

@@ -2,3 +2,24 @@
 # One line per step: [ISO8601] <task> — <what shipped>. Commit: <subject>
 
 [2026-05-25T18:50:03Z] AUTOPILOT START — read CLAUDE.md + investigated repo. Found: .env tracked w/ live secrets, scheduler sends on boot (spam risk via auto-deploy), Render auto-deploys main. Founder approved push-to-main + admin-only sends.
+[2026-05-25T18:58:43Z] P0.1 done — hygiene files (BACKLOG/DECISIONS/PROGRESS/eslint/prettier/editorconfig). Commit: chore(repo): bootstrap engineering hygiene
+[2026-05-25T18:58:43Z] P0.2 done — .env untracked, .env.example added, key rotation logged as founder action. Commit: chore(secrets): stop tracking .env
+[2026-05-25T18:58:43Z] P0.3 done — Vitest+supertest+coverage, CI workflow, 15 tests green. Commit: test(ci): add Vitest + CI
+[2026-05-25T18:58:43Z] P0.4 done — lib/log.js leveled logger; services/routes migrated off console.log. Commit: feat(log): add lib/log.js
+[2026-05-25T18:58:43Z] SAFETY done — WATI_SEND_MODE allowlist guard (default admin-only) + scheduler gate + /health. 13 tests. Commit: feat(wati): send-mode allowlist guard
+[2026-05-25T18:58:43Z] P0.5 done — scripts/smoke.js boot-and-probe, 9/9 checks. Commit: test(smoke): add scripts/smoke.js
+[2026-05-25T18:58:43Z] chore — untracked 1070 node_modules files. Pushed P0 batch (7 commits) to main; Render auto-deploy triggered.
+[2026-05-25T19:03:25Z] LIVE VERIFY — prod /health shows sendMode=allowlist, schedulerEnabled=true, totalUsers=0. Auto-deploy confirmed working; spam guard active in production.
+[2026-05-25T19:03:25Z] P1.7 done — Gemini prompt-injection guard + content snapshot. Commit: fix(gemini): guard scoring prompt
+[2026-05-25T19:03:25Z] P1.3+P1.6 done — in-process webhook handler (no localhost re-POST), idempotent enroll. 31 tests green. Commit: refactor(webhook): in-process handler + idempotent enroll
+[2026-05-25T19:08:43Z] P1.2 done — verified Razorpay webhook → user upgrade (active/cancelled) + signature fix. Commit: feat(payment): verified Razorpay webhook
+[2026-05-25T19:08:43Z] P1.8 done — Sentry wrapper (no-op w/o DSN) + express error handler. Commit: feat(obs): add Sentry
+[2026-05-25T19:08:43Z] P1.4 done — admin JWT login + bcrypt, legacy header auto-disabled once hash set. 53 tests. Commit: feat(admin): JWT login
+[2026-05-25T19:08:43Z] P1 batch pushed to main. P1.1 (Postgres) + P1.5 (worker split) deferred to BACKLOG (need founder infra: DATABASE_URL, paid dyno).
+[2026-05-25T19:15:40Z] P4.4+P4.5 done — helmet, rate limiting (webhook-exempt), enroll validation. 59 tests. Commit: feat(security): helmet, rate limiting, validation
+[2026-05-25T19:15:40Z] docs done — README + RUNBOOK. Commit: docs: add README + RUNBOOK
+[2026-05-25T19:15:40Z] P5.4 LIVE VERIFY — /health healthy, all config true, sendMode=allowlist; admin login 401, payment webhook 400 (rejects unsigned). All P0/P1/P4 builds confirmed deployed.
+[2026-05-25T19:15:40Z] P5.5 LIVE FUNNEL — enrolled ADMIN_PHONE; START NOW→day 1; daily reply→Gemini score recorded (5 dims) + chronicle. 3 real WhatsApps delivered to founder (welcome/Day1/evening). Funnel works end-to-end in prod.
+[2026-05-25T19:15:40Z] NOTE — live store is ephemeral; the 'Founder Test' user (918595833852, day 1) will be wiped by the next redeploy (the end-of-run push), so no unexpected 08:00 Day-2 send.
+[2026-05-25T19:17:36Z] coverage — added model/services/routes tests. 85 tests, ~74.7% overall (routes 73%, models 98.5%). Commit: test: raise coverage
+[2026-05-25T19:17:36Z] END OF RUN — shipped P0 (hygiene/secrets/CI/logger/smoke + Wati allowlist guard), most of P1 (webhook verify+payment upgrade, in-process webhook, admin JWT, idempotent enroll, prompt-injection guard, Sentry), P4 (helmet/rate-limit/validation), README+RUNBOOK. Live verified incl. real Day-1 funnel. DEFERRED (need founder infra): P1.1 Postgres, P1.5 worker split, P2 subscriptions/email/funnel-events, P3 voice/dashboard/timezone, P4.2/4.3 admin metrics+digest. See BACKLOG.md.

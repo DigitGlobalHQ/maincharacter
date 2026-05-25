@@ -31,5 +31,19 @@
 - [ ] Move JSON-file fallback out entirely once Postgres is stable for 7 days
 - [ ] P1.1 Postgres/Prisma migration — schema drafted, NOT wired (needs DATABASE_URL to test against; JSON store retained as default to avoid breaking prod overnight)
 
+## BUGS / INCONSISTENCIES FOUND (not yet fixed — out of overnight scope)
+- [ ] `START NOW` path (handleStartNow) does NOT call `addWordsLearned`, so a
+      user who starts via START NOW has an empty lexicon until the scheduler
+      sends Day 2. The scheduler path (sendMorningMessages) does add words.
+      Verified live: enrolled user had `wordsLearned: 0` after Day 1. Decide on
+      one source of truth for "add words when a day's morning message is sent".
+- [ ] `/api/webhook/wati` is open to the internet (no Wati signature check).
+      Implemented for Razorpay; Wati signature verification still TODO (confirm
+      Wati plan supports HMAC; else IP-allowlist). See CLAUDE.md landmine #5.
+
 ## COPY REVIEW QUEUE (founder must approve before shipping)
-(populate as TODO copy review markers are added in code)
+- Payment confirmation + cancellation WhatsApp copy in routes/api.js
+  (processPaymentEvent) was taken verbatim from the autopilot brief, not
+  invented — confirm it reads correctly in The Consultant's voice.
+- No new Consultant copy was improvised this run. The 7-day Orator content is
+  unchanged (guarded by a snapshot test in tests/orator-content.test.js).

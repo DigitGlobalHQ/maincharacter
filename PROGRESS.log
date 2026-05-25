@@ -36,3 +36,15 @@
 [2026-05-26T21:55:00Z] P3.2 done — routes/audit.js (POST session/quiz/photos/analyze, GET result/:token), mounted /api/audit. services/storage.js (R2 if R2_* + @aws-sdk present, else local /tmp; sharp resize if installed, else pass-through — all lazy-required, deploy-safe). Full funnel test session→quiz→photos→analyze→result + no-photos guard (P3.5a). 135 tests green. Commit: feat(audit): audit API routes + storage service (P3.2)
 [2026-05-26T22:15:00Z] P3.1+P3.4 done — public/audit.html 6-scene SPA (hook→quiz(12)→photos(client downscale)→analysis(min-8s reveal)→Aura Score(8-axis, weakest in violet)→diagnosis→paywall handoff to /upgrade). /audit now serves it; legacy prototype kept at /audit-legacy (rollback). Quiz Q1 verbatim from brief; Q2-12 drafted to spec, flagged TODO copy review. tests/audit-page.test.js + smoke /audit checks. 141 tests, smoke 12/12. Commit: feat(audit): 6-scene Aesthetic Audit funnel page (P3.1/P3.4)
 [2026-05-26T22:45:00Z] P4.2+P4.3 done — Razorpay Subscriptions: PLANS gain lookmaxxing(₹1,499)+auraplus(₹1,999, saves ₹299) with pillar mapping; createOrFetchPlan/createSubscription (mock-safe), resolvePlanForPillars (both→bundle). POST /api/payment/subscribe (phone-primary, links audit session, pending pillars). Webhook flips oratorActive/lookmaxxingActive per plan + sets lookmaxxingStartedAt; cancel un-sets per pillar; Aura++ computed. Launch-time test-key/mock warning. 13 tests incl. existing-Orator-adds-Lookmaxxing→Aura++ + per-pillar cancel. 154 tests, smoke 12/12. Commit: feat(payment): Razorpay subscriptions + Aura++ bundle math (P4.2/P4.3)
+[2026-05-26T22:55:00Z] LIVE VERIFY — prod /health healthy: env=production, gemini/wati/razorpay/adminPhone all true, sendMode=allowlist (KILL-SWITCH INTACT, untouched), scheduler on, totalUsers=0. All Night-2 pushes deployed cleanly; /audit + /api/audit live in prod.
+[2026-05-26T23:00:00Z] END OF NIGHT-2 RUN — SHIPPED (7 commits, 85→154 tests, smoke 12/12, all deployed):
+  P0.2/P0.5 decisions + data layer (AuditSession model, User Lookmaxxing fields, computeAuraStatus).
+  P1.1 START NOW lexicon bug FIXED. P1.2 Wati webhook verification FIXED (HMAC/IP/open).
+  P2 landing → 2-pillar + Aura++ reveal (locked copy guarded byte-identical).
+  P3 COMPLETE — free Aesthetic Audit funnel end-to-end live at /audit: 6-scene SPA → vision.scoreAesthetic (Gemini 2.0 multimodal, brand-safe fallback) → 8-axis Aura Score + diagnosis → paywall handoff. services/storage.js (R2/local, lazy native deps).
+  P4 (backend) — Razorpay Subscriptions + Aura++ bundle math (₹1,999, saves ₹299), /api/payment/subscribe, webhook flips oratorActive/lookmaxxingActive per pillar.
+  DEFERRED (large / gated on founder infra — see BACKLOG NIGHT-2 REMAINING P-BLOCKS):
+  P4.1 paywall.html page + P4.4 post-pay confirmation; P5 PWA shell (needs VAPID keys);
+  P6 mirror; P7 protocol; P8 hair tracker; P9 weekly reveal (needs ffmpeg in container);
+  P10 Day-30 re-audit; P11 cross-sell automation.
+  FOUNDER ACTIONS queued in BACKLOG: install sharp/@aws-sdk/web-push, add ffmpeg, create R2 bucket + VAPID keys, verify Razorpay Plans, review drafted audit-quiz copy, then flip WATI_SEND_MODE=all.

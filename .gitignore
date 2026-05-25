@@ -11,5 +11,9 @@ scores.json
 aura_scores.json
 data/users.json
 data/waitlist.json
+data/audit-sessions.json
+data/razorpay-plans.json
+maincharacter-uploads/
+/tmp/maincharacter-uploads/
 coverage/
 .DS_Store

@@ -78,6 +78,16 @@ function createUser({ name, phone, pillar = 'orator', preferredTime = '08:00' })
     subscriptionStatus: 'trial', // trial | active | cancelled
     razorpayCustomerId: null,
     notes: '',
+
+    // ── Night-2: Lookmaxxing + Aura++ (P0.5) ──
+    email: null,                 // optional secondary identifier (receipts/digests)
+    oratorActive: false,         // paid Orator subscription live
+    lookmaxxingActive: false,    // paid Lookmaxxing subscription live
+    // auraPlusPlus is computed, never stored — see computeAuraStatus().
+    mirrorLevel: 'raw',          // raw | polished | magnetic | radiant | sovereign
+    auditSessionId: null,        // links to the AuditSession that converted them
+    lookmaxxingStartedAt: null,  // ISO date Lookmaxxing protocol began (Day-30 trigger)
+    pushSubscription: null,      // web-push PushSubscription JSON (PWA notifications)
   };
 
   users[phone] = user;
@@ -239,6 +249,19 @@ function loadWaitlist() {
   }
 }
 
+/**
+ * Compute Aura++ status from the two subscription flags. Aura++ is a STATUS,
+ * not a SKU (DECISIONS.md, Night-2 #3): a user holds it when both pillars are
+ * active. Never stored — always derived so the flags stay the single truth.
+ * @param {object} user
+ * @returns {{ oratorActive: boolean, lookmaxxingActive: boolean, auraPlusPlus: boolean }}
+ */
+function computeAuraStatus(user) {
+  const oratorActive = !!(user && user.oratorActive);
+  const lookmaxxingActive = !!(user && user.lookmaxxingActive);
+  return { oratorActive, lookmaxxingActive, auraPlusPlus: oratorActive && lookmaxxingActive };
+}
+
 function addToWaitlist(phone, pillar) {
   const list = loadWaitlist();
   phone = phone.replace(/[\s+\-]/g, '');
@@ -265,6 +288,7 @@ module.exports = {
   addChronicle,
   addWordsLearned,
   masterWord,
+  computeAuraStatus,
   getAllUsers,
   getUsersForTime,
   getUsersForEveningTime,

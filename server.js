@@ -107,6 +107,12 @@ app.get('/welcome', (req, res) => {
 
 // Audit Funnel (existing)
 app.get('/audit', (req, res) => {
+  // Night-2 (P3.4): serve the new Aesthetic Audit funnel. Legacy prototype
+  // remains at index.html (served at /audit-legacy) for reference/rollback.
+  res.sendFile(path.join(__dirname, 'public', 'audit.html'));
+});
+
+app.get('/audit-legacy', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 

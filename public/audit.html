@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Aesthetic Audit — MainCharacter</title>
+<meta name="description" content="Five minutes. One reading. The room reads you before you speak — find out what it sees." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Sora:wght@200;300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --obsidian: #070708; --surface: #1c1c21; --ink: #f4f1ea; --ink-dim: #9b988f;
+    --ink-faint: #5c5a54; --gold: #e8b84b; --gold-deep: #8a6f31; --violet: #b06fd8;
+    --line: rgba(255,255,255,0.08);
+    --font-serif: 'Cormorant Garamond','Georgia',serif; --font-sans: 'Sora',sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--obsidian); color: var(--ink); font-family: var(--font-sans);
+    font-weight: 300; line-height: 1.6; -webkit-font-smoothing: antialiased;
+    min-height: 100vh; overflow-x: hidden; }
+  .scene { display: none; min-height: 100vh; padding: 64px 24px; max-width: 640px;
+    margin: 0 auto; flex-direction: column; justify-content: center; }
+  .scene.active { display: flex; animation: fade .6s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; } }
+  h1, h2 { font-family: var(--font-serif); font-weight: 500; line-height: 1.15; }
+  .eyebrow { color: var(--gold); font-size: 0.7rem; letter-spacing: 0.3em;
+    text-transform: uppercase; margin-bottom: 1.2rem; }
+  .hook h1 { font-size: clamp(2.2rem, 8vw, 3.4rem); font-style: italic; }
+  .hook p { color: var(--ink-dim); margin: 1.4rem 0 2.4rem; font-size: 1.1rem; }
+  .btn { background: transparent; border: 1px solid var(--gold); color: var(--gold);
+    font-family: var(--font-sans); font-size: 0.78rem; letter-spacing: 0.16em;
+    text-transform: uppercase; padding: 14px 30px; border-radius: 6px; cursor: pointer;
+    transition: all .4s ease; align-self: flex-start; }
+  .btn:hover { background: rgba(232,184,75,0.1); box-shadow: 0 0 24px rgba(232,184,75,0.18); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .progress { height: 2px; background: var(--line); border-radius: 2px; margin-bottom: 2.4rem; }
+  .progress__fill { height: 100%; background: var(--gold); border-radius: 2px;
+    width: 0; transition: width .4s ease; }
+  .q__cat { color: var(--violet); font-size: 0.7rem; letter-spacing: 0.2em;
+    text-transform: uppercase; margin-bottom: 0.8rem; }
+  .q__text { font-family: var(--font-serif); font-size: 1.6rem; margin-bottom: 1.8rem; }
+  .opt { display: block; width: 100%; text-align: left; background: var(--surface);
+    border: 1px solid var(--line); color: var(--ink); padding: 16px 18px; border-radius: 8px;
+    margin-bottom: 12px; cursor: pointer; font-family: var(--font-sans); font-size: 0.96rem;
+    transition: all .25s ease; }
+  .opt:hover, .opt.sel { border-color: var(--gold); background: rgba(232,184,75,0.06); }
+  textarea { width: 100%; background: var(--surface); border: 1px solid var(--line);
+    color: var(--ink); padding: 16px; border-radius: 8px; font-family: var(--font-sans);
+    font-size: 1rem; min-height: 120px; resize: vertical; }
+  .uploads { display: grid; gap: 14px; margin: 1.6rem 0 2rem; }
+  .upload { border: 1px dashed var(--line); border-radius: 10px; padding: 18px;
+    display: flex; align-items: center; gap: 14px; cursor: pointer; transition: border-color .3s; }
+  .upload.done { border-color: var(--gold); border-style: solid; }
+  .upload__label { flex: 1; }
+  .upload__label b { font-weight: 500; }
+  .upload__label span { display: block; color: var(--ink-faint); font-size: 0.82rem; }
+  .upload__check { color: var(--gold); font-size: 1.2rem; opacity: 0; }
+  .upload.done .upload__check { opacity: 1; }
+  .upload input { display: none; }
+  .analysis__line { color: var(--ink-dim); font-size: 1.1rem; font-style: italic;
+    font-family: var(--font-serif); min-height: 1.6em; }
+  .spinner { width: 40px; height: 40px; border: 2px solid var(--line);
+    border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite;
+    margin: 2rem 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .score__num { font-family: var(--font-serif); font-size: 6rem; color: var(--gold);
+    line-height: 1; }
+  .score__num small { font-size: 1.4rem; color: var(--ink-faint); }
+  .axes { margin: 2rem 0; }
+  .axis { margin-bottom: 14px; }
+  .axis__row { display: flex; justify-content: space-between; font-size: 0.85rem;
+    margin-bottom: 5px; }
+  .axis__name { color: var(--ink-dim); text-transform: capitalize; }
+  .axis__bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .axis__fill { height: 100%; background: var(--gold); border-radius: 3px; width: 0;
+    transition: width .8s ease; }
+  .axis--weak .axis__fill { background: var(--violet); }
+  .axis--weak .axis__name { color: var(--violet); }
+  .diagnosis { font-family: var(--font-serif); font-size: 1.25rem; line-height: 1.7; }
+  .diagnosis p { margin-bottom: 1.2rem; }
+  .err { color: #d8736f; font-size: 0.9rem; margin-top: 1rem; }
+  .muted { color: var(--ink-faint); font-size: 0.85rem; margin-top: 1.4rem; }
+</style>
+</head>
+<body>
+<!-- TODO copy review: quiz questions drafted to the brief's category spec
+     (Skin 3 / Hair 2 / Jaw 2 / Body 2 / Lifestyle 2 / Goals 1). Q1 (skin) is
+     verbatim from the brief; the rest are a working draft pending founder voice
+     approval. See BACKLOG → COPY REVIEW QUEUE. -->
+
+<!-- Scene 1: Hook -->
+<section class="scene hook active" id="scene-hook">
+  <div class="eyebrow">The Aesthetic Audit</div>
+  <h1>The room reads you before you speak.</h1>
+  <p>Five minutes. One reading. Yours.</p>
+  <button class="btn" onclick="startAudit()">Begin Audit</button>
+</section>
+
+<!-- Scene 2: Quiz -->
+<section class="scene" id="scene-quiz">
+  <div class="progress"><div class="progress__fill" id="quiz-progress"></div></div>
+  <div id="quiz-body"></div>
+  <div class="err" id="quiz-err"></div>
+</section>
+
+<!-- Scene 3: Photos -->
+<section class="scene" id="scene-photos">
+  <div class="eyebrow">The Reading</div>
+  <h2 style="font-size:1.8rem;">Stand in natural light. Camera at eye level. Neutral expression. We need the truth, not the angle.</h2>
+  <div class="uploads" id="uploads">
+    <label class="upload" data-kind="front"><div class="upload__label"><b>Front face</b><span>Straight on, eyes level</span></div><div class="upload__check">◆</div><input type="file" accept="image/*" capture="user" /></label>
+    <label class="upload" data-kind="side"><div class="upload__label"><b>Side profile</b><span>Jaw and neck line</span></div><div class="upload__check">◆</div><input type="file" accept="image/*" capture="user" /></label>
+    <label class="upload" data-kind="body"><div class="upload__label"><b>Full body</b><span>Posture, head to feet</span></div><div class="upload__check">◆</div><input type="file" accept="image/*" capture="environment" /></label>
+  </div>
+  <button class="btn" id="photos-btn" onclick="submitPhotos()" disabled>Submit for Reading</button>
+  <div class="err" id="photos-err"></div>
+</section>
+
+<!-- Scene 4: Analysis -->
+<section class="scene" id="scene-analysis" style="align-items:center;text-align:center;">
+  <div class="eyebrow">Reading</div>
+  <div class="spinner"></div>
+  <div class="analysis__line" id="analysis-line">Mapping skin signal…</div>
+</section>
+
+<!-- Scene 5/6: Score + Diagnosis -->
+<section class="scene" id="scene-result">
+  <div class="eyebrow">Your Aura Score</div>
+  <div class="score__num" id="score-num">—<small>/100</small></div>
+  <div class="axes" id="axes"></div>
+  <div class="diagnosis" id="diagnosis"></div>
+  <button class="btn" style="margin-top:2rem;" onclick="toPaywall()">See Your Protocol →</button>
+  <div class="muted">Your reading is free. No account needed to see it.</div>
+</section>
+
+<script>
+  const API = '';
+  let sessionToken = null;
+  let answers = {};
+  let qIndex = 0;
+  const photoFiles = {};
+
+  // Quiz — Q1 verbatim from brief; Q2-12 drafted to spec, pending copy review.
+  const QUIZ = [
+    { id: 'skin1', cat: 'Skin', text: 'Your morning ritual when you look at the mirror — what happens after?',
+      opts: ['I cleanse, moisturise, sunscreen', 'Water and out the door', "Nothing — that's not my world yet", 'Skip — I have a routine already'] },
+    { id: 'skin2', cat: 'Skin', text: 'By late afternoon, your skin reads as —',
+      opts: ['Even and calm', 'Shiny through the centre', 'Tight and dry', "I've never paid attention"] },
+    { id: 'skin3', cat: 'Skin', text: 'When something flares — a breakout, redness — you —',
+      opts: ['Treat it deliberately', 'Wait it out', 'Cover it', 'It rarely happens'] },
+    { id: 'hair1', cat: 'Hair', text: 'The hairline you see now, against the one from two years ago —',
+      opts: ['Holding', 'Quietly retreating', 'Clearly thinner', "I avoid the question"] },
+    { id: 'hair2', cat: 'Hair', text: 'Your scalp, most days —',
+      opts: ['Comfortable', 'Itchy or flaky', 'Oily by evening', 'Unremarkable'] },
+    { id: 'jaw1', cat: 'Jaw & Face', text: 'In a photo, your jawline reads as —',
+      opts: ['Defined', 'Soft at the edges', 'Lost under the chin', 'Depends on the angle'] },
+    { id: 'jaw2', cat: 'Jaw & Face', text: 'At rest, your mouth and tongue sit —',
+      opts: ['Tongue to the roof, lips closed', 'Mouth slightly open', "I don't know what mine does", 'Jaw tends to clench'] },
+    { id: 'body1', cat: 'Body & Posture', text: 'Catch your reflection walking past glass — your posture is —',
+      opts: ['Tall, shoulders back', 'Rounded forward', 'Head ahead of the spine', 'Better when I notice'] },
+    { id: 'body2', cat: 'Body & Posture', text: 'Your training, honestly —',
+      opts: ['Consistent and structured', 'On and off', 'Not currently', 'Just started'] },
+    { id: 'life1', cat: 'Lifestyle', text: 'Your sleep, most nights —',
+      opts: ['In bed by eleven', 'Midnight or later', 'Irregular', 'Broken'] },
+    { id: 'life2', cat: 'Lifestyle', text: 'Sunlight on your face before nine in the morning —',
+      opts: ['Most days', 'Sometimes', 'Rarely', 'Never thought about it'] },
+    { id: 'goals', cat: 'Goals', text: 'In your own words — what would you change first, and why?', open: true },
+  ];
+
+  function show(id) {
+    document.querySelectorAll('.scene').forEach((s) => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  async function startAudit() {
+    try {
+      const intent = new URLSearchParams(location.search).get('intent');
+      const res = await fetch(API + '/api/audit/session', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intent }),
+      });
+      const data = await res.json();
+      sessionToken = data.sessionToken;
+      qIndex = 0; renderQuestion(); show('scene-quiz');
+    } catch (e) { alert('Could not start. Try again.'); }
+  }
+
+  function renderQuestion() {
+    const q = QUIZ[qIndex];
+    document.getElementById('quiz-progress').style.width = ((qIndex) / QUIZ.length) * 100 + '%';
+    const body = document.getElementById('quiz-body');
+    let html = `<div class="q__cat">${q.cat}</div><div class="q__text">${q.text}</div>`;
+    if (q.open) {
+      html += `<textarea id="open-answer" placeholder="A sentence or two.">${answers[q.id] || ''}</textarea>
+        <button class="btn" style="margin-top:1.4rem;" onclick="answerOpen()">Reveal My Reading →</button>`;
+    } else {
+      html += q.opts.map((o, i) => `<button class="opt" onclick="answer('${q.id}', ${i})">${o}</button>`).join('');
+    }
+    body.innerHTML = html;
+  }
+
+  function answer(id, optIndex) {
+    answers[id] = QUIZ[qIndex].opts[optIndex];
+    next();
+  }
+  function answerOpen() {
+    answers['goals'] = (document.getElementById('open-answer').value || '').slice(0, 500);
+    next();
+  }
+  async function next() {
+    qIndex++;
+    if (qIndex < QUIZ.length) { renderQuestion(); return; }
+    // Quiz complete — persist, move to photos.
+    document.getElementById('quiz-progress').style.width = '100%';
+    await fetch(API + '/api/audit/quiz', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionToken, answers }),
+    });
+    show('scene-photos');
+  }
+
+  // Photo uploads with client-side downscale to <=1024px.
+  document.querySelectorAll('#uploads .upload').forEach((label) => {
+    const input = label.querySelector('input');
+    input.addEventListener('change', async () => {
+      if (!input.files[0]) return;
+      const blob = await downscale(input.files[0], 1024);
+      photoFiles[label.dataset.kind] = blob;
+      label.classList.add('done');
+      const ready = ['front', 'side', 'body'].every((k) => photoFiles[k]);
+      document.getElementById('photos-btn').disabled = !ready;
+    });
+  });
+
+  function downscale(file, max) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = img.width * scale; c.height = img.height * scale;
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob((b) => resolve(b), 'image/jpeg', 0.85);
+      };
+      img.onerror = () => resolve(file);
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  async function submitPhotos() {
+    const btn = document.getElementById('photos-btn');
+    btn.disabled = true; btn.textContent = 'Uploading…';
+    try {
+      const fd = new FormData();
+      fd.append('sessionToken', sessionToken);
+      ['front', 'side', 'body'].forEach((k) => fd.append(k, photoFiles[k], k + '.jpg'));
+      const res = await fetch(API + '/api/audit/photos', { method: 'POST', body: fd });
+      if (!res.ok) throw new Error('upload failed');
+      runAnalysis();
+    } catch (e) {
+      document.getElementById('photos-err').textContent = 'Upload failed. Try again.';
+      btn.disabled = false; btn.textContent = 'Submit for Reading';
+    }
+  }
+
+  async function runAnalysis() {
+    show('scene-analysis');
+    const lines = ['Mapping skin signal…', 'Analysing facial geometry…', 'Assessing hair density…', 'Reading posture…'];
+    let li = 0;
+    const lineEl = document.getElementById('analysis-line');
+    const ticker = setInterval(() => { lineEl.textContent = lines[li++ % lines.length]; }, 2000);
+    const started = Date.now();
+    try {
+      const res = await fetch(API + '/api/audit/analyze', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionToken }),
+      });
+      const data = await res.json();
+      // Hold a minimum 8s of reveal so it never feels fake-instant.
+      const wait = Math.max(0, 8000 - (Date.now() - started));
+      setTimeout(() => { clearInterval(ticker); renderResult(data); }, wait);
+    } catch (e) {
+      clearInterval(ticker);
+      lineEl.textContent = 'The reading failed. Refresh to try again.';
+    }
+  }
+
+  function renderResult(data) {
+    const axes = data.scores || {};
+    const vals = Object.values(axes);
+    const overall = Math.round(vals.reduce((a, b) => a + b, 0) / (vals.length || 1));
+    const numEl = document.getElementById('score-num');
+    numEl.innerHTML = overall + '<small>/100</small>';
+
+    document.getElementById('axes').innerHTML = Object.entries(axes).map(([k, v]) => {
+      const weak = k === data.weakestAxis ? ' axis--weak' : '';
+      const label = k.replace(/([A-Z])/g, ' $1');
+      return `<div class="axis${weak}"><div class="axis__row"><span class="axis__name">${label}</span><span>${v}</span></div>
+        <div class="axis__bar"><div class="axis__fill" data-w="${v}"></div></div></div>`;
+    }).join('');
+
+    document.getElementById('diagnosis').innerHTML =
+      (data.diagnosis || '').split('\n').filter(Boolean).map((p) => `<p>${p}</p>`).join('');
+
+    show('scene-result');
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.axis__fill').forEach((f) => { f.style.width = f.dataset.w + '%'; });
+    });
+  }
+
+  function toPaywall() {
+    // P4 paywall ships separately; route through the existing upgrade page,
+    // carrying the audit session + any bundle intent.
+    const intent = new URLSearchParams(location.search).get('intent');
+    const q = new URLSearchParams({ from: 'audit', session: sessionToken || '' });
+    if (intent) q.set('to', intent === 'bundle' ? 'auraplus' : intent);
+    location.href = '/upgrade?' + q.toString();
+  }
+</script>
+</body>
+</html>

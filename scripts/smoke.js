@@ -81,6 +81,19 @@ async function run() {
     const plansJson = await plans.json();
     check('GET /api/payment/plans → 200', plans.status === 200);
     check('/api/payment/plans has seeker plan', plansJson.seeker && plansJson.seeker.amount === 79900);
+
+    // audit funnel (Night-2 P3)
+    const audit = await fetch(`${BASE}/audit`);
+    const auditBody = await audit.text();
+    check('GET /audit → 200', audit.status === 200);
+    check('/audit serves the Aesthetic Audit funnel', /The Aesthetic Audit/.test(auditBody));
+    const session = await fetch(`${BASE}/api/audit/session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const sessionJson = await session.json();
+    check('POST /api/audit/session → 200 with token', session.status === 200 && !!sessionJson.sessionToken);
   } finally {
     server.kill('SIGTERM');
     await wait(200);

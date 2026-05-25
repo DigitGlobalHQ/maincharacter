@@ -8,14 +8,21 @@
 
 **MainCharacter** is a WhatsApp-first personal-growth platform. Users enrol once and receive a daily protocol over WhatsApp from a persona called **"The Consultant."** They reply (text or voice note). Gemini scores the reply across five dimensions. On Day 7 they get a personalised **Evolution Report** and are offered a paid subscription.
 
-Three product **pillars**:
-- **The Orator** (LIVE) — speech, voice, communication. 7-day trial protocol exists end-to-end.
-- **The Aesthetic** (PROTOTYPED, NOT WIRED) — physical presence; an aesthetic-audit funnel HTML exists in `/maincomponent-claude/maincharacter/aesthetic-audit-prototype.html`.
-- **The Sage** (WAITLIST ONLY) — wisdom & mindset.
+**Two product pillars** (launch scope; Sage deferred):
 
-**Ranks** the user progresses through: Unawakened → Seeker → Ascendant → Luminary → Sovereign.
+- **The Orator** (LIVE) — speech, voice, communication. WhatsApp-delivered. 7-day trial protocol end-to-end.
+- **Lookmaxxing** (formerly "Aesthetic") — physical presence. **Web-only PWA**, NOT WhatsApp-delivered. Daily morning mirror selfie + personalised protocol checklist + weekly reveal video + Day-30 re-audit. Audit-funnel reference prototype: `/maincomponent-claude/maincharacter/aesthetic-audit-prototype.html`.
+- **The Sage** — DEFERRED. Mention in landing footer only.
 
-**Pricing:** ₹799/mo Seeker, ₹1,499/mo Sovereign. Razorpay.
+**Aura++** is the **bundle status** when a user holds BOTH paid subscriptions. NOT a separate product or SKU. Implemented as a computed flag (`oratorActive && lookmaxxingActive`). Bundle pricing ₹1,999/mo automatically applies at checkout when both are selected; saves ₹299 vs separate.
+
+**Ranks** the user progresses through: Unawakened → Seeker → Ascendant → Luminary → Sovereign (Orator). Mirror Levels for Lookmaxxing: Raw → Polished → Magnetic → Radiant → Sovereign.
+
+**Pricing:**
+- Orator ₹799/mo (Seeker plan)
+- Lookmaxxing ₹1,499/mo
+- Aura++ bundle ₹1,999/mo (auto-applied when both selected)
+- All Razorpay Subscriptions (recurring), NOT one-shot links.
 
 **Domain:** `https://maincharacter.digitglobalservices.com` (Render.com).
 
@@ -131,6 +138,13 @@ Set in Render dashboard (NOT in committed `.env`):
 | `REDIS_URL` | new — Upstash Redis for queue/cache | add |
 | `RESEND_API_KEY` | new — transactional email | add |
 | `SENTRY_DSN` | new — error monitoring | add |
+| `WATI_SEND_MODE` | `all` / `allowlist` / `off` — global send guard (defaults to `allowlist`) | yes |
+| `WEB_PUSH_VAPID_PUBLIC` | VAPID public key for PWA push notifications | add |
+| `WEB_PUSH_VAPID_PRIVATE` | VAPID private key for PWA push notifications | add |
+| `R2_ACCOUNT_ID` | Cloudflare R2 (object storage for daily mirror photos + reveal videos) | add |
+| `R2_ACCESS_KEY_ID` | R2 access key | add |
+| `R2_SECRET_ACCESS_KEY` | R2 secret | add |
+| `R2_BUCKET` | R2 bucket name | add |
 | `NODE_ENV` | `production` | yes |
 | `PORT` | `3000` | yes |
 

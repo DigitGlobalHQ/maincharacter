@@ -12,12 +12,14 @@
   "rules": {
     "no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
     "no-console": "off",
-    "no-empty": ["warn", { "allowEmptyCatch": true }]
+    "no-empty": ["warn", { "allowEmptyCatch": true }],
+    "no-useless-escape": "warn"
   },
   "overrides": [
     {
-      "files": ["tests/**/*.js", "scripts/**/*.js"],
-      "env": { "node": true }
+      "files": ["tests/**/*.js", "*.config.js"],
+      "parserOptions": { "sourceType": "module" },
+      "env": { "node": true, "es2022": true }
     }
   ]
 }

@@ -5,7 +5,10 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "echo \"No tests yet\" && exit 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "smoke": "node scripts/smoke.js",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{js,json,md}\"",
     "format:check": "prettier --check \"**/*.{js,json,md}\""
@@ -27,8 +30,11 @@
     "razorpay": "^2.9.6"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.8",
     "eslint": "^8.57.1",
-    "prettier": "^3.4.2"
+    "prettier": "^3.4.2",
+    "supertest": "^7.0.0",
+    "vitest": "^2.1.8"
   }
 }
 

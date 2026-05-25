@@ -93,6 +93,16 @@ router.post('/enroll', enrollValidators, async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════
 
 router.post('/webhook/wati', (req, res) => {
+  const v = wati.verifyWebhookRequest({
+    rawBody: req.rawBody,
+    body: req.body,
+    signature: req.headers['x-wati-signature'],
+    ip: req.ip,
+  });
+  if (!v.ok) {
+    log('WEBHOOK', `Rejected (${v.mode}): ${v.reason}`);
+    return res.status(401).json({ error: 'unauthorized' });
+  }
   res.json({ status: 'received' }); // Respond to Wati immediately
   processWatiWebhook(req.body).catch((err) =>
     log('ERROR', `Webhook handler error: ${err.message}`)
@@ -210,6 +220,14 @@ async function handleStartNow(user) {
     awaitingResponse: true,
     status: 'active',
   });
+
+  // Seed the Day-1 lexicon. The scheduler path (sendMorningMessages) does this
+  // for Day N+1; START NOW must do the same for Day 1 or the user's lexicon
+  // stays empty until Day 2 (Night-1 bug). Source of truth: words are forged
+  // when a day's morning message is sent.
+  if (DAYS[1]) {
+    User.addWordsLearned(user.phone, DAYS[1].words, 1);
+  }
 
   // Send Day 1 morning message
   const morningMsg = buildMorningMessage(1, user.name);

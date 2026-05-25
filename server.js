@@ -142,6 +142,13 @@ app.use('/api/admin', adminRoutes);
 // (P1.3) instead of re-POSTing to localhost. All spam-gating lives in the
 // handler, so there is a single source of truth for filtering.
 app.post('/webhook', (req, res) => {
+  const v = wati.verifyWebhookRequest({
+    rawBody: req.rawBody,
+    body: req.body,
+    signature: req.headers['x-wati-signature'],
+    ip: req.ip,
+  });
+  if (!v.ok) return res.status(401).json({ error: 'unauthorized' });
   res.json({ status: 'received' });
   apiRoutes.processWatiWebhook(req.body);
 });
@@ -235,6 +242,8 @@ app.listen(PORT, () => {
   console.log('');
 
   console.log(`  Wati send mode: ${wati.getSendMode().toUpperCase()}`);
+  const guard = wati.webhookGuardMode();
+  console.log(`  Webhook guard:  ${guard.toUpperCase()}${guard === 'open' ? ' — set WATI_WEBHOOK_SECRET to verify incoming webhooks' : ''}`);
   console.log('═'.repeat(62));
   console.log('');
 

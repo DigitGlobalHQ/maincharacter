@@ -14,6 +14,7 @@
  */
 
 const axios = require('axios');
+const crypto = require('crypto');
 const { createLogger } = require('../lib/log');
 
 const log = createLogger('WATI');
@@ -167,6 +168,55 @@ async function sendMessageSafe(phone, text) {
   }
 }
 
+/**
+ * Verify an incoming Wati webhook request (P1.2, CLAUDE.md landmine #5).
+ *
+ * Wati's current plan does not document an HMAC signature header, so we support
+ * BOTH strategies and use whichever is configured (HMAC preferred):
+ *   1. HMAC  — if WATI_WEBHOOK_SECRET is set, the `x-wati-signature` header must
+ *              equal HMAC-SHA256(rawBody) in hex (timing-safe compare).
+ *   2. IP    — else if WATI_WEBHOOK_ALLOWED_IPS (comma-separated) is set, the
+ *              request IP must be in the list. Requires `trust proxy` on Render.
+ *   3. open  — if neither is set, accept and warn, so webhooks keep working in
+ *              production until the founder sets a secret. See DECISIONS.md.
+ *
+ * @param {{ rawBody?: Buffer|string, body?: object, signature?: string, ip?: string }} req
+ * @returns {{ ok: boolean, mode: 'hmac'|'ip'|'open', reason?: string }}
+ */
+function verifyWebhookRequest({ rawBody, body, signature, ip } = {}) {
+  const secret = process.env.WATI_WEBHOOK_SECRET || '';
+  const allowedIps = (process.env.WATI_WEBHOOK_ALLOWED_IPS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (secret) {
+    if (!signature) return { ok: false, mode: 'hmac', reason: 'missing x-wati-signature' };
+    const payload = Buffer.isBuffer(rawBody)
+      ? rawBody
+      : Buffer.from(rawBody != null ? String(rawBody) : JSON.stringify(body || {}));
+    const expected = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+    const a = Buffer.from(expected);
+    const b = Buffer.from(String(signature));
+    const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
+    return { ok, mode: 'hmac', reason: ok ? undefined : 'signature mismatch' };
+  }
+
+  if (allowedIps.length) {
+    const ok = allowedIps.includes(String(ip || ''));
+    return { ok, mode: 'ip', reason: ok ? undefined : `ip ${ip} not in allowlist` };
+  }
+
+  return { ok: true, mode: 'open', reason: 'no WATI_WEBHOOK_SECRET — accepting unsigned' };
+}
+
+/** Human-readable description of the active webhook guard, for the boot banner. */
+function webhookGuardMode() {
+  if (process.env.WATI_WEBHOOK_SECRET) return 'hmac';
+  if ((process.env.WATI_WEBHOOK_ALLOWED_IPS || '').trim()) return 'ip';
+  return 'open';
+}
+
 module.exports = {
   sendMessage,
   sendMessageSafe,
@@ -175,4 +225,6 @@ module.exports = {
   getSendMode,
   isAllowed,
   allowedNumbers,
+  verifyWebhookRequest,
+  webhookGuardMode,
 };

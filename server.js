@@ -22,6 +22,7 @@ const fs = require('fs');
 const apiRoutes = require('./routes/api');
 const adminRoutes = require('./routes/admin');
 const scheduler = require('./services/scheduler');
+const wati = require('./services/wati');
 const User = require('./models/User');
 
 // ─── App setup ───
@@ -138,7 +139,13 @@ app.get('/health', (req, res) => {
       gemini: !!process.env.GEMINI_API_KEY,
       wati: !!process.env.WATI_API_KEY,
       razorpay: !!process.env.RAZORPAY_KEY_ID,
-      adminPhone: process.env.ADMIN_PHONE ? '✓' : '✗',
+      adminPhone: !!process.env.ADMIN_PHONE,
+      sentry: !!process.env.SENTRY_DSN,
+      database: !!process.env.DATABASE_URL,
+    },
+    wati: {
+      sendMode: wati.getSendMode(),
+      schedulerEnabled: process.env.RUN_SCHEDULER !== 'false',
     },
     metrics: {
       totalUsers: userCount,
@@ -188,6 +195,14 @@ app.listen(PORT, () => {
   console.log('═'.repeat(62));
   console.log('');
 
-  // Start the scheduler
-  scheduler.start();
+  console.log(`  Wati send mode: ${wati.getSendMode().toUpperCase()}`);
+  console.log('═'.repeat(62));
+  console.log('');
+
+  // Start the scheduler (skip when RUN_SCHEDULER=false, e.g. tests / worker split)
+  if (process.env.RUN_SCHEDULER !== 'false') {
+    scheduler.start();
+  } else {
+    console.log('[server] RUN_SCHEDULER=false — scheduler not started');
+  }
 });

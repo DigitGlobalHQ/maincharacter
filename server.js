@@ -14,9 +14,16 @@
 
 require('dotenv').config();
 
+// Initialise error monitoring before anything else (no-op without SENTRY_DSN).
+const sentry = require('./lib/sentry');
+sentry.init();
+
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const { createLogger } = require('./lib/log');
+
+const slog = createLogger('SERVER');
 
 // ─── Import routes & services ───
 const apiRoutes = require('./routes/api');
@@ -147,6 +154,20 @@ function formatUptime(seconds) {
   const s = Math.floor(seconds % 60);
   return `${h}h ${m}m ${s}s`;
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// ERROR HANDLING (must be after all routes)
+// ═══════════════════════════════════════════════════════════════════
+
+sentry.setupExpressErrorHandler(app);
+
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, _next) => {
+  sentry.captureException(err);
+  slog.error('UNHANDLED', err.message, { path: req.path, stack: err.stack });
+  if (res.headersSent) return;
+  res.status(500).json({ error: 'Internal server error' });
+});
 
 // ═══════════════════════════════════════════════════════════════════
 // START SERVER + SCHEDULER

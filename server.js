@@ -137,6 +137,11 @@ app.get('/paywall', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'paywall.html'));
 });
 
+// Post-payment confirmation (P6) — Razorpay callback lands here.
+app.get('/payment-confirmed', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'payment-confirmed.html'));
+});
+
 // Audit result magic-link target (audit-confirmation email). Serves the audit
 // SPA; deep result rehydration from the link is a V4 item (BACKLOG).
 app.get('/audit/result/:token', (req, res) => {

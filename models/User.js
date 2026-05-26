@@ -114,6 +114,17 @@ function getUserByToken(token) {
 }
 
 /**
+ * Get user by their Razorpay subscription id (set at checkout). Used by the
+ * post-payment confirmation page (P6).
+ * @param {string} subscriptionId
+ */
+function getUserBySubscriptionId(subscriptionId) {
+  if (!subscriptionId) return null;
+  const users = loadUsers();
+  return Object.values(users).find(u => u.razorpaySubscriptionId === subscriptionId) || null;
+}
+
+/**
  * Update user fields (partial update).
  */
 function updateUser(phone, updates) {
@@ -283,6 +294,7 @@ module.exports = {
   createUser,
   getUserByPhone,
   getUserByToken,
+  getUserBySubscriptionId,
   updateUser,
   addScore,
   addChronicle,

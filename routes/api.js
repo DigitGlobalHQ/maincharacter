@@ -528,6 +528,9 @@ router.post('/payment/subscribe', async (req, res) => {
       email: email || user.email || '',
     });
 
+    // Persist the subscription id so the post-payment page can look the user up.
+    if (sub && sub.id) User.updateUser(cleanPhone, { razorpaySubscriptionId: sub.id });
+
     log('PAYMENT', `subscribe ${cleanPhone} → ${resolvedPlan} [${planPillars.join(',')}]${sub.mock ? ' (mock)' : ''}`);
     res.json({
       success: true,
@@ -540,6 +543,50 @@ router.post('/payment/subscribe', async (req, res) => {
     log('ERROR', `subscribe failed: ${err.message}`);
     res.status(500).json({ error: 'could not create subscription' });
   }
+});
+
+// GET /api/payment/status — backing data for the post-payment page (P6.2).
+// Query: subscriptionId (required) [+ paymentId, signature from Razorpay's
+// callback for verification]. Looks the user up by subscription id and reports
+// their live activation flags. Never leaks phone/PII beyond name.
+router.get('/payment/status', (req, res) => {
+  const { subscriptionId, paymentId, signature } = req.query || {};
+  if (!subscriptionId) return res.status(400).json({ error: 'subscriptionId required' });
+
+  const user = User.getUserBySubscriptionId(String(subscriptionId));
+  if (!user) {
+    // Webhook may not have landed yet, or unknown id. Page shows a graceful
+    // "being verified" message and offers a refresh.
+    return res.json({ found: false });
+  }
+
+  // Verify the callback signature when the params + secret are present. A bad
+  // signature is reported (verified:false) rather than hard-failing, so a user
+  // who genuinely paid still sees their status from the webhook-updated record.
+  let verified = false;
+  if (paymentId && signature) {
+    verified = razorpay.verifySubscriptionPayment(String(paymentId), String(subscriptionId), String(signature));
+    if (!verified) log('PAYMENT', `status: bad signature for ${subscriptionId}`);
+  }
+
+  const status = User.computeAuraStatus(user);
+  const planKey = user.pendingPlan || (user.oratorActive && user.lookmaxxingActive ? 'auraplus' : user.lookmaxxingActive ? 'lookmaxxing' : 'seeker');
+  const plan = razorpay.PLANS[planKey] || null;
+  const nextBilling = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  res.json({
+    found: true,
+    verified,
+    name: user.name || 'Seeker',
+    planKey,
+    planLabel: plan ? plan.label : 'Subscription',
+    amount: plan ? plan.amount : null,
+    oratorActive: !!user.oratorActive,
+    lookmaxxingActive: !!user.lookmaxxingActive,
+    auraPlusPlus: status.auraPlusPlus,
+    subscriptionActive: user.subscriptionStatus === 'active',
+    nextBillingDate: nextBilling.toISOString(),
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -592,11 +639,26 @@ async function processPaymentEvent(event) {
     const updates = { subscriptionStatus: 'active' };
     if (!user.subscribedAt) updates.subscribedAt = new Date().toISOString();
     if (user.rank === 'unawakened') updates.rank = 'seeker';
-    if (pillars.includes('orator')) updates.oratorActive = true;
+    if (pillars.includes('orator')) {
+      updates.oratorActive = true;
+      // P6.4: a paywall-converted Orator who has never received a morning message
+      // is primed so the scheduler sends Day 1 at their preferred time tomorrow.
+      // (A trial user mid-protocol — day>0 — is left untouched.)
+      if (user.day === 0 && !user.lastMorningSent) {
+        updates.day = 0;
+        updates.awaitingResponse = false;
+        updates.status = 'active';
+      }
+    }
     if (pillars.includes('lookmaxxing')) {
       updates.lookmaxxingActive = true;
       if (!user.lookmaxxingStartedAt) updates.lookmaxxingStartedAt = new Date().toISOString();
     }
+    // Capture the subscription id from the event if checkout didn't store it
+    // (lets the post-payment page find the user by subscription id).
+    const evtSubId =
+      (event.payload && event.payload.subscription && event.payload.subscription.entity && event.payload.subscription.entity.id) || '';
+    if (evtSubId && !user.razorpaySubscriptionId) updates.razorpaySubscriptionId = evtSubId;
     User.updateUser(phone, updates);
     const updatedUser = { ...user, ...updates };
     const status = User.computeAuraStatus(updatedUser);

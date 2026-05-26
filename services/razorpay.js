@@ -134,6 +134,26 @@ function verifyPayment(orderId, paymentId, signature) {
 }
 
 /**
+ * Verify a Razorpay subscription checkout callback signature.
+ * Razorpay signs HMAC-SHA256(`${paymentId}|${subscriptionId}`, KEY_SECRET).
+ * Returns false when the secret/params are missing — never trust unverified.
+ * @param {string} paymentId razorpay_payment_id
+ * @param {string} subscriptionId razorpay_subscription_id
+ * @param {string} signature razorpay_signature
+ * @returns {boolean}
+ */
+function verifySubscriptionPayment(paymentId, subscriptionId, signature) {
+  if (!RAZORPAY_KEY_SECRET || !paymentId || !subscriptionId || !signature) return false;
+  const expected = crypto
+    .createHmac('sha256', RAZORPAY_KEY_SECRET)
+    .update(`${paymentId}|${subscriptionId}`)
+    .digest('hex');
+  const a = Buffer.from(expected);
+  const b = Buffer.from(String(signature));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+/**
  * Verify a Razorpay webhook signature over the RAW request body.
  * Returns false when the secret is unset or the signature is missing — we
  * never accept an unverified webhook that mutates user/subscription state.
@@ -283,6 +303,7 @@ module.exports = {
   resolvePlanForPillars,
   createOrder,
   verifyPayment,
+  verifySubscriptionPayment,
   verifyWebhookSignature,
   createPaymentLink,
   createOrFetchPlan,

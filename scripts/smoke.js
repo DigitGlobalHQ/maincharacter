@@ -99,6 +99,12 @@ async function run() {
     check('GET /paywall → 200', paywall.status === 200);
     check('/paywall has all three plan cards', /The Orator/.test(paywallBody) && /Lookmaxxing/.test(paywallBody) && /Aura\+\+/.test(paywallBody));
 
+    // payment-confirmed page (Night-3 P6)
+    const confirmed = await fetch(`${BASE}/payment-confirmed`);
+    check('GET /payment-confirmed → 200', confirmed.status === 200);
+    const statusMissing = await fetch(`${BASE}/api/payment/status`);
+    check('GET /api/payment/status without id → 400', statusMissing.status === 400);
+
     // legacy Wati webhook retired → 308 redirect
     const watiRedirect = await fetch(`${BASE}/api/webhook/wati`, { method: 'POST', redirect: 'manual' });
     check('POST /api/webhook/wati → 308 redirect', watiRedirect.status === 308);

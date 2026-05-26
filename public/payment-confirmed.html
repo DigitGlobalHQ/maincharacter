@@ -1,0 +1,141 @@
+<!doctype html>
+<!-- Post-payment confirmation (P6). Consultant voice; ◆ only, no exclamation marks. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MainCharacter — The Chamber is Open</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Sora:wght@200;300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root { --obsidian:#070708; --panel:#0d0d0f; --line:#1d1d20; --gold:#e8b84b; --ink:#f4f1ea; --muted:#8a877f; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--obsidian); color: var(--ink);
+      font-family: 'Sora', system-ui, sans-serif; font-weight: 300; line-height: 1.6;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px;
+      background-image: radial-gradient(circle at 50% 0%, rgba(232,184,75,0.08), transparent 55%);
+    }
+    .card { max-width: 600px; width: 100%; text-align: center; }
+    .eyebrow { color: var(--gold); letter-spacing: 4px; font-size: 11px; text-transform: uppercase; }
+    h1 { font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500; font-size: clamp(32px, 6vw, 50px); line-height: 1.12; margin: 16px 0 10px; }
+    .lede { color: var(--muted); font-size: 16px; margin-bottom: 32px; }
+    .steps { text-align: left; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 8px 8px; margin: 0 auto 28px; }
+    .step { display: flex; gap: 14px; padding: 18px 18px; border-bottom: 1px solid var(--line); }
+    .step:last-child { border-bottom: none; }
+    .step .n { color: var(--gold); font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 22px; min-width: 24px; }
+    .step .t { font-size: 14px; color: #cfccc4; }
+    .receipt { border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; margin: 0 auto 24px; max-width: 420px; }
+    .receipt .row { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; }
+    .receipt .row .k { color: var(--muted); }
+    .receipt .row .v { color: var(--ink); }
+    .install { display: inline-block; margin: 4px 0 0; border: 1px solid var(--gold); color: var(--gold); background: transparent; cursor: pointer; font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 600; padding: 9px 18px; border-radius: 8px; }
+    .footer { color: #5f5d58; font-size: 12px; margin-top: 28px; }
+    .error { display: none; border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 20px; color: #cfccc4; font-size: 14px; }
+    a.link { color: var(--gold); text-decoration: none; }
+    #loading { color: var(--muted); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="eyebrow">◆ MainCharacter</div>
+
+    <div id="loading">Confirming your subscription…</div>
+
+    <div id="confirmed" style="display:none;">
+      <h1 id="headline">The Chamber is open. ◆</h1>
+      <p class="lede" id="lede">Your place is held. Here is what happens next.</p>
+
+      <div class="steps" id="steps"></div>
+
+      <div class="receipt" id="receipt">
+        <div class="row"><span class="k">Plan</span><span class="v" id="rPlan">—</span></div>
+        <div class="row"><span class="k">Amount</span><span class="v" id="rAmount">—</span></div>
+        <div class="row"><span class="k">Next billing</span><span class="v" id="rNext">—</span></div>
+      </div>
+
+      <div class="footer">◆ MainCharacter</div>
+    </div>
+
+    <div id="error" class="error">
+      Your payment is being verified. Please refresh in a moment, or contact
+      <a class="link" href="mailto:support@maincharacter.digitglobalservices.com">support@maincharacter.digitglobalservices.com</a>.
+    </div>
+  </div>
+
+<script>
+  const q = new URLSearchParams(location.search);
+  const subscriptionId = q.get('razorpay_subscription_id') || q.get('subscriptionId') || '';
+  const paymentId = q.get('razorpay_payment_id') || '';
+  const signature = q.get('razorpay_signature') || '';
+
+  function fmtINR(paise) {
+    if (paise == null) return '—';
+    return '₹' + Math.round(paise / 100).toLocaleString('en-IN');
+  }
+  function fmtDate(iso) {
+    try { return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
+    catch (_e) { return '—'; }
+  }
+  function showError() {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+  }
+
+  function renderSteps(d) {
+    const steps = [];
+    if (d.oratorActive) {
+      steps.push('Your first message arrives tomorrow morning at your preferred time.');
+    }
+    if (d.lookmaxxingActive) {
+      steps.push('Open the mirror at /lookmax/ — your daily ritual begins tomorrow morning.');
+    }
+    if (!steps.length) {
+      steps.push('Your protocol is being prepared. Watch your WhatsApp.');
+    }
+    const el = document.getElementById('steps');
+    el.innerHTML = steps
+      .map((t, i) => '<div class="step"><div class="n">' + (i + 1) + '</div><div class="t">' + t + '</div></div>')
+      .join('');
+    // Lookmaxxing: offer the (future) PWA install affordance.
+    if (d.lookmaxxingActive) {
+      const note = document.createElement('div');
+      note.className = 'step';
+      note.innerHTML = '<div class="n">+</div><div class="t"><button class="install" id="installBtn" type="button">Install the app</button></div>';
+      el.appendChild(note);
+    }
+  }
+
+  async function load() {
+    if (!subscriptionId) { showError(); return; }
+    try {
+      const params = new URLSearchParams({ subscriptionId });
+      if (paymentId) params.set('paymentId', paymentId);
+      if (signature) params.set('signature', signature);
+      const res = await fetch('/api/payment/status?' + params.toString());
+      const d = await res.json();
+      if (!res.ok || !d.found) { showError(); return; }
+
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('confirmed').style.display = 'block';
+      document.getElementById('headline').textContent = 'The Chamber is open, ' + (d.name || 'Seeker') + '. ◆';
+      renderSteps(d);
+      document.getElementById('rPlan').textContent = d.planLabel || '—';
+      document.getElementById('rAmount').textContent = d.amount != null ? fmtINR(d.amount) + ' / month' : '—';
+      document.getElementById('rNext').textContent = fmtDate(d.nextBillingDate);
+
+      // PWA install prompt wiring (full PWA build is a later night).
+      let deferredPrompt = null;
+      window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
+      document.addEventListener('click', (e) => {
+        if (e.target && e.target.id === 'installBtn' && deferredPrompt) deferredPrompt.prompt();
+      });
+    } catch (_e) {
+      showError();
+    }
+  }
+  load();
+</script>
+</body>
+</html>

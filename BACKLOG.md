@@ -1,5 +1,41 @@
 # MainCharacter Backlog
 
+## NIGHT 3 — FOUNDER ACTIONS (in this order):
+
+> **⚠ Wati was removed in Night 3.** All outbound WhatsApp is in DRY-RUN until the
+> Meta Cloud API credentials are pasted into Render. SMS (MSG91) and email
+> (Resend) are also DRY-RUN until their keys are set. `WHATSAPP_SEND_MODE` stays
+> `allowlist` (only `ADMIN_PHONE` / `ADMIN_EMAIL` receive real sends) until the
+> founder flips it to `all`. See WHATSAPP_CLOUD_API_SETUP.md.
+
+- [ ] Cancel Wati subscription in Wati dashboard.
+- [ ] Free up phone number 9958533994 (delete WhatsApp Business App from phone if installed; wait 24h).
+- [ ] Create personal Meta Business Manager at business.facebook.com.
+- [ ] Create new WhatsApp Business Account inside it (display name: MainCharacter, category: Education).
+- [ ] Add phone 9958533994 to that WABA.
+- [ ] Wait for display name approval (24-72h).
+- [ ] Generate system user access token with whatsapp_business_messaging + whatsapp_business_management permissions.
+- [ ] Note: WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_BUSINESS_ACCOUNT_ID.
+- [ ] Submit message templates for re-approval: welcome, day_one_morning, day_n_morning, evolution_report_ready, payment_confirmation, subscription_paused (same copy as Wati versions).
+- [ ] Sign up for MSG91 at msg91.com, prepaid wallet ₹500, get auth key + DLT-approved OTP template ID.
+- [ ] Sign up for Resend at resend.com, verify sending domain (maincharacter.digitglobalservices.com — add DNS records: SPF, DKIM).
+- [ ] Paste all 11 new env vars into Render (see list below).
+- [ ] Run smoke test: send an OTP to ADMIN_PHONE; confirm receipt.
+- [ ] Flip WHATSAPP_SEND_MODE=all when ready to send to real users.
+
+### NIGHT 3 — new Render env vars to paste
+- [ ] `WHATSAPP_ACCESS_TOKEN` (Meta system user token)
+- [ ] `WHATSAPP_PHONE_NUMBER_ID` (Meta phone number ID)
+- [ ] `WHATSAPP_BUSINESS_ACCOUNT_ID` (Meta WABA ID)
+- [ ] `WHATSAPP_APP_SECRET` (Meta app secret — for webhook signature verify)
+- [ ] `WHATSAPP_VERIFY_TOKEN` = `3e90099f-e036-458e-8d1d-da6d0b84ce3f` (generated Night-3; paste this exact value into BOTH Render env and the Meta App webhook config)
+- [ ] `MSG91_AUTH_KEY`
+- [ ] `MSG91_TEMPLATE_ID_OTP` (DLT-approved OTP template ID)
+- [ ] `MSG91_SENDER_ID` (6-letter sender ID, e.g. `MAINCH`)
+- [ ] `RESEND_API_KEY`
+- [ ] `RESEND_FROM_EMAIL` (e.g. `consultant@maincharacter.digitglobalservices.com`)
+- [ ] `ADMIN_EMAIL` (founder's email for admin alerts + email allowlist)
+
 ## FOUNDER ACTIONS REQUIRED (cannot be done by AI)
 
 > **⚠ TOP PRIORITY — outgoing WhatsApp is locked to ADMIN_PHONE only.**

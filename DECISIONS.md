@@ -93,3 +93,53 @@ every Render deploy — if that build fails, `npm install` fails and the WHOLE a
 deploy overnight for storage features the founder must finish configuring anyway
 (R2 bucket, VAPID keys). The installs are queued as a single founder action in
 BACKLOG; until then the audit funnel works end-to-end against local storage.
+
+---
+
+## 2026-05-27 — Night 3 channel migration decisions
+
+Decided by founder + CTO before the run; encoded here per the brief. Wati is
+removed; channels become Meta WhatsApp Cloud API (Orator), MSG91 SMS (Lookmaxxing
+OTP), Resend email (receipts/reports). All new outbound respects the renamed
+`WHATSAPP_SEND_MODE` (`all`/`allowlist`/`off`), default `allowlist` (admin-only).
+
+1. **Wati is OUT.** Delete `services/wati.js`, remove `WATI_*` env vars from
+   `.env.example` / `render.yaml` / docs. No Wati fallback provider — the founder
+   explicitly does not want it.
+2. **WhatsApp = Meta Cloud API directly.** New `services/whatsapp.js` uses Meta
+   Graph API v18.0. DORMANT until env vars present — if `WHATSAPP_ACCESS_TOKEN`
+   is empty, sends log `[whatsapp] DRY-RUN — credentials not configured` and
+   return a stub success, keeping the code path live for tests without real sends.
+3. **SMS = MSG91.** New `services/sms.js` for Lookmaxxing PWA OTP. DRY-RUN if
+   `MSG91_AUTH_KEY` empty.
+4. **Email = Resend.** New `services/email.js` for paywall receipts, Day-7
+   Evolution Report HTML, audit confirmation, weekly reveal notifications.
+   DRY-RUN if `RESEND_API_KEY` empty.
+5. **Renaming.** `WATI_SEND_MODE` → `WHATSAPP_SEND_MODE` (same semantics). On
+   boot, if `WATI_SEND_MODE` is set but `WHATSAPP_SEND_MODE` is not, mirror the
+   value and log a deprecation notice. Legacy var removed from `render.yaml` /
+   `.env.example`. Centralised in `lib/messaging-mode.js` so WhatsApp, SMS and
+   email share one kill-switch (the variable is now generic "messaging mode").
+6. **Webhook endpoints.** `/api/webhook/wati` → `/api/webhook/whatsapp`. Keep
+   `/api/webhook/wati` as a 308 redirect for 30 days so cached Wati config does
+   not 404. Delete after the window via a tracked BACKLOG item.
+7. **Webhook signature.** Meta signs with `x-hub-signature-256` (HMAC-SHA256 of
+   raw body using app secret). Replaces Wati signature verification. Until
+   `WHATSAPP_APP_SECRET` is set, accept unsigned webhooks and warn at boot (same
+   pattern as the Night-1 Wati handling) so real user replies don't 401 pre-config.
+8. **Number 9958533994 kept.** Founder moves the same number from Wati to their
+   own Meta Business Manager. No DB migration needed; code treats it as-is.
+9. **Render env vars to add** (founder pastes once Meta approved):
+   `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`,
+   `WHATSAPP_BUSINESS_ACCOUNT_ID`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`
+   (generated UUID — see WHATSAPP_CLOUD_API_SETUP.md), `MSG91_AUTH_KEY`,
+   `MSG91_TEMPLATE_ID_OTP`, `MSG91_SENDER_ID`, `RESEND_API_KEY`,
+   `RESEND_FROM_EMAIL`, `ADMIN_EMAIL`.
+10. **No PWA work tonight.** P5–P11 from V2 (PWA shell, mirror, protocol, etc.)
+    stay deferred. Tonight is channel migration + closing the revenue gap only.
+
+### Generated `WHATSAPP_VERIFY_TOKEN` (decision #9)
+A random token is required for Meta's webhook GET-handshake. Generated value to
+paste into Render (documented in WHATSAPP_CLOUD_API_SETUP.md). Rationale: the
+value only needs to match between Render env and the Meta App webhook config, so
+generating it now lets the founder copy one value into both places.

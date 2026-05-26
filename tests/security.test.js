@@ -6,7 +6,7 @@ import fs from 'node:fs';
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-sec-'));
 process.env.USERS_FILE_PATH = path.join(tmpDir, 'users.json');
 process.env.WAITLIST_FILE_PATH = path.join(tmpDir, 'waitlist.json');
-process.env.WATI_SEND_MODE = 'off';
+process.env.WHATSAPP_SEND_MODE = 'off';
 
 const request = require('supertest');
 const express = require('express');
@@ -55,7 +55,7 @@ describe('rate limiter behaviour + webhook exemption (P4.4)', () => {
     rateLimit({ windowMs: 60000, max: 3, skip: skipWebhooks, legacyHeaders: false })
   );
   app.get('/api/ping', (_req, res) => res.json({ ok: true }));
-  app.post('/api/webhook/wati', (_req, res) => res.json({ ok: true }));
+  app.post('/api/webhook/whatsapp', (_req, res) => res.json({ ok: true }));
 
   it('returns 429 after the limit is exceeded', async () => {
     for (let i = 0; i < 3; i++) {
@@ -68,7 +68,7 @@ describe('rate limiter behaviour + webhook exemption (P4.4)', () => {
   it('never rate-limits webhook paths', async () => {
     for (let i = 0; i < 10; i++) {
       // eslint-disable-next-line no-await-in-loop
-      expect((await request(app).post('/api/webhook/wati')).status).toBe(200);
+      expect((await request(app).post('/api/webhook/whatsapp')).status).toBe(200);
     }
   });
 });

@@ -9,7 +9,7 @@
 
 const cron = require('node-cron');
 const User = require('../models/User');
-const wati = require('./wati');
+const whatsapp = require('./whatsapp');
 const { DAYS, buildMorningMessage, buildEveningMessage, buildEvolutionReport } = require('../data/orator-content');
 const gemini = require('./gemini');
 
@@ -68,7 +68,7 @@ async function sendMorningMessages() {
         User.addWordsLearned(user.phone, DAYS[nextDay].words, nextDay);
       }
 
-      await wati.sendMessageSafe(user.phone, message);
+      await whatsapp.sendMessageSafe(user.phone, message);
 
       User.updateUser(user.phone, {
         day: nextDay,
@@ -113,7 +113,7 @@ async function checkMissedMessages() {
           User.addWordsLearned(user.phone, DAYS[nextDay].words, nextDay);
         }
         
-        await wati.sendMessageSafe(user.phone, message);
+        await whatsapp.sendMessageSafe(user.phone, message);
         User.updateUser(user.phone, {
           day: nextDay,
           awaitingResponse: true,

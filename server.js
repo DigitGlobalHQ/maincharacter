@@ -5,7 +5,7 @@
  *
  * Slim orchestrator. All logic lives in:
  *   /routes    — API, admin endpoints
- *   /services  — Wati, Gemini, Scheduler, Razorpay
+ *   /services  — WhatsApp (Meta Cloud API), Gemini, Scheduler, Razorpay
  *   /models    — User data (JSON-backed)
  *   /data      — Protocol content (7-day Orator)
  *
@@ -32,8 +32,17 @@ const apiRoutes = require('./routes/api');
 const adminRoutes = require('./routes/admin');
 const auditRoutes = require('./routes/audit');
 const scheduler = require('./services/scheduler');
-const wati = require('./services/wati');
+const whatsapp = require('./services/whatsapp');
+const messagingMode = require('./lib/messaging-mode');
 const User = require('./models/User');
+
+// ─── Messaging send-mode compatibility shim (Night-3 rename) ───
+// WHATSAPP_SEND_MODE is canonical; mirror the legacy WATI_SEND_MODE into it for a
+// 30-day deprecation window, then default to the safe `allowlist`. (DECISIONS #5)
+if (!process.env.WHATSAPP_SEND_MODE) {
+  process.env.WHATSAPP_SEND_MODE = process.env.WATI_SEND_MODE || 'allowlist';
+}
+messagingMode.checkDeprecation();
 
 // ─── App setup ───
 const app = express();
@@ -146,20 +155,10 @@ app.use('/api', apiRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/audit', auditRoutes);
 
-// Backward compatibility — Wati calls /webhook. Call the handler in-process
-// (P1.3) instead of re-POSTing to localhost. All spam-gating lives in the
-// handler, so there is a single source of truth for filtering.
-app.post('/webhook', (req, res) => {
-  const v = wati.verifyWebhookRequest({
-    rawBody: req.rawBody,
-    body: req.body,
-    signature: req.headers['x-wati-signature'],
-    ip: req.ip,
-  });
-  if (!v.ok) return res.status(401).json({ error: 'unauthorized' });
-  res.json({ status: 'received' });
-  apiRoutes.processWatiWebhook(req.body);
-});
+// Legacy webhook paths (Wati era) → 308 redirect to the Meta Cloud API endpoint
+// for a 30-day deprecation window so any cached config does not 404
+// (DECISIONS.md Night-3 #6). 308 preserves method + body.
+app.all('/webhook', (req, res) => res.redirect(308, '/api/webhook/whatsapp'));
 
 // ═══════════════════════════════════════════════════════════════════
 // HEALTH CHECK
@@ -177,14 +176,18 @@ app.get('/health', (req, res) => {
     uptimeFormatted: formatUptime(process.uptime()),
     config: {
       gemini: !!process.env.GEMINI_API_KEY,
-      wati: !!process.env.WATI_API_KEY,
       razorpay: !!process.env.RAZORPAY_KEY_ID,
       adminPhone: !!process.env.ADMIN_PHONE,
       sentry: !!process.env.SENTRY_DSN,
       database: !!process.env.DATABASE_URL,
+      sms: { configured: !!process.env.MSG91_AUTH_KEY },
+      email: { configured: !!process.env.RESEND_API_KEY },
     },
-    wati: {
-      sendMode: wati.getSendMode(),
+    messaging: {
+      provider: 'whatsapp-cloudapi',
+      mode: whatsapp.getSendMode(),
+      configured: whatsapp.isConfigured(),
+      webhookGuard: whatsapp.webhookGuardMode(),
       schedulerEnabled: process.env.RUN_SCHEDULER !== 'false',
     },
     metrics: {
@@ -228,7 +231,9 @@ app.listen(PORT, () => {
   console.log('─'.repeat(62));
   console.log(`  Environment:  ${NODE_ENV}`);
   console.log(`  Gemini:       ${process.env.GEMINI_API_KEY ? 'CONFIGURED' : 'NOT SET'}`);
-  console.log(`  Wati API:     ${process.env.WATI_API_KEY ? 'CONFIGURED' : 'NOT SET'}`);
+  console.log(`  WhatsApp:     ${whatsapp.isConfigured() ? 'CONFIGURED (Meta Cloud API)' : 'DRY-RUN (no Meta credentials)'}`);
+  console.log(`  SMS (MSG91):  ${process.env.MSG91_AUTH_KEY ? 'CONFIGURED' : 'DRY-RUN'}`);
+  console.log(`  Email (Resend): ${process.env.RESEND_API_KEY ? 'CONFIGURED' : 'DRY-RUN'}`);
   console.log(`  Razorpay:     ${process.env.RAZORPAY_KEY_ID ? 'CONFIGURED' : 'NOT SET'}`);
   console.log(`  Admin phone:  ${process.env.ADMIN_PHONE || 'NOT SET'}`);
   console.log('─'.repeat(62));
@@ -242,16 +247,17 @@ app.listen(PORT, () => {
   console.log('    /admin      — Admin panel');
   console.log('  API:');
   console.log('    POST /api/enroll          — Enroll new user');
-  console.log('    POST /api/webhook/wati    — WhatsApp webhook');
+  console.log('    GET  /api/webhook/whatsapp — Meta verification handshake');
+  console.log('    POST /api/webhook/whatsapp — Incoming WhatsApp messages');
   console.log('    POST /api/waitlist        — Coming Soon waitlist');
   console.log('    GET  /api/user/:token     — User dashboard data');
   console.log('    GET  /health              — Status check');
   console.log('═'.repeat(62));
   console.log('');
 
-  console.log(`  Wati send mode: ${wati.getSendMode().toUpperCase()}`);
-  const guard = wati.webhookGuardMode();
-  console.log(`  Webhook guard:  ${guard.toUpperCase()}${guard === 'open' ? ' — set WATI_WEBHOOK_SECRET to verify incoming webhooks' : ''}`);
+  console.log(`  Messaging mode: ${whatsapp.getSendMode().toUpperCase()} (provider: whatsapp-cloudapi)`);
+  const guard = whatsapp.webhookGuardMode();
+  console.log(`  Webhook guard:  ${guard.toUpperCase()}${guard === 'open' ? ' — set WHATSAPP_APP_SECRET to verify incoming webhooks' : ''}`);
   console.log('═'.repeat(62));
   console.log('');
 

@@ -3,12 +3,12 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
 
-// Point the User model at a throwaway store and force Wati into dry-run BEFORE
-// anything is required, so no real data or messages are touched.
+// Point the User model at a throwaway store and force WhatsApp into dry-run
+// BEFORE anything is required, so no real data or messages are touched.
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-api-'));
 process.env.USERS_FILE_PATH = path.join(tmpDir, 'users.json');
 process.env.WAITLIST_FILE_PATH = path.join(tmpDir, 'waitlist.json');
-process.env.WATI_SEND_MODE = 'off';
+process.env.WHATSAPP_SEND_MODE = 'off';
 process.env.ADMIN_PHONE = '919958533994';
 
 const request = require('supertest');
@@ -61,7 +61,7 @@ describe('webhook side-effect parity (P1.3)', () => {
       .send({ name: 'Cy', phone: '918000000003', preferredTime: '08:00' });
 
     await request(app)
-      .post('/api/webhook/wati')
+      .post('/api/webhook/whatsapp')
       .send({ waId: '918000000003', text: 'START NOW' });
 
     // handler runs async after the 'received' response; let it settle
@@ -69,12 +69,61 @@ describe('webhook side-effect parity (P1.3)', () => {
     expect(User.getUserByPhone('918000000003').day).toBe(1);
   });
 
-  it('direct processWatiWebhook call produces the identical side effect', async () => {
+  it('parses the Meta Cloud API payload shape (entry → changes → messages)', async () => {
+    await request(app)
+      .post('/api/enroll')
+      .send({ name: 'Fi', phone: '918000000006', preferredTime: '08:00' });
+
+    await apiRouter.processWhatsAppWebhook({
+      entry: [
+        {
+          changes: [
+            {
+              value: {
+                contacts: [{ profile: { name: 'Fi' } }],
+                messages: [{ from: '918000000006', type: 'text', text: { body: 'START NOW' } }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(User.getUserByPhone('918000000006').day).toBe(1);
+  });
+
+  it('ignores a Meta status-update payload (statuses, no messages)', async () => {
+    await request(app)
+      .post('/api/enroll')
+      .send({ name: 'Gus', phone: '918000000007', preferredTime: '08:00' });
+
+    await apiRouter.processWhatsAppWebhook({
+      entry: [{ changes: [{ value: { statuses: [{ status: 'delivered', recipient_id: '918000000007' }] } }] }],
+    });
+    expect(User.getUserByPhone('918000000007').day).toBe(0); // unchanged
+  });
+
+  it('legacy /api/webhook/wati 308-redirects to /api/webhook/whatsapp', async () => {
+    const res = await request(app).post('/api/webhook/wati').send({});
+    expect(res.status).toBe(308);
+    expect(res.headers.location).toBe('/api/webhook/whatsapp');
+  });
+
+  it('GET /api/webhook/whatsapp echoes the hub.challenge when the verify token matches', async () => {
+    process.env.WHATSAPP_VERIFY_TOKEN = 'tok-verify';
+    const res = await request(app)
+      .get('/api/webhook/whatsapp')
+      .query({ 'hub.mode': 'subscribe', 'hub.verify_token': 'tok-verify', 'hub.challenge': 'echo-42' });
+    expect(res.status).toBe(200);
+    expect(res.text).toBe('echo-42');
+    delete process.env.WHATSAPP_VERIFY_TOKEN;
+  });
+
+  it('direct processWhatsAppWebhook call produces the identical side effect', async () => {
     await request(app)
       .post('/api/enroll')
       .send({ name: 'Di', phone: '918000000004', preferredTime: '08:00' });
 
-    await apiRouter.processWatiWebhook({ waId: '918000000004', text: 'START NOW' });
+    await apiRouter.processWhatsAppWebhook({ waId: '918000000004', text: 'START NOW' });
     expect(User.getUserByPhone('918000000004').day).toBe(1);
   });
 
@@ -83,7 +132,7 @@ describe('webhook side-effect parity (P1.3)', () => {
       .post('/api/enroll')
       .send({ name: 'Ed', phone: '918000000005', preferredTime: '08:00' });
 
-    await apiRouter.processWatiWebhook({ waId: '918000000005', text: 'START NOW', owner: true });
+    await apiRouter.processWhatsAppWebhook({ waId: '918000000005', text: 'START NOW', owner: true });
     expect(User.getUserByPhone('918000000005').day).toBe(0); // unchanged
   });
 });

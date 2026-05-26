@@ -7,7 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
-const wati = require('../services/wati');
+const whatsapp = require('../services/whatsapp');
 const auth = require('../lib/auth');
 
 let _log;
@@ -109,7 +109,7 @@ router.post('/send-message', requireAuth, async (req, res) => {
   if (!phone || !message) return res.status(400).json({ error: 'Phone and message required' });
 
   try {
-    await wati.sendMessage(phone, message);
+    await whatsapp.sendMessage(phone, message);
     log('SEND', `Custom message to ${phone}: ${message.substring(0, 50)}...`);
     res.json({ success: true });
   } catch (err) {
@@ -136,7 +136,7 @@ router.post('/broadcast', requireAuth, async (req, res) => {
   let failed = 0;
   for (const user of targets) {
     try {
-      await wati.sendMessageSafe(user.phone, message);
+      await whatsapp.sendMessageSafe(user.phone, message);
       sent++;
       // Rate limit: 1 message per second
       await new Promise(r => setTimeout(r, 1000));

@@ -8,14 +8,14 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const router = express.Router();
 const User = require('../models/User');
-const wati = require('../services/wati');
+const whatsapp = require('../services/whatsapp');
 const gemini = require('../services/gemini');
 const razorpay = require('../services/razorpay');
 const { DAYS, buildMorningMessage, buildEveningMessage, buildEvolutionReport } = require('../data/orator-content');
 
 const ADMIN_PHONE = process.env.ADMIN_PHONE || '';
 const BASE_URL = process.env.UPGRADE_BASE_URL || 'https://maincharacter.digitglobalservices.com';
-const WHATSAPP_NUMBER = '919958533994'; // Wati Business number
+const WHATSAPP_NUMBER = '919958533994'; // WhatsApp Business number (Meta Cloud API)
 
 let _log;
 function log(tag, msg) {
@@ -72,13 +72,13 @@ router.post('/enroll', enrollValidators, async (req, res) => {
     // Send welcome WhatsApp message
     const welcomeMsg = `◆ MainCharacter\n\nWelcome, ${user.name}.\n\nI'm The Consultant.\n\nYour Orator Protocol is confirmed.\n\nReply *START NOW* to begin your Day 1 immediately.\nOr sit with this: think about the last time you spoke in a room that mattered. What happened?\n\nWhen you're ready — reply START NOW.`;
 
-    wati.sendMessageSafe(user.phone, welcomeMsg).catch(err => {
-      log('ENROLL-WATI', `Failed to send welcome: ${err.message}`);
+    whatsapp.sendMessageSafe(user.phone, welcomeMsg).catch(err => {
+      log('ENROLL-WA', `Failed to send welcome: ${err.message}`);
     });
 
     // Notify admin
     if (ADMIN_PHONE) {
-      wati.sendMessageSafe(ADMIN_PHONE, `◆ NEW ENROLLMENT\n\nName: ${user.name}\nPhone: ${user.phone}\nPillar: ${user.pillar}\nPreferred Time: ${user.preferredTime}\nToken: ${user.token}`).catch(() => {});
+      whatsapp.sendMessageSafe(ADMIN_PHONE, `◆ NEW ENROLLMENT\n\nName: ${user.name}\nPhone: ${user.phone}\nPillar: ${user.pillar}\nPreferred Time: ${user.preferredTime}\nToken: ${user.token}`).catch(() => {});
     }
 
     res.json({ success: true, userId: user.token, redirectTo: `/welcome?name=${encodeURIComponent(user.name)}&phone=${encodeURIComponent(user.phone)}&time=${encodeURIComponent(user.preferredTime)}` });
@@ -89,63 +89,114 @@ router.post('/enroll', enrollValidators, async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// POST /api/webhook/wati — Incoming WhatsApp messages
+// WhatsApp Cloud API webhook — Meta Graph (Night-3 migration)
 // ═══════════════════════════════════════════════════════════════════
 
-router.post('/webhook/wati', (req, res) => {
-  const v = wati.verifyWebhookRequest({
-    rawBody: req.rawBody,
-    body: req.body,
-    signature: req.headers['x-wati-signature'],
-    ip: req.ip,
-  });
+// GET — Meta's verification handshake performed when the webhook is attached.
+router.get('/webhook/whatsapp', (req, res) => {
+  const challenge = whatsapp.verifyWebhookChallenge(
+    req.query['hub.mode'],
+    req.query['hub.verify_token'],
+    req.query['hub.challenge']
+  );
+  if (challenge !== null) {
+    log('WEBHOOK', 'Meta verification handshake OK');
+    return res.status(200).send(String(challenge));
+  }
+  log('WEBHOOK', 'Meta verification handshake failed (bad mode/token)');
+  return res.sendStatus(403);
+});
+
+// POST — incoming user messages. Meta signs the raw body with x-hub-signature-256.
+router.post('/webhook/whatsapp', (req, res) => {
+  const v = whatsapp.verifyWebhookSignature(req.rawBody, req.headers['x-hub-signature-256']);
   if (!v.ok) {
     log('WEBHOOK', `Rejected (${v.mode}): ${v.reason}`);
     return res.status(401).json({ error: 'unauthorized' });
   }
-  res.json({ status: 'received' }); // Respond to Wati immediately
-  processWatiWebhook(req.body).catch((err) =>
+  res.json({ status: 'received' }); // Ack Meta immediately (must be <10s)
+  processWhatsAppWebhook(req.body).catch((err) =>
     log('ERROR', `Webhook handler error: ${err.message}`)
   );
 });
 
+// Legacy Wati endpoint → 308 permanent redirect for 30 days so any cached Wati
+// webhook config does not 404 (DECISIONS.md Night-3 #6; deletion tracked in
+// BACKLOG). 308 preserves the method + body.
+router.all('/webhook/wati', (req, res) => res.redirect(308, '/api/webhook/whatsapp'));
+
 /**
- * Process an incoming Wati webhook payload. Called directly (in-process) by
- * both /api/webhook/wati and the legacy /webhook shim — no localhost re-POST.
- * Never throws; logs and returns.
- * @param {object} body raw Wati webhook body
+ * Extract the salient fields from an incoming webhook body. Handles Meta's
+ * Cloud API shape (`entry[].changes[].value.{messages,statuses,contacts}`) and
+ * falls back to a flat shape (`{ waId|from, text }`) for resilience + tests.
+ * @param {object} body raw webhook body
+ * @returns {{ statusOnly?: boolean, phone?: string, text?: string, senderName?: string, messageType?: string }}
  */
-async function processWatiWebhook(body) {
+function parseIncomingMessage(body) {
+  body = body || {};
+
+  // ── Meta Cloud API format ──
+  if (Array.isArray(body.entry)) {
+    const value =
+      (body.entry[0] &&
+        body.entry[0].changes &&
+        body.entry[0].changes[0] &&
+        body.entry[0].changes[0].value) ||
+      {};
+    // Status updates (sent/delivered/read) carry `statuses`, not `messages`.
+    if (!value.messages || !value.messages.length) return { statusOnly: true };
+
+    const msg = value.messages[0];
+    const phone = String(msg.from || '').replace(/[+\s\-]/g, '');
+    let text = '';
+    if (msg.type === 'text') text = (msg.text && msg.text.body) || '';
+    else if (msg.type === 'button') text = (msg.button && (msg.button.text || msg.button.payload)) || '';
+    else if (msg.type === 'interactive') {
+      const i = msg.interactive || {};
+      text = (i.button_reply && i.button_reply.title) || (i.list_reply && i.list_reply.title) || '';
+    }
+    const senderName =
+      (value.contacts && value.contacts[0] && value.contacts[0].profile && value.contacts[0].profile.name) || '';
+    return { phone, text: String(text).trim(), senderName, messageType: msg.type };
+  }
+
+  // ── Flat fallback (legacy / tests) ──
+  // Ignore echoes of our own outgoing messages + status-only payloads.
+  if (body.owner === true || body.owner === 'true') return { statusOnly: true };
+  const eventType = (body.eventType || '').toLowerCase();
+  if (['delivered', 'read', 'sent', 'replied', 'failed', 'status'].some((e) => eventType.includes(e))) {
+    return { statusOnly: true };
+  }
+  const phone = String(body.waId || body.from || body.senderPhoneNumber || '').replace(/[+\s\-]/g, '');
+  const text = String(body.text || body.message || body.messageText || '').trim();
+  const senderName = body.senderName || body.pushName || body.contactName || '';
+  return { phone, text, senderName, messageType: 'text' };
+}
+
+/**
+ * Process an incoming WhatsApp webhook payload. Called directly (in-process) by
+ * the route handler. Never throws; logs and returns.
+ * @param {object} body raw webhook body (Meta or flat shape)
+ */
+async function processWhatsAppWebhook(body) {
   try {
-    body = body || {};
+    const parsed = parseIncomingMessage(body);
+    if (parsed.statusOnly) return;
 
-    // ── GATE 1: Ignore bot's own outgoing messages ──
-    if (body.owner === true || body.owner === 'true') {
-      return;
-    }
+    const { phone, text, senderName, messageType } = parsed;
 
-    // ── GATE 2: Ignore delivery/read/sent status events ──
-    const eventType = (body.eventType || '').toLowerCase();
-    if (eventType.includes('delivered') || eventType.includes('read') ||
-        eventType.includes('sent') || eventType.includes('replied') ||
-        eventType.includes('failed') || eventType.includes('payment') ||
-        eventType.includes('clicked') || eventType.includes('status')) {
-      return;
-    }
-
-    // ── GATE 3: Ignore status string updates ──
-    const status = (body.statusString || '').toUpperCase();
-    if (status === 'SENT' || status === 'DELIVERED' || status === 'READ' || status === 'REPLIED') {
-      return;
-    }
-
-    // ── Extract fields ──
-    const phone = (body.waId || body.from || body.senderPhoneNumber || '').replace(/[+\s\-]/g, '');
-    const text = (body.text || body.message || body.messageText || '').trim();
-    const senderName = body.senderName || body.pushName || body.contactName || '';
-
-    // ── GATE 4: Must have phone AND non-empty text ──
-    if (!phone || !text) {
+    // Must have a phone. Non-text messages (e.g. voice notes) have no text yet —
+    // voice transcription is not handled (CLAUDE.md landmine #9, BACKLOG).
+    if (!phone) return;
+    if (!text) {
+      if (messageType && messageType !== 'text') {
+        log('WEBHOOK', `← ${phone} sent a ${messageType} message (no text — not yet handled)`);
+        if (ADMIN_PHONE) {
+          whatsapp
+            .sendMessageSafe(ADMIN_PHONE, `◆ NON-TEXT MESSAGE\n\nPhone: ${phone}\nType: ${messageType}`)
+            .catch(() => {});
+        }
+      }
       return;
     }
 
@@ -157,7 +208,7 @@ async function processWatiWebhook(body) {
     if (!user) {
       log('WEBHOOK', `Unknown user: ${phone}`);
       if (ADMIN_PHONE) {
-        wati.sendMessageSafe(ADMIN_PHONE, `◆ UNKNOWN USER\n\nPhone: ${phone}\nName: ${senderName}\nMessage: ${text.substring(0, 200)}`).catch(() => {});
+        whatsapp.sendMessageSafe(ADMIN_PHONE, `◆ UNKNOWN USER\n\nPhone: ${phone}\nName: ${senderName}\nMessage: ${text.substring(0, 200)}`).catch(() => {});
       }
       return;
     }
@@ -180,15 +231,15 @@ async function processWatiWebhook(body) {
     log('WEBHOOK', `Unhandled message from ${user.name}: "${msg}"`);
 
     if (ADMIN_PHONE && phone !== ADMIN_PHONE) {
-      wati.sendMessageSafe(ADMIN_PHONE, `◆ USER MESSAGE\n\nFrom: ${user.name} (${user.phone})\nDay: ${user.day}\nMessage: ${text.substring(0, 300)}`).catch(() => {});
+      whatsapp.sendMessageSafe(ADMIN_PHONE, `◆ USER MESSAGE\n\nFrom: ${user.name} (${user.phone})\nDay: ${user.day}\nMessage: ${text.substring(0, 300)}`).catch(() => {});
     }
 
     // If user hasn't started yet, prompt them
     if (user.day === 0) {
-      await wati.sendMessageSafe(user.phone, `Reply *START NOW* to begin your Day 1 protocol. ◆`);
+      await whatsapp.sendMessageSafe(user.phone, `Reply *START NOW* to begin your Day 1 protocol. ◆`);
     } else {
       const defaultReply = `The Consultant is preparing your next message. It arrives at ${user.preferredTime}. ◆`;
-      await wati.sendMessageSafe(user.phone, defaultReply);
+      await whatsapp.sendMessageSafe(user.phone, defaultReply);
     }
 
   } catch (err) {
@@ -211,7 +262,7 @@ async function handleStartNow(user) {
     const msg = user.awaitingResponse
       ? `You're on Day ${user.day}, ${user.name}. Reply with your response to the current challenge. ◆`
       : `Your Day ${user.day + 1 <= 7 ? user.day + 1 : 7} protocol arrives at ${user.preferredTime}. ◆`;
-    return await wati.sendMessageSafe(user.phone, msg);
+    return await whatsapp.sendMessageSafe(user.phone, msg);
   }
 
   // Advance to Day 1
@@ -231,7 +282,7 @@ async function handleStartNow(user) {
 
   // Send Day 1 morning message
   const morningMsg = buildMorningMessage(1, user.name);
-  await wati.sendMessageSafe(user.phone, morningMsg);
+  await whatsapp.sendMessageSafe(user.phone, morningMsg);
 
   log('CMD', `${user.name} started Day 1 immediately`);
 }
@@ -290,7 +341,7 @@ async function handleDailyResponse(user, text, msgType) {
   // Build and send evening message
   const updatedUser = User.getUserByPhone(user.phone);
   const eveningMsg = buildEveningMessage(day, user.name, result.scores, result.consultantMessage, previousScores);
-  await wati.sendMessageSafe(user.phone, eveningMsg);
+  await whatsapp.sendMessageSafe(user.phone, eveningMsg);
 
   // Day 7 — send Evolution Report
   if (day === 7) {
@@ -299,7 +350,7 @@ async function handleDailyResponse(user, text, msgType) {
         const finalUser = User.getUserByPhone(user.phone);
         const assessment = await gemini.generateEvolutionAssessment(finalUser);
         const report = buildEvolutionReport(finalUser, assessment);
-        await wati.sendMessageSafe(user.phone, report);
+        await whatsapp.sendMessageSafe(user.phone, report);
 
         User.updateUser(user.phone, {
           trialComplete: true,
@@ -328,10 +379,10 @@ async function handleContinue(user) {
     
     const msg = `◆ The Chamber Remains Open.\n\nYour subscription begins now.\n\n${paymentUrl}\n\nAfter payment, your Day 8 protocol arrives automatically.\nNothing changes except the depth.\n\n◆ MainCharacter`;
     
-    await wati.sendMessageSafe(user.phone, msg);
+    await whatsapp.sendMessageSafe(user.phone, msg);
   } catch (err) {
     log('ERROR', `CONTINUE failed for ${user.name}: ${err.message}`);
-    await wati.sendMessageSafe(user.phone, `◆ Something went wrong. Please visit:\n${BASE_URL}/upgrade\n\n◆ MainCharacter`);
+    await whatsapp.sendMessageSafe(user.phone, `◆ Something went wrong. Please visit:\n${BASE_URL}/upgrade\n\n◆ MainCharacter`);
   }
 }
 
@@ -345,7 +396,7 @@ async function handleStop(user) {
 
   const msg = `◆ Noted, ${user.name}.\n\nThe Seeker returns when the Seeker is ready.\nYour dashboard stays live. Your lexicon stays yours.\nYour rank holds.\n\nWhen you're ready — reply RETURN and the protocol resumes.\n\n◆ MainCharacter`;
   
-  await wati.sendMessageSafe(user.phone, msg);
+  await whatsapp.sendMessageSafe(user.phone, msg);
 }
 
 /**
@@ -358,7 +409,7 @@ async function handleReturn(user) {
 
   const msg = `◆ Welcome back, ${user.name}.\n\nYour protocol resumes. The Consultant remembers where you left off.\n\nYour next message arrives tomorrow at ${user.preferredTime}.\n\n◆ MainCharacter`;
   
-  await wati.sendMessageSafe(user.phone, msg);
+  await whatsapp.sendMessageSafe(user.phone, msg);
 }
 
 /**
@@ -537,7 +588,7 @@ async function processPaymentEvent(event) {
     const status = User.computeAuraStatus({ ...user, ...updates });
     log('PAYMENT', `${user.name} (${phone}) → active via ${evt} [${pillars.join(',') || 'orator'}]${status.auraPlusPlus ? ' AURA++' : ''}`);
     // Copy supplied by founder in the autopilot brief (not invented).
-    await wati.sendMessageSafe(
+    await whatsapp.sendMessageSafe(
       phone,
       `◆ The Chamber is open, ${user.name}.\n\nDay 8 arrives tomorrow at your preferred time.\n\n◆ MainCharacter`
     );
@@ -554,7 +605,7 @@ async function processPaymentEvent(event) {
     if (!after.oratorActive && !after.lookmaxxingActive) updates.subscriptionStatus = 'cancelled';
     User.updateUser(phone, updates);
     log('PAYMENT', `${user.name} (${phone}) → cancelled via ${evt} [${pillars.join(',') || 'all'}]`);
-    await wati.sendMessageSafe(
+    await whatsapp.sendMessageSafe(
       phone,
       `◆ Your protocol pauses, ${user.name}.\n\nYour lexicon and rank remain yours. Reply RETURN when ready.\n\n◆ MainCharacter`
     );
@@ -577,5 +628,5 @@ router.post('/payment/webhook', (req, res) => {
 });
 
 module.exports = router;
-module.exports.processWatiWebhook = processWatiWebhook;
+module.exports.processWhatsAppWebhook = processWhatsAppWebhook;
 module.exports.processPaymentEvent = processPaymentEvent;

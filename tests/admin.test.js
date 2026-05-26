@@ -8,7 +8,7 @@ process.env.USERS_FILE_PATH = path.join(tmpDir, 'users.json');
 process.env.WAITLIST_FILE_PATH = path.join(tmpDir, 'waitlist.json');
 process.env.ADMIN_PASSWORD = 'secret123';
 delete process.env.ADMIN_PASSWORD_HASH;
-process.env.WATI_SEND_MODE = 'off';
+process.env.WHATSAPP_SEND_MODE = 'off';
 
 const request = require('supertest');
 const express = require('express');

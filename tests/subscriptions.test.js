@@ -7,7 +7,7 @@ const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-subs-'));
 process.env.USERS_FILE_PATH = path.join(tmpDir, 'users.json');
 process.env.WAITLIST_FILE_PATH = path.join(tmpDir, 'waitlist.json');
 process.env.RAZORPAY_PLANS_FILE_PATH = path.join(tmpDir, 'razorpay-plans.json');
-process.env.WATI_SEND_MODE = 'off';
+process.env.WHATSAPP_SEND_MODE = 'off';
 // No RAZORPAY_KEY_ID → service runs in mock mode (deterministic, no live calls).
 
 const request = require('supertest');

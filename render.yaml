@@ -21,11 +21,33 @@ services:
         sync: false
       - key: RAZORPAY_WEBHOOK_SECRET
         sync: false
-      - key: WATI_API_KEY
+      # ─── WhatsApp Cloud API (Meta) — dormant until set (DRY-RUN) ───
+      - key: WHATSAPP_ACCESS_TOKEN
         sync: false
-      - key: WATI_BASE_URL
+      - key: WHATSAPP_PHONE_NUMBER_ID
         sync: false
+      - key: WHATSAPP_BUSINESS_ACCOUNT_ID
+        sync: false
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false
+      # ─── MSG91 (SMS/OTP) ───
+      - key: MSG91_AUTH_KEY
+        sync: false
+      - key: MSG91_TEMPLATE_ID_OTP
+        sync: false
+      - key: MSG91_SENDER_ID
+        sync: false
+      # ─── Resend (email) ───
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
+      # ─── Admin ───
       - key: ADMIN_PHONE
+        sync: false
+      - key: ADMIN_EMAIL
         sync: false
       - key: UPGRADE_BASE_URL
         value: https://maincharacter.digitglobalservices.com

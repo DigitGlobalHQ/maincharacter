@@ -9,7 +9,7 @@ const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-pay-'));
 process.env.USERS_FILE_PATH = path.join(tmpDir, 'users.json');
 process.env.WAITLIST_FILE_PATH = path.join(tmpDir, 'waitlist.json');
 process.env.RAZORPAY_WEBHOOK_SECRET = SECRET;
-process.env.WATI_SEND_MODE = 'off';
+process.env.WHATSAPP_SEND_MODE = 'off';
 
 const request = require('supertest');
 const express = require('express');

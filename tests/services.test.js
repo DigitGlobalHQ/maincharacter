@@ -6,7 +6,7 @@ import fs from 'node:fs';
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-svc-'));
 process.env.USERS_FILE_PATH = path.join(tmpDir, 'users.json');
 process.env.WAITLIST_FILE_PATH = path.join(tmpDir, 'waitlist.json');
-process.env.WATI_SEND_MODE = 'off';
+process.env.WHATSAPP_SEND_MODE = 'off';
 // No Razorpay keys → mock mode; no Gemini key → fallback scoring.
 delete process.env.RAZORPAY_KEY_ID;
 delete process.env.RAZORPAY_KEY_SECRET;

@@ -1,7 +1,7 @@
 /**
  * Smoke test — boots the real server on a random port with the scheduler
- * OFF and Wati in dry-run (WATI_SEND_MODE=off), hits the key routes, asserts
- * status + shape, then kills the server. Never sends a real message.
+ * OFF and messaging in dry-run (WHATSAPP_SEND_MODE=off), hits the key routes,
+ * asserts status + shape, then kills the server. Never sends a real message.
  *
  * Run: npm run smoke   (exit 0 = pass, 1 = fail)
  */
@@ -43,7 +43,7 @@ async function run() {
       PORT: String(PORT),
       NODE_ENV: 'test',
       RUN_SCHEDULER: 'false',
-      WATI_SEND_MODE: 'off',
+      WHATSAPP_SEND_MODE: 'off',
       LOG_LEVEL: 'error',
     },
     stdio: ['ignore', 'ignore', 'inherit'],
@@ -64,7 +64,12 @@ async function run() {
     check('GET /health → 200', health.status === 200);
     check('/health status healthy', healthJson.status === 'healthy');
     check('/health exposes config', healthJson.config && typeof healthJson.config === 'object');
-    check('/health reports wati send mode', healthJson.wati && healthJson.wati.sendMode === 'off');
+    check(
+      '/health reports messaging provider',
+      healthJson.messaging && healthJson.messaging.provider === 'whatsapp-cloudapi'
+    );
+    check('/health reports messaging send mode', healthJson.messaging && healthJson.messaging.mode === 'off');
+    check('/health reports messaging DRY-RUN (no creds)', healthJson.messaging && healthJson.messaging.configured === false);
 
     // landing
     const home = await fetch(`${BASE}/`);

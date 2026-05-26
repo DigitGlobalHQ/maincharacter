@@ -7,7 +7,7 @@ import fs from 'node:fs';
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-startnow-'));
 process.env.USERS_FILE_PATH = path.join(tmpDir, 'users.json');
 process.env.WAITLIST_FILE_PATH = path.join(tmpDir, 'waitlist.json');
-process.env.WATI_SEND_MODE = 'off';
+process.env.WHATSAPP_SEND_MODE = 'off';
 
 const apiRouter = require('../routes/api');
 const User = require('../models/User');
@@ -23,7 +23,7 @@ describe('START NOW seeds the Day-1 lexicon (P1.1 regression)', () => {
     User.createUser({ name: 'Lex', phone, pillar: 'orator', preferredTime: '08:00' });
     expect(User.getUserByPhone(phone).wordsLearned).toHaveLength(0);
 
-    await apiRouter.processWatiWebhook({ waId: phone, text: 'START NOW' });
+    await apiRouter.processWhatsAppWebhook({ waId: phone, text: 'START NOW' });
 
     const user = User.getUserByPhone(phone);
     expect(user.day).toBe(1);
@@ -40,8 +40,8 @@ describe('START NOW seeds the Day-1 lexicon (P1.1 regression)', () => {
     const phone = '918000000102';
     User.createUser({ name: 'Mira', phone, pillar: 'orator', preferredTime: '08:00' });
 
-    await apiRouter.processWatiWebhook({ waId: phone, text: 'START NOW' });
-    await apiRouter.processWatiWebhook({ waId: phone, text: 'START NOW' });
+    await apiRouter.processWhatsAppWebhook({ waId: phone, text: 'START NOW' });
+    await apiRouter.processWhatsAppWebhook({ waId: phone, text: 'START NOW' });
 
     expect(User.getUserByPhone(phone).wordsLearned).toHaveLength(DAYS[1].words.length);
   });

@@ -6,7 +6,7 @@ import fs from 'node:fs';
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-routes-'));
 process.env.USERS_FILE_PATH = path.join(tmpDir, 'users.json');
 process.env.WAITLIST_FILE_PATH = path.join(tmpDir, 'waitlist.json');
-process.env.WATI_SEND_MODE = 'off';
+process.env.WHATSAPP_SEND_MODE = 'off';
 process.env.ADMIN_PASSWORD = 'secret123';
 delete process.env.ADMIN_PASSWORD_HASH;
 delete process.env.RAZORPAY_KEY_ID;
@@ -31,24 +31,24 @@ describe('webhook command handlers', () => {
   });
 
   it('STOP pauses the user', async () => {
-    await apiRouter.processWatiWebhook({ waId: '919700000001', text: 'STOP' });
+    await apiRouter.processWhatsAppWebhook({ waId: '919700000001', text: 'STOP' });
     expect(User.getUserByPhone('919700000001').status).toBe('paused');
   });
 
   it('RETURN reactivates the user', async () => {
-    await apiRouter.processWatiWebhook({ waId: '919700000001', text: 'return' });
+    await apiRouter.processWhatsAppWebhook({ waId: '919700000001', text: 'return' });
     expect(User.getUserByPhone('919700000001').status).toBe('active');
   });
 
   it('CONTINUE runs the payment-link handler without throwing', async () => {
     await expect(
-      apiRouter.processWatiWebhook({ waId: '919700000001', text: 'CONTINUE' })
+      apiRouter.processWhatsAppWebhook({ waId: '919700000001', text: 'CONTINUE' })
     ).resolves.toBeUndefined();
   });
 
   it('unknown user pings admin path without throwing', async () => {
     await expect(
-      apiRouter.processWatiWebhook({ waId: '910000000000', text: 'hello' })
+      apiRouter.processWhatsAppWebhook({ waId: '910000000000', text: 'hello' })
     ).resolves.toBeUndefined();
   });
 });

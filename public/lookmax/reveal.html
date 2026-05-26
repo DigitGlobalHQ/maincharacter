@@ -1,0 +1,112 @@
+<!doctype html>
+<!-- Weekly Reveal (Night-4, P8.1). Client-rendered slideshow of the week's
+     selfies; real MP4 generation waits on ffmpeg (BACKLOG). // TODO copy review. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Lookmaxxing — Reveal</title>
+  <link rel="manifest" href="/lookmax/manifest.json" />
+  <meta name="theme-color" content="#070708" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/lookmax/app.css" />
+  <style>
+    .stage { position: relative; width: 100%; aspect-ratio: 9/16; max-height: 70vh; margin: 0 auto; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: #000; }
+    .stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .4s; }
+    .stage img.show { opacity: 1; }
+    .stage canvas { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; }
+    .cap { position: absolute; left: 14px; bottom: 56px; right: 14px; font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 20px; text-shadow: 0 2px 12px #000; }
+    .shares { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar"><div class="who">◆ Weekly Reveal</div></div>
+
+    <!-- Locked -->
+    <div id="lockedView" class="hidden center" style="padding-top:30px">
+      <h1 style="margin-bottom:10px">Your reveal is forming.</h1>
+      <p class="muted" id="lockedSub">Take more mirrors this week. Your reveal unlocks at 4 of 7.</p>
+      <div class="weekstrip" id="lockStrip" style="margin-top:20px"></div>
+    </div>
+
+    <!-- Reveal -->
+    <div id="revealView" class="hidden">
+      <p class="muted center" style="margin-bottom:12px">It airs Friday at 8pm. Here is the preview.</p>
+      <div class="stage" id="stage">
+        <canvas id="traj" height="80"></canvas>
+        <div class="cap" id="cap"></div>
+      </div>
+      <div class="shares">
+        <button class="btn" data-share="instagram">Instagram</button>
+        <button class="btn" data-share="tiktok">TikTok</button>
+        <button class="btn" data-share="whatsapp">WhatsApp Status</button>
+        <button class="btn btn--solid" data-share="generic">Share</button>
+      </div>
+      <p class="footer-note" id="stubNote">The reveal is a preview. The full video — stitched, scored, with the soundtrack — arrives once the infrastructure lands. Soon. ◆</p>
+    </div>
+  </div>
+
+  <script src="/lookmax/app.js"></script>
+  <script>
+    let preview = null;
+
+    (async function () {
+      const user = await LM.requireSession();
+      if (!user) return;
+      LM.renderNav('reveal');
+      try { preview = await LM.api('/api/lookmax/reveal/preview'); } catch { preview = { unlocked: false, count: 0 }; }
+      if (preview.unlocked && (preview.photoUrls || []).length) showReveal();
+      else showLocked();
+    })();
+
+    function showLocked() {
+      document.getElementById('lockedView').classList.remove('hidden');
+      const count = preview ? (preview.count || 0) : 0;
+      document.getElementById('lockStrip').innerHTML = Array.from({ length: 7 }, (_, i) =>
+        `<span class="dot ${i < count ? 'on' : ''}"></span>`).join('');
+    }
+
+    function showReveal() {
+      document.getElementById('revealView').classList.remove('hidden');
+      const urls = preview.photoUrls; const scores = preview.scores || [];
+      document.getElementById('cap').textContent = `Week ${preview.weekNumber}. The mirror has been honest. ◆ MainCharacter`;
+      const stage = document.getElementById('stage');
+      const imgs = urls.map((u, i) => { const im = document.createElement('img'); im.src = u; if (i === 0) im.classList.add('show'); stage.insertBefore(im, stage.firstChild); return im; });
+      let i = 0;
+      setInterval(() => { imgs[i].classList.remove('show'); i = (i + 1) % imgs.length; imgs[i].classList.add('show'); }, 1200);
+      drawTrajectory(scores);
+      wireShares();
+    }
+
+    function drawTrajectory(scores) {
+      const c = document.getElementById('traj'); if (!scores.length) return;
+      c.width = c.clientWidth; const ctx = c.getContext('2d');
+      const w = c.width, h = c.height, pad = 8;
+      const max = 100, min = 0;
+      ctx.strokeStyle = '#e8b84b'; ctx.lineWidth = 2; ctx.beginPath();
+      scores.forEach((s, idx) => {
+        const x = pad + (idx / Math.max(1, scores.length - 1)) * (w - 2 * pad);
+        const y = h - pad - ((s - min) / (max - min)) * (h - 2 * pad);
+        idx === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+
+    function wireShares() {
+      const base = location.origin + '/audit';
+      const utm = (src) => `${base}?utm_source=${src}&utm_medium=reveal&utm_campaign=week${preview.weekNumber}`;
+      const text = `Week ${preview.weekNumber} of the work. ◆ ${utm('share')}`;
+      document.querySelectorAll('[data-share]').forEach((b) => b.addEventListener('click', async () => {
+        const kind = b.dataset.share;
+        if (kind === 'whatsapp') location.href = 'whatsapp://send?text=' + encodeURIComponent(`Week ${preview.weekNumber} of the work. ◆ ${utm('whatsapp')}`);
+        else if (kind === 'instagram') { try { location.href = 'instagram://library'; } catch { location.href = utm('instagram'); } }
+        else if (kind === 'tiktok') { try { location.href = 'snssdk1233://'; } catch { location.href = utm('tiktok'); } }
+        else if (kind === 'generic' && navigator.share) { try { await navigator.share({ title: 'MainCharacter', text, url: utm('share') }); } catch {} }
+        else location.href = utm('share');
+      }));
+    }
+  </script>
+</body>
+</html>

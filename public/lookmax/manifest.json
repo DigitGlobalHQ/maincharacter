@@ -1,0 +1,15 @@
+{
+  "name": "MainCharacter — Lookmaxxing",
+  "short_name": "Lookmaxxing",
+  "start_url": "/lookmax/",
+  "scope": "/lookmax/",
+  "display": "standalone",
+  "background_color": "#070708",
+  "theme_color": "#070708",
+  "description": "Daily mirror. Daily ritual. Weekly reveal.",
+  "icons": [
+    { "src": "/lookmax/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/lookmax/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/lookmax/icons/maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

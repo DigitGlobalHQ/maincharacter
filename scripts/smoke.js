@@ -119,6 +119,21 @@ async function run() {
     const sessionJson = await session.json();
     check('POST /api/audit/session → 200 with token', session.status === 200 && !!sessionJson.sessionToken);
 
+    // Lookmaxxing PWA shell (Night-4 P2)
+    const lmLogin = await fetch(`${BASE}/lookmax/login`);
+    check('GET /lookmax/login → 200', lmLogin.status === 200);
+    const lmAdmin = await fetch(`${BASE}/lookmax/admin-login`);
+    check('GET /lookmax/admin-login → 200', lmAdmin.status === 200);
+    const lmManifest = await fetch(`${BASE}/lookmax/manifest.json`);
+    const lmManifestJson = await lmManifest.json();
+    check('GET /lookmax/manifest.json → valid JSON', lmManifest.status === 200 && lmManifestJson.display === 'standalone');
+    const lmSw = await fetch(`${BASE}/lookmax/sw.js`);
+    check('GET /lookmax/sw.js → 200', lmSw.status === 200);
+    const lmIcon = await fetch(`${BASE}/lookmax/icons/icon-512.png`);
+    check('GET /lookmax/icons/icon-512.png → 200', lmIcon.status === 200);
+    const lmMirror = await fetch(`${BASE}/lookmax/mirror`);
+    check('GET /lookmax/mirror (pretty URL) → 200', lmMirror.status === 200);
+
     // early-access waitlist capture (Night-4 P0.3)
     const early = await fetch(`${BASE}/api/waitlist/early-access`, {
       method: 'POST',

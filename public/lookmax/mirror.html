@@ -1,0 +1,185 @@
+<!doctype html>
+<!-- Daily Mirror (Night-4, P4.1). Camera capture → upload → 8-axis score reveal
+     → trend. // TODO copy review on rotating lines + headers. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Lookmaxxing — Mirror</title>
+  <link rel="manifest" href="/lookmax/manifest.json" />
+  <meta name="theme-color" content="#070708" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/lookmax/app.css" />
+  <style>
+    .preview { width: 100%; border-radius: 14px; border: 1px solid var(--line); background: #000; aspect-ratio: 1/1; object-fit: cover; }
+    .cap-row { display: flex; gap: 10px; margin-top: 14px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <div class="who">◆ Daily Mirror</div>
+      <div class="badges"><span class="badge badge--streak" id="streakBadge">—</span><span class="badge badge--level" id="levelBadge">—</span></div>
+    </div>
+
+    <!-- Capture -->
+    <div id="captureView">
+      <h1 style="margin-bottom:10px">Take today’s mirror.</h1>
+      <p class="muted" style="margin-bottom:16px">Natural light. Camera at eye level. The honest angle.</p>
+      <video id="video" class="preview" autoplay playsinline muted></video>
+      <input id="fileInput" type="file" accept="image/*" capture="user" class="hidden" />
+      <div class="cap-row">
+        <button class="btn btn--solid" id="captureBtn">Capture</button>
+        <button class="btn btn--ghost" id="useFile">Use a photo</button>
+      </div>
+      <div class="err" id="capErr"></div>
+    </div>
+
+    <!-- Analysis -->
+    <div id="analysisView" class="hidden center" style="padding-top:40px">
+      <div class="score-big" style="font-size:3rem;color:var(--muted)">◆</div>
+      <div class="rotline" id="rotline">Mapping skin signal…</div>
+    </div>
+
+    <!-- Reveal -->
+    <div id="revealView" class="hidden">
+      <div class="score-big" id="scoreBig">0</div>
+      <div class="center muted" id="levelLine" style="margin-bottom:6px"></div>
+      <div class="consultant" id="consultantLine"></div>
+      <div id="axes"></div>
+      <div class="card" style="margin-top:18px">
+        <div class="muted" style="font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Last 14 days</div>
+        <canvas id="trend" height="120"></canvas>
+      </div>
+      <button class="btn btn--ghost" onclick="location.href='/lookmax/protocol'">Open today’s protocol →</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="/lookmax/app.js"></script>
+  <script>
+    const AXIS_LABELS = {
+      skinClarity: 'Skin clarity', jawDefinition: 'Jaw definition', eyeArea: 'Eye area',
+      hairDensity: 'Hair density', posture: 'Posture', facialHarmony: 'Facial harmony',
+      expression: 'Expression', bodyComposition: 'Body composition',
+    };
+    const ROT_LINES = [
+      'Mapping skin signal…', 'Reading jaw geometry…', 'Measuring the eye area…',
+      'Assessing hairline integrity…', 'Checking carriage and posture…', 'Weighing facial harmony…',
+    ];
+    let stream = null;
+
+    (async function () {
+      const user = await LM.requireSession();
+      if (!user) return;
+      LM.renderNav('mirror');
+      document.getElementById('levelBadge').textContent = levelLabel(user.mirrorLevel);
+      startCamera();
+    })();
+
+    async function startCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+        document.getElementById('video').srcObject = stream;
+      } catch {
+        // Fallback: hide live preview, rely on file capture (older iOS Safari).
+        document.getElementById('video').classList.add('hidden');
+        document.getElementById('captureBtn').textContent = 'Open camera';
+        document.getElementById('captureBtn').onclick = () => document.getElementById('fileInput').click();
+      }
+    }
+
+    document.getElementById('useFile').addEventListener('click', () => document.getElementById('fileInput').click());
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (f) blobToScored(f);
+    });
+    document.getElementById('captureBtn').addEventListener('click', () => {
+      const video = document.getElementById('video');
+      if (!stream || !video.videoWidth) { document.getElementById('fileInput').click(); return; }
+      const size = Math.min(1024, video.videoWidth, video.videoHeight);
+      const canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const sx = (video.videoWidth - Math.min(video.videoWidth, video.videoHeight)) / 2;
+      const sy = (video.videoHeight - Math.min(video.videoWidth, video.videoHeight)) / 2;
+      const s = Math.min(video.videoWidth, video.videoHeight);
+      ctx.drawImage(video, sx, sy, s, s, 0, 0, size, size);
+      canvas.toBlob((b) => blobToScored(b), 'image/jpeg', 0.85);
+    });
+
+    async function blobToScored(blob) {
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+      showAnalysis();
+      const fd = new FormData();
+      fd.append('photo', blob, 'mirror.jpg');
+      const started = Date.now();
+      try {
+        const result = await LM.api('/api/lookmax/mirror', { method: 'POST', body: fd });
+        const wait = Math.max(0, 5000 - (Date.now() - started)); // min 5s dwell
+        setTimeout(() => reveal(result), wait);
+      } catch (e) {
+        document.getElementById('analysisView').classList.add('hidden');
+        document.getElementById('captureView').classList.remove('hidden');
+        document.getElementById('capErr').textContent = (e && e.data && e.data.error) || 'Scoring failed. Try again.';
+      }
+    }
+
+    function showAnalysis() {
+      document.getElementById('captureView').classList.add('hidden');
+      document.getElementById('analysisView').classList.remove('hidden');
+      let i = 0;
+      const el = document.getElementById('rotline');
+      el.textContent = ROT_LINES[0];
+      const iv = setInterval(() => { i = (i + 1) % ROT_LINES.length; el.textContent = ROT_LINES[i]; }, 1600);
+      window._rotIv = iv;
+    }
+
+    function reveal(r) {
+      clearInterval(window._rotIv);
+      document.getElementById('analysisView').classList.add('hidden');
+      document.getElementById('revealView').classList.remove('hidden');
+      document.getElementById('streakBadge').textContent = (r.streak || 0) + ' 🔥';
+      document.getElementById('levelBadge').textContent = levelLabel(r.mirrorLevel);
+      document.getElementById('levelLine').textContent = levelLabel(r.mirrorLevel) + ' — ' + r.score + '/100';
+      document.getElementById('consultantLine').textContent = r.consultantLine || '';
+
+      // Animate score 0 → final over ~2s
+      const big = document.getElementById('scoreBig');
+      const target = r.score || 0; const t0 = Date.now();
+      (function step() {
+        const p = Math.min(1, (Date.now() - t0) / 2000);
+        big.textContent = Math.round(target * p);
+        if (p < 1) requestAnimationFrame(step);
+      })();
+
+      // Axis bars with deltas
+      const dY = r.deltaVsYesterday || {}; const dB = r.deltaVsBaseline || {};
+      const axesEl = document.getElementById('axes');
+      axesEl.innerHTML = Object.keys(AXIS_LABELS).map((k) => {
+        const v = (r.axes && r.axes[k]) || 0;
+        const dy = dY[k]; const cls = dy > 0 ? 'up' : dy < 0 ? 'down' : '';
+        const dyTxt = dy == null ? '' : (dy > 0 ? '▲ ' + dy : dy < 0 ? '▼ ' + Math.abs(dy) : '–');
+        return `<div class="axis"><div class="axis-row"><span>${AXIS_LABELS[k]}</span><span class="delta ${cls}">${dyTxt}</span></div><div class="bar"><span data-w="${v}"></span></div></div>`;
+      }).join('');
+      requestAnimationFrame(() => axesEl.querySelectorAll('.bar > span').forEach((s) => { s.style.width = s.dataset.w + '%'; }));
+
+      // 14-day trend
+      drawTrend(r.trend || []);
+    }
+
+    function drawTrend(trend) {
+      const ctx = document.getElementById('trend');
+      if (!window.Chart || !trend.length) return;
+      new Chart(ctx, {
+        type: 'line',
+        data: { labels: trend.map((p) => p.date.slice(5)), datasets: [{ data: trend.map((p) => p.score), borderColor: '#e8b84b', backgroundColor: 'rgba(232,184,75,0.12)', fill: true, tension: 0.35, pointRadius: 2 }] },
+        options: { plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, ticks: { color: '#8a877f' }, grid: { color: '#1d1d20' } }, x: { ticks: { color: '#8a877f' }, grid: { display: false } } } },
+      });
+    }
+
+    function levelLabel(l) { return ({ raw: 'Raw', polished: 'Polished', magnetic: 'Magnetic', radiant: 'Radiant', sovereign: 'Sovereign' })[l] || 'Raw'; }
+  </script>
+</body>
+</html>

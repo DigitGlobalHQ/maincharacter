@@ -1,0 +1,143 @@
+<!doctype html>
+<!-- Hair receding tracker (Night-4, P6.1). Weekly cadence; two photos (front +
+     crown); Norwood visualisation + evidence-based recommendations. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Lookmaxxing — Hair</title>
+  <link rel="manifest" href="/lookmax/manifest.json" />
+  <meta name="theme-color" content="#070708" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/lookmax/app.css" />
+  <style>
+    .norwood { display: flex; gap: 6px; justify-content: space-between; margin: 14px 0; }
+    .nw { flex: 1; text-align: center; }
+    .nw .dome { height: 30px; border: 1px solid var(--line); border-radius: 16px 16px 4px 4px; }
+    .nw.on .dome { background: var(--gold); border-color: var(--gold); }
+    .nw .n { font-size: 10px; color: var(--muted); margin-top: 4px; }
+    .nw.on .n { color: var(--gold); }
+    .slot { border: 1px dashed var(--line); border-radius: 12px; padding: 18px; text-align: center; color: var(--muted); margin-bottom: 10px; cursor: pointer; }
+    .slot.filled { border-style: solid; border-color: rgba(232,184,75,0.5); color: var(--gold); }
+    .reclist li { padding: 6px 0 6px 20px; position: relative; font-size: 14px; color: #cfccc4; }
+    .reclist li::before { content: '◆'; position: absolute; left: 0; color: var(--gold); font-size: 9px; top: 8px; }
+    .reclist.dont li::before { content: '⊘'; color: var(--aesthetic); }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar"><div class="who">◆ Hair Tracker</div></div>
+
+    <!-- Locked (within weekly window) -->
+    <div id="lockedView" class="hidden">
+      <h1 style="margin-bottom:8px">Next hair audit unlocks soon.</h1>
+      <p class="muted" id="lockedSub" style="margin-bottom:16px"></p>
+      <div id="lastAnalysis"></div>
+    </div>
+
+    <!-- Capture -->
+    <div id="captureView" class="hidden">
+      <h1 style="margin-bottom:8px">This week’s hair audit.</h1>
+      <p class="muted" style="margin-bottom:16px">Stand in flat overhead light. Camera at the same height as your scalp. Take two photos: one straight-on, one from above (crown). The honest angle, not the angle.</p>
+      <div class="slot" id="slotFront" data-for="front">Front / hairline photo — tap to add</div>
+      <div class="slot" id="slotCrown" data-for="crown">Crown / from-above photo — tap to add</div>
+      <input id="fileFront" type="file" accept="image/*" capture="user" class="hidden" />
+      <input id="fileCrown" type="file" accept="image/*" capture="environment" class="hidden" />
+      <button class="btn btn--solid" id="analyzeBtn" disabled>Analyse</button>
+      <div class="err" id="capErr"></div>
+    </div>
+
+    <!-- Analysis -->
+    <div id="analysisView" class="hidden center" style="padding-top:40px">
+      <div class="score-big" style="font-size:3rem;color:var(--muted)">⌃</div>
+      <div class="rotline">Reading the hairline cone…</div>
+    </div>
+
+    <!-- Result -->
+    <div id="resultView" class="hidden"></div>
+  </div>
+
+  <script src="/lookmax/app.js"></script>
+  <script>
+    const TIER = { 1: 'RCT-supported', 2: 'Mechanism-supported', 3: 'Observational' };
+    const files = { front: null, crown: null };
+
+    (async function () {
+      const user = await LM.requireSession();
+      if (!user) return;
+      LM.renderNav('hair');
+      let h;
+      try { h = await LM.api('/api/lookmax/hair/history'); } catch { h = { unlocked: true, readings: [] }; }
+      if (h.unlocked) showCapture();
+      else showLocked(h);
+    })();
+
+    function showLocked(h) {
+      document.getElementById('lockedView').classList.remove('hidden');
+      document.getElementById('lockedSub').textContent = `Next reading in ${h.daysUntilNext} days. Weekly cadence keeps the signal clean.`;
+      if (h.latest) document.getElementById('lastAnalysis').innerHTML = renderResult(h.latest, true);
+    }
+
+    function showCapture() {
+      document.getElementById('captureView').classList.remove('hidden');
+      bindSlot('front'); bindSlot('crown');
+    }
+    function bindSlot(kind) {
+      const slot = document.getElementById('slot' + cap(kind));
+      const input = document.getElementById('file' + cap(kind));
+      slot.addEventListener('click', () => input.click());
+      input.addEventListener('change', (e) => {
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        files[kind] = f; slot.classList.add('filled'); slot.textContent = cap(kind) + ' photo added ✓';
+        document.getElementById('analyzeBtn').disabled = !(files.front && files.crown);
+      });
+    }
+
+    document.getElementById('analyzeBtn').addEventListener('click', async () => {
+      if (!(files.front && files.crown)) return;
+      document.getElementById('captureView').classList.add('hidden');
+      document.getElementById('analysisView').classList.remove('hidden');
+      const fd = new FormData();
+      fd.append('front', files.front, 'front.jpg');
+      fd.append('crown', files.crown, 'crown.jpg');
+      const t0 = Date.now();
+      try {
+        const r = await LM.api('/api/lookmax/hair/photo', { method: 'POST', body: fd });
+        setTimeout(() => {
+          document.getElementById('analysisView').classList.add('hidden');
+          const rv = document.getElementById('resultView');
+          rv.classList.remove('hidden'); rv.innerHTML = renderResult(r, false);
+        }, Math.max(0, 8000 - (Date.now() - t0)));
+      } catch (e) {
+        document.getElementById('analysisView').classList.add('hidden');
+        document.getElementById('captureView').classList.remove('hidden');
+        document.getElementById('capErr').textContent = 'Analysis failed. Try again in better light.';
+      }
+    });
+
+    function renderResult(r, compact) {
+      const nw = Array.from({ length: 7 }, (_, i) => i + 1).map((n) =>
+        `<div class="nw ${n === r.norwood ? 'on' : ''}"><div class="dome"></div><div class="n">${n}</div></div>`).join('');
+      const recession = r.confidence === 'low' || r.recessionMm == null
+        ? 'insufficient data — try better lighting next week'
+        : r.recessionMm + ' mm';
+      const delta = r.deltaVsFirst != null ? ` (${r.deltaVsFirst > 0 ? '+' : ''}${r.deltaVsFirst} vs first reading)` : '';
+      const rec = r.recommendations || { do: [], doNot: [] };
+      return `
+        ${compact ? '' : '<h1 style="margin-bottom:6px">Your hairline, read honestly.</h1>'}
+        <div class="card"><div class="muted" style="font-size:12px;letter-spacing:1px;text-transform:uppercase">Norwood stage</div>
+          <div class="norwood">${nw}</div>
+          <div style="display:flex;justify-content:space-between;font-size:14px"><span>Hairline score</span><b style="color:var(--gold)">${r.hairlineScore}/100${delta}</b></div>
+          <div style="display:flex;justify-content:space-between;font-size:14px;margin-top:6px"><span>Recession</span><span class="muted">${recession}</span></div>
+        </div>
+        ${r.consultantLine ? `<div class="consultant">${LM.escapeHtml(r.consultantLine)}</div>` : ''}
+        <div class="card"><h3 style="font-size:18px">Do</h3><ul class="reclist">${(rec.do || []).map((d) => `<li>${LM.escapeHtml(typeof d === 'string' ? d : d.title)}${d.evidenceTier ? ` <span class="tier">${TIER[d.evidenceTier]}</span>` : ''}</li>`).join('')}</ul></div>
+        <div class="card card--look"><h3 style="font-size:18px">Do not</h3><ul class="reclist dont">${(rec.doNot || []).map((d) => `<li>${LM.escapeHtml(typeof d === 'string' ? d : d.title)}</li>`).join('')}</ul></div>`;
+    }
+
+    function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  </script>
+</body>
+</html>

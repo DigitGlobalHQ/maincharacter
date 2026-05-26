@@ -1,0 +1,98 @@
+<!doctype html>
+<!-- Lookmaxxing PWA login (Night-4, P3.3). OTP is the default UI but is dormant
+     until WhatsApp Cloud API is live + approved; until then it routes to the
+     admin login. // TODO copy review on user-facing strings. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Lookmaxxing — Enter</title>
+  <link rel="manifest" href="/lookmax/manifest.json" />
+  <meta name="theme-color" content="#070708" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/lookmax/app.css" />
+</head>
+<body>
+  <div class="page" style="max-width:440px;padding-top:64px">
+    <div class="center">
+      <div class="eyebrow">◆ MainCharacter</div>
+      <h1 style="margin:14px 0 6px">Lookmaxxing</h1>
+      <p class="muted" style="margin-bottom:26px">The mirror is honest. Enter to begin.</p>
+    </div>
+
+    <div class="card">
+      <div id="otpStep">
+        <div class="field">
+          <label for="phone">WhatsApp number</label>
+          <input id="phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="10-digit number" />
+        </div>
+        <button class="btn btn--solid" id="sendOtp">Send code</button>
+        <p class="hint" id="otpNote">OTP unavailable yet — <a class="link" href="/lookmax/admin-login">use Admin login →</a></p>
+      </div>
+
+      <div id="verifyStep" class="hidden">
+        <div class="field">
+          <label for="otp">Enter the 6-digit code</label>
+          <input id="otp" type="tel" inputmode="numeric" maxlength="6" placeholder="••••••" />
+        </div>
+        <button class="btn btn--solid" id="verify">Verify</button>
+      </div>
+
+      <div class="err" id="err"></div>
+    </div>
+
+    <p class="footer-note">Daily mirror. Daily ritual. Weekly reveal.</p>
+  </div>
+
+  <script src="/lookmax/app.js"></script>
+  <script>
+    const errEl = document.getElementById('err');
+    const phoneEl = document.getElementById('phone');
+    const sendBtn = document.getElementById('sendOtp');
+
+    sendBtn.addEventListener('click', async () => {
+      errEl.textContent = '';
+      const phone = phoneEl.value.replace(/\D/g, '');
+      if (!/^\d{10,13}$/.test(phone)) { errEl.textContent = 'Enter a valid number.'; return; }
+      sendBtn.disabled = true;
+      try {
+        const res = await fetch('/api/lookmax/auth/request-otp', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (data.status === 'unavailable') {
+          location.href = '/lookmax/admin-login?phone=' + encodeURIComponent(phone);
+          return;
+        }
+        if (data.status === 'sent') {
+          document.getElementById('otpStep').classList.add('hidden');
+          document.getElementById('verifyStep').classList.remove('hidden');
+        } else {
+          errEl.textContent = data.message || 'Could not send a code. Use admin login.';
+          sendBtn.disabled = false;
+        }
+      } catch {
+        errEl.textContent = 'Network error. Try again.';
+        sendBtn.disabled = false;
+      }
+    });
+
+    document.getElementById('verify').addEventListener('click', async () => {
+      errEl.textContent = '';
+      const phone = phoneEl.value.replace(/\D/g, '');
+      const otp = document.getElementById('otp').value.replace(/\D/g, '');
+      try {
+        const res = await fetch('/api/lookmax/auth/verify-otp', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, otp }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.token) { LM.setToken(data.token); location.href = '/lookmax/'; }
+        else errEl.textContent = 'That code did not match. Try again.';
+      } catch { errEl.textContent = 'Network error. Try again.'; }
+    });
+  </script>
+</body>
+</html>

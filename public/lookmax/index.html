@@ -1,0 +1,93 @@
+<!doctype html>
+<!-- Lookmaxxing dashboard home (Night-4, P7.1). // TODO copy review on copy. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Lookmaxxing</title>
+  <link rel="manifest" href="/lookmax/manifest.json" />
+  <meta name="theme-color" content="#070708" />
+  <link rel="apple-touch-icon" href="/lookmax/icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/lookmax/app.css" />
+</head>
+<body>
+  <div class="page" id="page">
+    <div class="topbar">
+      <div class="who">◆ MainCharacter · Lookmaxxing<br /><b id="whoName">—</b></div>
+      <div class="badges">
+        <span class="badge badge--streak" id="streakBadge">0 🔥</span>
+        <span class="badge badge--level" id="levelBadge">Raw</span>
+      </div>
+    </div>
+
+    <div id="tiles"></div>
+
+    <div class="card">
+      <div class="muted" style="font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">This week</div>
+      <div class="weekstrip" id="weekstrip"></div>
+    </div>
+
+    <div id="crosssell"></div>
+
+    <p class="footer-note">The mirror has been honest. ◆ MainCharacter</p>
+  </div>
+
+  <script src="/lookmax/app.js"></script>
+  <script>
+    (async function () {
+      const user = await LM.requireSession();
+      if (!user) return; // requireSession redirects to /lookmax/login
+      LM.renderNav('profile');
+
+      let d;
+      try { d = await LM.api('/api/lookmax/dashboard'); }
+      catch { d = null; }
+      if (!d) return;
+
+      document.getElementById('whoName').textContent = d.user.name || 'Seeker';
+      document.getElementById('streakBadge').textContent = (d.streak || 0) + ' 🔥';
+      document.getElementById('levelBadge').textContent = levelLabel(d.mirrorLevel);
+
+      // Three status tiles
+      const t = d.today || {};
+      const tiles = [];
+      // Mirror tile
+      if (t.mirror && t.mirror.takenToday) {
+        tiles.push(tile('Mirror', `Today's score ${t.mirror.score} · Taken at ${t.mirror.at} ✓`, '/lookmax/mirror', false));
+      } else {
+        tiles.push(tile('Mirror', 'Take today’s mirror →', '/lookmax/mirror', true));
+      }
+      // Protocol tile
+      const p = t.protocol || {};
+      tiles.push(tile('Protocol', `${p.completedCount || 0} of ${p.totalCount || 0} complete`, '/lookmax/protocol', false, p.totalCount ? (p.completedCount / p.totalCount) : 0));
+      // Hair tile
+      const h = t.hair || {};
+      if (h.unlocked) tiles.push(tile('Hair', 'Take this week’s hair audit →', '/lookmax/hair', true));
+      else tiles.push(tile('Hair', `Next reading in ${h.daysUntil != null ? h.daysUntil : 7} days`, '/lookmax/hair', false));
+      document.getElementById('tiles').innerHTML = tiles.join('');
+
+      // Week strip
+      const week = d.thisWeek || [];
+      document.getElementById('weekstrip').innerHTML = week.map((on) => `<span class="dot ${on ? 'on' : ''}"></span>`).join('');
+
+      // Cross-sell when Orator is not held
+      if (!d.user.oratorActive) {
+        document.getElementById('crosssell').innerHTML =
+          `<a class="card card--gold card--cta" href="/paywall?upgrade=auraplus&from=lookmax" style="display:block;text-decoration:none;color:inherit">
+            <h3>Add The Orator</h3>
+            <p class="muted" style="font-size:14px">₹799/mo. Or upgrade to Aura++ ₹1,999 (saves ₹299). The voice changes when the room turns. ◆</p>
+          </a>`;
+      }
+    })();
+
+    function levelLabel(l) { return ({ raw: 'Raw', polished: 'Polished', magnetic: 'Magnetic', radiant: 'Radiant', sovereign: 'Sovereign' })[l] || 'Raw'; }
+    function tile(title, sub, href, pulse, progress) {
+      const bar = progress != null ? `<div class="bar" style="margin-top:10px"><span style="width:${Math.round(progress * 100)}%"></span></div>` : '';
+      return `<a href="${href}" class="card card--look card--cta ${pulse ? 'card--pulse' : ''}" style="display:block;text-decoration:none;color:inherit">
+        <h3>${title}</h3><p class="muted" style="font-size:14px">${sub}</p>${bar}</a>`;
+    }
+  </script>
+</body>
+</html>

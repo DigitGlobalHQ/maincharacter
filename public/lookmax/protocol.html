@@ -1,0 +1,104 @@
+<!doctype html>
+<!-- Daily Protocol checklist (Night-4, P5.3). Items expand for instruction +
+     evidence tier; do-nots are violet reminders, not actions. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Lookmaxxing — Protocol</title>
+  <link rel="manifest" href="/lookmax/manifest.json" />
+  <meta name="theme-color" content="#070708" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/lookmax/app.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <div class="who">◆ Today’s Protocol</div>
+      <div class="badges"><span class="badge badge--streak" id="streakBadge">—</span></div>
+    </div>
+
+    <h1 style="margin-bottom:4px">The work for today.</h1>
+    <p class="muted" id="progressLine" style="margin-bottom:18px">—</p>
+
+    <div id="items"></div>
+    <div id="doNots" style="margin-top:12px"></div>
+
+    <button class="btn btn--solid" id="completeBtn" style="margin-top:18px">Complete the day</button>
+    <div class="err center" id="msg" style="color:var(--muted)"></div>
+  </div>
+
+  <script src="/lookmax/app.js"></script>
+  <script>
+    const TIER = { 1: 'RCT-supported', 2: 'Mechanism-supported', 3: 'Observational' };
+    let state = null;
+
+    (async function () {
+      const user = await LM.requireSession();
+      if (!user) return;
+      LM.renderNav('protocol');
+      await refresh();
+    })();
+
+    async function refresh() {
+      try { state = await LM.api('/api/lookmax/protocol/today'); }
+      catch { document.getElementById('msg').textContent = 'No protocol yet. Take a mirror to generate one.'; return; }
+      render();
+    }
+
+    function render() {
+      document.getElementById('streakBadge').textContent = (state.streak || 0) + ' 🔥';
+      document.getElementById('progressLine').textContent = `${state.completedCount} of ${state.totalCount} complete` + (state.isLocked ? ' · locked' : '');
+
+      document.getElementById('items').innerHTML = (state.items || []).map((it) => `
+        <div class="check ${it.checked ? 'checked' : ''}" data-id="${it.itemId}">
+          <div class="box" data-toggle="${it.itemId}">${it.checked ? '◆' : ''}</div>
+          <div class="body" data-expand="${it.itemId}">
+            <div class="title">${LM.escapeHtml(it.title)}</div>
+            <div class="instruction">${LM.escapeHtml(it.instruction || '')}<br /><span class="tier">${TIER[it.evidenceTier] || 'Observational'}</span></div>
+          </div>
+        </div>`).join('');
+
+      document.getElementById('doNots').innerHTML = (state.doNots || []).map((d) => `
+        <div class="donot"><span class="mark">⊘</span><div><div class="title">${LM.escapeHtml(d.title)}</div>
+        <div class="muted" style="font-size:12px;margin-top:4px">${LM.escapeHtml(d.instruction || '')}</div></div></div>`).join('');
+
+      const btn = document.getElementById('completeBtn');
+      btn.disabled = !!state.isLocked;
+      btn.textContent = state.isLocked ? 'Day complete ◆' : 'Complete the day';
+
+      // wire toggles + expanders
+      document.querySelectorAll('[data-toggle]').forEach((el) => el.addEventListener('click', (e) => {
+        e.stopPropagation(); toggle(el.dataset.toggle);
+      }));
+      document.querySelectorAll('[data-expand]').forEach((el) => el.addEventListener('click', () => {
+        el.closest('.check').classList.toggle('open');
+      }));
+    }
+
+    async function toggle(itemId) {
+      if (state.isLocked) return;
+      const item = state.items.find((i) => i.itemId === itemId);
+      const next = !item.checked;
+      try { await LM.api('/api/lookmax/protocol/check', { method: 'POST', body: JSON.stringify({ itemId, checked: next }) }); }
+      catch { return; }
+      item.checked = next;
+      state.completedCount = state.items.filter((i) => i.checked).length;
+      render();
+    }
+
+    document.getElementById('completeBtn').addEventListener('click', async () => {
+      if (state.isLocked) return;
+      try {
+        const r = await LM.api('/api/lookmax/protocol/complete-day', { method: 'POST' });
+        state.isLocked = true; state.streak = r.streak;
+        document.getElementById('msg').textContent = r.streakIncremented
+          ? 'The day is closed. The streak holds. ◆'
+          : 'The day is closed. Eighty percent carries the streak — aim higher tomorrow. ◆';
+        render();
+      } catch { document.getElementById('msg').textContent = 'Could not lock the day. Try again.'; }
+    });
+  </script>
+</body>
+</html>

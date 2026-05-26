@@ -1,0 +1,61 @@
+<!doctype html>
+<!-- Lookmaxxing admin bypass login (Night-4, P3.4). Phone + password → bcrypt
+     check against ADMIN_PASSWORD_HASH. Dignified error copy (no "Whoops!"). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Lookmaxxing — Admin</title>
+  <link rel="manifest" href="/lookmax/manifest.json" />
+  <meta name="theme-color" content="#070708" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/lookmax/app.css" />
+</head>
+<body>
+  <div class="page" style="max-width:440px;padding-top:64px">
+    <div class="center">
+      <div class="eyebrow">◆ MainCharacter</div>
+      <h1 style="margin:14px 0 6px">Admin entry</h1>
+      <p class="muted" style="margin-bottom:26px">For the founder and operators.</p>
+    </div>
+
+    <div class="card">
+      <div class="field">
+        <label for="phone">Admin phone</label>
+        <input id="phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Country code, no +" />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" />
+      </div>
+      <button class="btn btn--solid" id="enter">Enter</button>
+      <div class="err" id="err"></div>
+      <p class="hint center" style="margin-top:14px"><a class="link" href="/lookmax/login">← Back to standard login</a></p>
+    </div>
+  </div>
+
+  <script src="/lookmax/app.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    if (params.get('phone')) document.getElementById('phone').value = params.get('phone');
+    const errEl = document.getElementById('err');
+
+    document.getElementById('enter').addEventListener('click', async () => {
+      errEl.textContent = '';
+      const phone = document.getElementById('phone').value.replace(/\D/g, '');
+      const password = document.getElementById('password').value;
+      if (!phone || !password) { errEl.textContent = 'Phone and password are required.'; return; }
+      try {
+        const res = await fetch('/api/lookmax/auth/admin-login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, password }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.token) { LM.setToken(data.token); location.href = '/lookmax/'; }
+        else errEl.textContent = 'Phone or password incorrect.';
+      } catch { errEl.textContent = 'Network error. Try again.'; }
+    });
+  </script>
+</body>
+</html>

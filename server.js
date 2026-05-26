@@ -166,6 +166,22 @@ app.get('/audit/result/:token', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'audit.html'));
 });
 
+// ─── Lookmaxxing PWA (Night-4, P2.6) ───
+// Static assets (manifest, sw.js, app.css/js, icons, *.html) + pretty-URL routes
+// so the PWA can use clean paths without the .html suffix. Static is mounted
+// first; requests for pretty URLs fall through to the explicit handlers below.
+app.use('/lookmax', express.static(path.join(__dirname, 'public', 'lookmax')));
+const lookmaxPage = (file) => (req, res) =>
+  res.sendFile(path.join(__dirname, 'public', 'lookmax', file));
+app.get('/lookmax', lookmaxPage('index.html'));
+app.get('/lookmax/', lookmaxPage('index.html'));
+app.get('/lookmax/login', lookmaxPage('login.html'));
+app.get('/lookmax/admin-login', lookmaxPage('admin-login.html'));
+app.get('/lookmax/mirror', lookmaxPage('mirror.html'));
+app.get('/lookmax/protocol', lookmaxPage('protocol.html'));
+app.get('/lookmax/hair', lookmaxPage('hair.html'));
+app.get('/lookmax/reveal', lookmaxPage('reveal.html'));
+
 // Upgrade/Pricing
 app.get('/upgrade', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'upgrade.html'));

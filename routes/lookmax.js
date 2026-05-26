@@ -16,8 +16,7 @@ const User = require('../models/User');
 const Lookmax = require('../models/Lookmax');
 const photos = require('../services/photos');
 const vision = require('../services/vision');
-const protocolSvc = require('../services/protocol');
-const hairSvc = require('../services/hair');
+// protocol + hair services are lazy-required inside their handlers (P5/P6).
 const { AESTHETIC_AXES } = require('../data/lookmax-prompts');
 const { requireLookmaxAuth } = require('../lib/lookmax-auth');
 const { createLogger } = require('../lib/log');
@@ -45,6 +44,16 @@ function mirrorLevelFor(score) {
 function overallOf(axes) {
   const vals = AESTHETIC_AXES.map((a) => Number(axes[a]) || 0);
   return Math.round(vals.reduce((s, v) => s + v, 0) / vals.length);
+}
+
+/**
+ * Next streak value: +1 when the previous mirror was within 30h (24h + buffer),
+ * else reset to 1. No previous mirror → 1. Pure + exported for tests.
+ */
+function nextStreak(prevMirror, currentStreak) {
+  if (!prevMirror) return 1;
+  const gapH = (Date.now() - new Date(prevMirror.createdAt).getTime()) / 3600000;
+  return gapH <= 30 ? (currentStreak || 0) + 1 : 1;
 }
 
 /** "HH:MM" in IST for a timestamp. */
@@ -78,13 +87,7 @@ router.post('/mirror', upload.single('photo'), async (req, res) => {
     // Streak: increment if the previous mirror was within 30h, else reset to 1.
     const prev = Lookmax.latestMirror(user.token);
     const yest = prev || null;
-    let streak = user.lookmaxStreak || 0;
-    if (prev) {
-      const gapH = (Date.now() - new Date(prev.createdAt).getTime()) / 3600000;
-      streak = gapH <= 30 ? streak + 1 : 1;
-    } else {
-      streak = 1;
-    }
+    const streak = nextStreak(prev, user.lookmaxStreak || 0);
 
     Lookmax.addMirror(user.token, { photoPath: saved.path, axes, overallScore: overall, mirrorLevel: level });
     User.updateUser(user.phone, { mirrorLevel: level, lastMirrorAt: new Date().toISOString(), lookmaxStreak: streak });
@@ -98,7 +101,7 @@ router.post('/mirror', upload.single('photo'), async (req, res) => {
     }
 
     const trend = Lookmax.getMirrors(user.token).slice(-14).map((m) => ({ date: m.date, score: m.overallScore }));
-    const consultantLine = vision.consultantLine(axes, deltaVsYesterday);
+    const consultantLine = await vision.consultantLine(axes, deltaVsYesterday);
 
     res.json({
       score: overall,
@@ -136,6 +139,7 @@ async function loadBaseline(user) {
 function ensureProtocolToday(user) {
   let day = Lookmax.getProtocolToday(user.token);
   if (day) return day;
+  const protocolSvc = require('../services/protocol');
   const audit = protocolSvc.auditForUser(user);
   day = protocolSvc.generateProtocol(user, audit);
   return Lookmax.setProtocolDay(user.token, day);
@@ -202,6 +206,7 @@ router.post(
         crown: { data: crownBuf.toString('base64'), mimeType: f.crown[0].mimetype || 'image/jpeg' },
       });
 
+      const hairSvc = require('../services/hair');
       const first = Lookmax.getHair(user.token)[0] || null;
       const rec = Lookmax.addHair(user.token, {
         frontPath: savedFront.path,
@@ -234,6 +239,7 @@ router.post(
 
 router.get('/hair/history', (req, res) => {
   const user = req.lookmaxUser;
+  const hairSvc = require('../services/hair');
   const readings = Lookmax.getHair(user.token);
   const latest = readings.length ? readings[readings.length - 1] : null;
   let unlocked = true;
@@ -322,7 +328,7 @@ router.get('/reveal/preview', (req, res) => {
     unlocked: true,
     count,
     weekNumber,
-    photoUrls: recent.map((m) => photos.publicUrl(m.photoPath, req.lookmaxToken || (req.query.token || ''))),
+    photoUrls: recent.map((m) => photos.publicUrl(m.photoPath, req.lookmaxToken || req.query.token || '')),
     scores: recent.map((m) => m.overallScore),
   });
 });
@@ -330,3 +336,4 @@ router.get('/reveal/preview', (req, res) => {
 module.exports = router;
 module.exports.mirrorLevelFor = mirrorLevelFor;
 module.exports.overallOf = overallOf;
+module.exports.nextStreak = nextStreak;

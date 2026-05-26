@@ -9,9 +9,12 @@
 
 const cron = require('node-cron');
 const User = require('../models/User');
+const Lookmax = require('../models/Lookmax');
 const whatsapp = require('./whatsapp');
 const { DAYS, buildMorningMessage, buildEveningMessage, buildEvolutionReport } = require('../data/orator-content');
 const gemini = require('./gemini');
+
+const BASE_URL = process.env.UPGRADE_BASE_URL || 'https://maincharacter.digitglobalservices.com';
 
 let _log;
 function log(tag, msg) {
@@ -85,6 +88,30 @@ async function sendMorningMessages() {
 }
 
 /**
+ * Lookmaxxing mirror nudge (P4.4). Every minute, message active Lookmaxxing
+ * users whose mirrorReminderTime (default 06:30 IST) is now AND who have not
+ * submitted today's mirror. Respects WHATSAPP_SEND_MODE via sendMessageSafe, so
+ * under `allowlist` only admin phones receive it (and DRY-RUN logs otherwise).
+ */
+async function sendMirrorNudges() {
+  const currentTime = getCurrentIST();
+  const users = Object.values(User.getAllUsers()).filter(
+    (u) => u.lookmaxxingActive && (u.mirrorReminderTime || '06:30') === currentTime
+  );
+  if (users.length === 0) return;
+
+  for (const user of users) {
+    try {
+      if (Lookmax.mirrorForToday(user.token)) continue; // already done today
+      await whatsapp.sendMessageSafe(user.phone, `◆ The mirror is open. ◆\n\n${BASE_URL}/lookmax/mirror`);
+      log('MIRROR-NUDGE', `→ ${user.phone} (${user.name})`);
+    } catch (err) {
+      log('ERROR', `mirror nudge for ${user.phone}: ${err.message}`);
+    }
+  }
+}
+
+/**
  * Check for missed messages on server restart.
  * If a user should have received their message today but hasn't, send it now.
  */
@@ -134,6 +161,7 @@ function start() {
   cron.schedule('* * * * *', async () => {
     try {
       await sendMorningMessages();
+      await sendMirrorNudges();
     } catch (err) {
       log('ERROR', `Scheduler error: ${err.message}`);
     }
@@ -149,4 +177,4 @@ function start() {
   log('INIT', 'Scheduler started');
 }
 
-module.exports = { start, sendMorningMessages, checkMissedMessages };
+module.exports = { start, sendMorningMessages, sendMirrorNudges, checkMissedMessages };

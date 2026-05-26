@@ -105,6 +105,27 @@ Respond ONLY with JSON: { "scores": { <each axis>: 0-100 } }. Integers only.`;
 }
 
 /**
+ * Build the hair-recession prompt (P6.2). Two photos (front hairline + crown)
+ * are passed as separate image parts by the caller (services/vision.scoreHair).
+ * @returns {string}
+ */
+function buildHairPrompt() {
+  return `You are The Consultant for MainCharacter's Lookmaxxing pillar, assessing
+hair recession from two photographs of one person: a straight-on hairline shot
+and a from-above crown shot. Estimate:
+- norwood: the Norwood-Hamilton stage, an integer 1-7 (1 = no recession, 7 = advanced).
+- hairlineScore: 0-100, higher = more intact hairline + denser scalp coverage.
+- recessionMm: approximate temporal recession in millimetres ONLY if the photos
+  are clear enough to judge; otherwise null.
+- confidence: "high" only when lighting + angle make the estimate reliable; else "low".
+
+Be conservative: when unsure, lower the confidence rather than guessing a number.
+
+Respond ONLY with this JSON:
+{ "norwood": 1-7, "hairlineScore": 0-100, "recessionMm": number|null, "confidence": "high"|"low" }`;
+}
+
+/**
  * Deterministic, brand-safe one-line note for a mirror score delta (P6.4).
  * Kept factual and minimal so we never improvise rich Consultant copy without a
  * spec (CLAUDE.md rule #5). Marked for copy review.
@@ -131,6 +152,7 @@ module.exports = {
   FORBIDDEN_TOKENS,
   buildAestheticPrompt,
   buildMirrorPrompt,
+  buildHairPrompt,
   mirrorDeltaLine,
   hasForbiddenToken,
 };

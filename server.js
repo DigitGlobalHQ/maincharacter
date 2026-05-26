@@ -205,8 +205,23 @@ app.use('/api', apiRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/audit', auditRoutes);
 // Lookmaxxing PWA API (Night-4). Auth routes are public; the feature router
-// (mirror/protocol/hair/dashboard/reveal) is mounted in P4 once its services exist.
+// (mirror/protocol/hair/dashboard/reveal) is gated by requireLookmaxAuth.
 app.use('/api/lookmax', require('./routes/lookmax-auth'));
+app.use('/api/lookmax', require('./routes/lookmax'));
+
+// Token-gated photo serving (Night-4, P4/P5). A user can only read their own
+// files: the JWT's userId must match the {userId} path segment. Photos live in
+// /tmp and are volatile (DECISIONS.md Night-4 #5).
+const lookmaxAuthLib = require('./lib/lookmax-auth');
+const photosSvc = require('./services/photos');
+app.get('/uploads/:userId/:filename', (req, res) => {
+  const token = (req.headers['authorization'] || '').replace(/^Bearer /, '') || req.query.token;
+  const decoded = lookmaxAuthLib.verifyLookmaxToken(token);
+  if (!decoded || decoded.userId !== req.params.userId) return res.sendStatus(401);
+  const abs = photosSvc.resolve(req.params.userId, req.params.filename);
+  if (!abs || !fs.existsSync(abs)) return res.sendStatus(404);
+  res.sendFile(abs);
+});
 
 // Legacy webhook paths (Wati era) → 308 redirect to the Meta Cloud API endpoint
 // for a 30-day deprecation window so any cached config does not 404

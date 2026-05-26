@@ -8,6 +8,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const whatsapp = require('../services/whatsapp');
+const sms = require('../services/sms');
 const auth = require('../lib/auth');
 
 let _log;
@@ -112,6 +113,29 @@ router.post('/send-message', requireAuth, async (req, res) => {
     await whatsapp.sendMessage(phone, message);
     log('SEND', `Custom message to ${phone}: ${message.substring(0, 50)}...`);
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Test SMS / OTP (founder verification — RUNBOOK) ───
+// Sends a freshly-generated OTP to the given phone (defaults to ADMIN_PHONE).
+// Respects WHATSAPP_SEND_MODE, so under `allowlist` only ADMIN_PHONE delivers,
+// and it is a DRY-RUN until MSG91_AUTH_KEY is set. The OTP is not returned in
+// production to avoid logging a real code in a response.
+router.post('/test-sms', requireAuth, async (req, res) => {
+  const phone = (req.body && req.body.phone) || process.env.ADMIN_PHONE;
+  if (!phone) return res.status(400).json({ error: 'No phone and no ADMIN_PHONE set' });
+  try {
+    const otp = sms.generateOtp();
+    const result = await sms.sendOtp(phone, otp);
+    log('TEST-SMS', `OTP send to ${phone} → ${result && result.result ? result.result : 'sent'}`);
+    res.json({
+      success: true,
+      result,
+      configured: sms.isConfigured(),
+      otp: process.env.NODE_ENV === 'production' ? undefined : otp,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

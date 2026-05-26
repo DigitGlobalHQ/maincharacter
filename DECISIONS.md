@@ -143,3 +143,60 @@ A random token is required for Meta's webhook GET-handshake. Generated value to
 paste into Render (documented in WHATSAPP_CLOUD_API_SETUP.md). Rationale: the
 value only needs to match between Render env and the Meta App webhook config, so
 generating it now lets the founder copy one value into both places.
+
+---
+
+## 2026-05-27 — Night 4 Lookmaxxing PWA decisions
+
+Decided by founder + CTO before the run; encoded here per the brief. Razorpay is
+now LIVE in production and the Orator pillar is blocked on Meta approval, so
+tonight ships the web-only Lookmaxxing PWA end-to-end with a paywall safety gate.
+
+1. **`PAYWALL_PUBLIC` defaults to `false`.** While `false`, `/paywall` serves a
+   "Launching this weekend — join the waitlist" page that captures phone + name
+   to an `EarlyAccess` store; no Razorpay flow is reachable. When `true`, the
+   Night-3 paywall logic runs unchanged. Rationale: Razorpay keys are now live,
+   so the gate guarantees the founder's dogfood window cannot trigger a real
+   charge; the founder personally flips the flag after validation.
+2. **Founder seed route** — `POST /api/admin/seed-test-user` (admin-JWT-gated),
+   body `{ phone, name, weakestAxis? }`. Upserts a User with `oratorActive:true`
+   + `lookmaxxingActive:true` (so `auraPlusPlus` computes true), a pre-completed
+   synthetic `AuditSession` (8 mid-range axes, one weakest at 35), and today's
+   personalised protocol. Returns `{ user, loginUrl }`. Rationale: lets the
+   founder dogfood the full ritual without going through live Razorpay.
+3. **Admin bypass login** — `POST /api/lookmax/auth/admin-login`, body
+   `{ phone, password }`, validates `isAdminPhone(phone)` + bcrypt against
+   `ADMIN_PASSWORD_HASH`, returns a Lookmaxxing-scoped JWT (24h). The OTP path
+   stays the default UI but shows "OTP currently unavailable — admin login only"
+   until WhatsApp Cloud API is live + approved. Rationale: Meta is not approved
+   yet, so OTP cannot deliver; admin login unblocks dogfooding immediately.
+4. **Multi-admin allowlist** — new `ADMIN_PHONES` (comma-separated) and
+   `ADMIN_EMAILS` (comma-separated); a `lib/admin.js` helper checks these,
+   falling back to the singular `ADMIN_PHONE` / `ADMIN_EMAIL`. Every reader of
+   the singular vars routes through the helper. Rationale: more than one operator
+   needs admin access without re-deploying per phone.
+5. **Photo storage to `/tmp`.** Mirror + hair photos save to
+   `/tmp/maincharacter-uploads/{userId}/{date}.jpg`, served token-gated at
+   `/uploads/...`. Every save logs a volatility warning; R2 migration is a
+   week-2 BACKLOG item. Rationale: we are testing ritual logic, not data
+   permanence; R2 needs founder-provisioned credentials.
+6. **Weekly reveal stubbed.** `public/lookmax/reveal.html` ships the full UX
+   (share buttons, timing copy, week framing); the artefact is a client-rendered
+   canvas slideshow of the week's selfies. Real MP4 generation waits on ffmpeg in
+   the Render container (BACKLOG). Rationale: the page UX is identical either
+   way; ffmpeg is a container change the founder must make.
+7. **Founder receives every protocol item.** No demographic/state filtering — the
+   founder sees minoxidil, ketoconazole, retinoid, and explicit "DO NOT use jaw
+   exercisers" copy. Rationale: human-in-the-loop decision #4; the founder is
+   Customer #1 and must review the full library.
+8. **No payment flow in founder dogfood.** The founder uses the seed route; the
+   audit + paywall pages remain visitable (paywall shows the waitlist page until
+   `PAYWALL_PUBLIC=true`) but the founder never touches Razorpay. Rationale:
+   keeps the live-key blast radius at zero during testing.
+
+### Reverted a stray native `bcrypt` dependency
+An uncommitted `bcrypt` (native) addition was found in package.json at the start
+of the run; reverted it. Rationale: the codebase authenticates with pure-JS
+`bcryptjs` everywhere (lib/auth.js), and a native build can fail on the Render
+deploy and take the whole app down (DECISIONS.md Night-2 P0.3). All Night-4
+password hashing continues through `bcryptjs`.

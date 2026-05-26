@@ -93,11 +93,14 @@ async function run() {
     check('GET /audit → 200', audit.status === 200);
     check('/audit serves the Aesthetic Audit funnel', /The Aesthetic Audit/.test(auditBody));
 
-    // paywall (Night-3 P5)
+    // paywall safety gate (Night-4 P0.3): PAYWALL_PUBLIC unset → waitlist page.
+    check('/health paywall gate is off by default', healthJson.paywall && healthJson.paywall.public === false);
+    check('/health reports lookmaxxing configured', healthJson.lookmaxxing && healthJson.lookmaxxing.configured === true);
     const paywall = await fetch(`${BASE}/paywall`);
     const paywallBody = await paywall.text();
     check('GET /paywall → 200', paywall.status === 200);
-    check('/paywall has all three plan cards', /The Orator/.test(paywallBody) && /Lookmaxxing/.test(paywallBody) && /Aura\+\+/.test(paywallBody));
+    check('/paywall serves the waitlist page (gate off)', /The Chamber opens this weekend/.test(paywallBody));
+    check('/paywall does NOT expose the live payment cards (gate off)', !/Choose the work/.test(paywallBody));
 
     // payment-confirmed page (Night-3 P6)
     const confirmed = await fetch(`${BASE}/payment-confirmed`);
@@ -115,6 +118,15 @@ async function run() {
     });
     const sessionJson = await session.json();
     check('POST /api/audit/session → 200 with token', session.status === 200 && !!sessionJson.sessionToken);
+
+    // early-access waitlist capture (Night-4 P0.3)
+    const early = await fetch(`${BASE}/api/waitlist/early-access`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Smoke', phone: '9000099000' }),
+    });
+    const earlyJson = await early.json();
+    check('POST /api/waitlist/early-access → 200 success', early.status === 200 && earlyJson.success === true);
   } finally {
     server.kill('SIGTERM');
     await wait(200);

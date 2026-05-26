@@ -8,6 +8,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const router = express.Router();
 const User = require('../models/User');
+const EarlyAccess = require('../models/EarlyAccess');
 const whatsapp = require('../services/whatsapp');
 const email = require('../services/email');
 const gemini = require('../services/gemini');
@@ -443,6 +444,32 @@ router.post('/waitlist', (req, res) => {
   log('WAITLIST', `${phone} joined ${pillar} waitlist (new: ${added})`);
 
   res.json({ success: true, added });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// POST /api/waitlist/early-access — paywall waitlist (Night-4, P0.3)
+// Captures name + phone while PAYWALL_PUBLIC is false so no live Razorpay
+// charge can fire during the dogfood window. Deduplicated by phone.
+// ═══════════════════════════════════════════════════════════════════
+
+router.post('/waitlist/early-access', (req, res) => {
+  const { phone, name, auditSessionToken } = req.body || {};
+  const cleanPhone = String(phone || '').replace(/\D/g, '');
+  if (!/^\d{10,13}$/.test(cleanPhone)) {
+    return res.status(400).json({ error: 'valid phone required' });
+  }
+  const { added } = EarlyAccess.add({
+    phone: cleanPhone,
+    name: name || '',
+    sourceAuditSessionToken: auditSessionToken || null,
+  });
+  log('EARLY-ACCESS', `${cleanPhone} ${added ? 'added to' : 'already on'} early-access list`);
+  // Consultant-voice confirmation (copy from the autopilot brief — not invented).
+  res.json({
+    success: true,
+    added,
+    message: "You're on the list. When the doors open, yours opens first. ◆ MainCharacter",
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════

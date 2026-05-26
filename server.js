@@ -35,6 +35,7 @@ const scheduler = require('./services/scheduler');
 const whatsapp = require('./services/whatsapp');
 const messagingMode = require('./lib/messaging-mode');
 const User = require('./models/User');
+const EarlyAccess = require('./models/EarlyAccess');
 
 // ─── Messaging send-mode compatibility shim (Night-3 rename) ───
 // WHATSAPP_SEND_MODE is canonical; mirror the legacy WATI_SEND_MODE into it for a
@@ -48,6 +49,16 @@ messagingMode.checkDeprecation();
 const app = express();
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
+
+// Best-effort build identifier surfaced on /health (Render sets RENDER_GIT_COMMIT).
+const GIT_SHA = (() => {
+  if (process.env.RENDER_GIT_COMMIT) return process.env.RENDER_GIT_COMMIT.slice(0, 7);
+  try {
+    return require('child_process').execSync('git rev-parse --short HEAD').toString().trim();
+  } catch {
+    return 'unknown';
+  }
+})();
 
 // Render runs behind a proxy; trust the first hop so rate-limit sees real IPs.
 app.set('trust proxy', 1);
@@ -133,8 +144,14 @@ app.get('/dashboard/:token', (req, res) => {
 });
 
 // Paywall (P5) — 3-card subscribe page (Orator / Lookmaxxing / Aura++).
+// Night-4 safety gate (P0.3): Razorpay is LIVE, so the full paywall is only
+// served when PAYWALL_PUBLIC === 'true'. Otherwise we serve a waitlist page so
+// no live charge can fire during the founder's dogfood window (DECISIONS #1).
 app.get('/paywall', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'paywall.html'));
+  if (process.env.PAYWALL_PUBLIC === 'true') {
+    return res.sendFile(path.join(__dirname, 'public', 'paywall.html'));
+  }
+  res.sendFile(path.join(__dirname, 'public', 'paywall-waitlist.html'));
 });
 
 // Post-payment confirmation (P6) — Razorpay callback lands here.
@@ -198,6 +215,14 @@ app.get('/health', (req, res) => {
       database: !!process.env.DATABASE_URL,
       sms: { configured: !!process.env.MSG91_AUTH_KEY },
       email: { configured: !!process.env.RESEND_API_KEY },
+    },
+    paywall: {
+      public: process.env.PAYWALL_PUBLIC === 'true',
+      waitlistCount: EarlyAccess.count(),
+    },
+    lookmaxxing: {
+      configured: true,
+      version: GIT_SHA,
     },
     messaging: {
       provider: 'whatsapp-cloudapi',
@@ -276,6 +301,24 @@ app.listen(PORT, () => {
   console.log(`  Webhook guard:  ${guard.toUpperCase()}${guard === 'open' ? ' — set WHATSAPP_APP_SECRET to verify incoming webhooks' : ''}`);
   console.log('═'.repeat(62));
   console.log('');
+
+  // P0.6 — guard against an accidental real charge: live keys + a public paywall
+  // + no historical paying user is almost always a misconfiguration during the
+  // dogfood window. Surface it loudly so the founder notices before a user pays.
+  const liveKeys = String(process.env.RAZORPAY_KEY_ID || '').startsWith('rzp_live_');
+  const paywallPublic = process.env.PAYWALL_PUBLIC === 'true';
+  const everPaid = Object.values(User.getAllUsers()).some(
+    (u) => u.oratorActive || u.lookmaxxingActive || u.subscriptionStatus === 'active'
+  );
+  if (liveKeys && paywallPublic && !everPaid) {
+    console.log('─'.repeat(62));
+    slog.warn(
+      'RAZORPAY',
+      'LIVE keys + paywall public + zero historical paying users. Verify this is ' +
+        'intentional. To gate the paywall, set PAYWALL_PUBLIC=false.'
+    );
+    console.log('─'.repeat(62));
+  }
 
   // Start the scheduler (skip when RUN_SCHEDULER=false, e.g. tests / worker split)
   if (process.env.RUN_SCHEDULER !== 'false') {

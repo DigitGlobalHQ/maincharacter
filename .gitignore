@@ -13,6 +13,8 @@ data/users.json
 data/waitlist.json
 data/audit-sessions.json
 data/razorpay-plans.json
+data/early-access.json
+data/lookmax/
 maincharacter-uploads/
 /tmp/maincharacter-uploads/
 coverage/

@@ -204,6 +204,9 @@ app.get('/admin', (req, res) => {
 app.use('/api', apiRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/audit', auditRoutes);
+// Lookmaxxing PWA API (Night-4). Auth routes are public; the feature router
+// (mirror/protocol/hair/dashboard/reveal) is mounted in P4 once its services exist.
+app.use('/api/lookmax', require('./routes/lookmax-auth'));
 
 // Legacy webhook paths (Wati era) → 308 redirect to the Meta Cloud API endpoint
 // for a 30-day deprecation window so any cached config does not 404

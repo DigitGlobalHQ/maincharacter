@@ -133,6 +133,13 @@ async function run() {
     check('GET /lookmax/icons/icon-512.png → 200', lmIcon.status === 200);
     const lmMirror = await fetch(`${BASE}/lookmax/mirror`);
     check('GET /lookmax/mirror (pretty URL) → 200', lmMirror.status === 200);
+    const lmMe = await fetch(`${BASE}/api/lookmax/me`);
+    check('GET /api/lookmax/me without token → 401', lmMe.status === 401);
+    const lmOtp = await fetch(`${BASE}/api/lookmax/auth/request-otp`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: '919876543210' }),
+    });
+    const lmOtpJson = await lmOtp.json();
+    check('POST /api/lookmax/auth/request-otp → unavailable (OTP dormant)', lmOtpJson.status === 'unavailable');
 
     // early-access waitlist capture (Night-4 P0.3)
     const early = await fetch(`${BASE}/api/waitlist/early-access`, {

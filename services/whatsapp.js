@@ -150,6 +150,19 @@ async function sendTemplateMessage(phone, templateName, params = [], langCode = 
 }
 
 /**
+ * Send a one-time login code via a Meta "authentication" template (Night-4, P3).
+ * The template (default `otp_login`) must be pre-approved with one body
+ * parameter — the OTP. DRY-RUN/allowlist-gated like every other send.
+ * @param {string} phone
+ * @param {string} otp 6-digit code
+ * @param {string} [templateName]
+ * @returns {Promise<object>}
+ */
+async function sendOtp(phone, otp, templateName = process.env.WHATSAPP_OTP_TEMPLATE || 'otp_login') {
+  return sendTemplateMessage(phone, templateName, [String(otp)]);
+}
+
+/**
  * Send a message with one retry. Never throws — returns null on total failure.
  * Suppressed/blocked/dry-run sends are returned as-is (no retry needed).
  * @param {string} phone
@@ -228,6 +241,7 @@ module.exports = {
   sendMessage,
   sendMessageSafe,
   sendTemplateMessage,
+  sendOtp,
   verifyWebhookSignature,
   verifyWebhookChallenge,
   webhookGuardMode,

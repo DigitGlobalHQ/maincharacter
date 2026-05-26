@@ -38,25 +38,35 @@
 
 ## FOUNDER ACTIONS REQUIRED (cannot be done by AI)
 
-> **⚠ TOP PRIORITY — outgoing WhatsApp is locked to ADMIN_PHONE only.**
-> During the overnight autopilot run, `WATI_SEND_MODE` defaults to `allowlist`
-> (sends only to `ADMIN_PHONE`) so a redeploy cannot re-trigger the spam loop.
-> - [ ] **Set `WATI_SEND_MODE=all` in Render env to resume sending to real users** (after auditing the diff).
+> **⚠ TOP PRIORITY — outgoing messaging is locked to ADMIN_PHONE / ADMIN_EMAIL only.**
+> `WHATSAPP_SEND_MODE` defaults to `allowlist` so a redeploy cannot re-trigger a
+> send loop. It governs WhatsApp, SMS and email together.
+> - [ ] **Set `WHATSAPP_SEND_MODE=all` in Render env to resume sending to real users** (after auditing the diff).
 
 - [ ] Rotate Gemini API key (was committed in .env — still in git history)
-- [ ] Rotate Wati JWT (was committed in .env — still in git history)
 - [ ] Rotate Razorpay test keys; complete KYC; paste live keys into Render env
 - [ ] Set `ADMIN_PASSWORD_HASH` in Render env (bcrypt hash — see DECISIONS.md / lib/auth.js)
-- [ ] Set `WATI_WEBHOOK_SECRET` in Render env (for incoming webhook verification)
 - [ ] Set `RAZORPAY_WEBHOOK_SECRET` in Render env + configure the webhook in Razorpay dashboard pointing at `/api/payment/webhook`
 - [ ] Create Supabase project; paste DATABASE_URL into Render env
 - [ ] Create Sentry project; paste SENTRY_DSN into Render env
-- [ ] Create Resend account; paste RESEND_API_KEY into Render env
 - [ ] (Optional) Create Upstash Redis; paste REDIS_URL into Render env
 - [ ] Configure cron-job.org to ping /health every 5 minutes (free-tier scheduler workaround)
-- [ ] Approve Wati templates for: welcome, day-1-morning, day-N-morning, day-7-report, payment-confirmation, subscription-cancelled
 - [ ] Upgrade Render web service from Free to Starter ($7/mo) before first paid customer
 - [ ] Set up Cloudflare in front of the domain for caching + DDoS protection
+
+> WhatsApp / SMS / email channel setup (Meta, MSG91, Resend) is in the
+> **NIGHT 3 — FOUNDER ACTIONS** section at the top of this file.
+
+## ARCHIVED — WATI (removed Night 3)
+
+Wati was ripped out in the Night-3 migration (DECISIONS.md). These items no
+longer apply; kept for history.
+
+- ~~Rotate Wati JWT~~ — the key is dead; nothing reads it.
+- ~~Set `WATI_WEBHOOK_SECRET`~~ — replaced by `WHATSAPP_APP_SECRET` (Meta `x-hub-signature-256`).
+- ~~Approve Wati templates~~ — re-submit templates in Meta instead (see NIGHT 3 founder actions).
+- [ ] After ~2026-06-26 (30 days): delete the `/api/webhook/wati` and `/webhook` 308 redirects and the legacy `WATI_SEND_MODE` fallback in `lib/messaging-mode.js`.
+- (Night 2, P1.2) `/api/webhook/wati` HMAC `x-wati-signature` verification + `tests/wati-webhook-verify.test.js` — removed; superseded by Meta signature verification in `services/whatsapp.js` + `tests/whatsapp.test.js`.
 
 ### NIGHT 2 — FOUNDER ACTIONS REQUIRED
 - [ ] `npm install sharp @aws-sdk/client-s3 web-push` then redeploy. Until then:
@@ -99,8 +109,8 @@
 - [ ] P9 — Weekly Reveal video (ffmpeg composer w/ static fallback, share sheet).
 - [ ] P10 — Day-30 re-audit + cross-sell (side-by-side delta, evolution write-up).
 - [ ] P11 — Cross-sell automation (Orator Day-7 report + Lookmaxxing first reveal,
-      /upgrade?to=auraplus pre-select). NOTE: audit page already routes
-      ?intent=bundle → /upgrade?to=auraplus.
+      Aura++ pre-select). NOTE: audit page now routes ?intent=bundle →
+      /paywall?intent=bundle (Night-3 P5); paywall pre-selects Aura++.
 - [ ] Referral programme — "Invite 3 to unlock ₹200 off"
 - [ ] LTV/cohort analytics on /admin
 - [ ] Mobile-app shell (PWA first; React Native later)
@@ -111,10 +121,10 @@
 - [x] (Night 2, P1.1) `START NOW` now seeds the Day-1 lexicon via
       `User.addWordsLearned(phone, DAYS[1].words, 1)` in `handleStartNow`.
       Regression test: `tests/start-now.test.js`.
-- [x] (Night 2, P1.2) `/api/webhook/wati` + `/webhook` now verify incoming
-      requests via `wati.verifyWebhookRequest` (HMAC `x-wati-signature` →
-      IP-allowlist → open+warn). Test: `tests/wati-webhook-verify.test.js`.
-      FOUNDER ACTION: set `WATI_WEBHOOK_SECRET` in Render (else open mode).
+- [x] (Night 3) Incoming webhook verification now uses Meta's `x-hub-signature-256`
+      (`services/whatsapp.verifyWebhookSignature`, `tests/whatsapp.test.js`).
+      Superseded the Night-2 Wati `x-wati-signature` verifier (see ARCHIVED — WATI).
+      FOUNDER ACTION: set `WHATSAPP_APP_SECRET` in Render (else open + boot warn).
 
 ## COPY REVIEW QUEUE (founder must approve before shipping)
 - Payment confirmation + cancellation WhatsApp copy in routes/api.js

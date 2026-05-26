@@ -65,14 +65,17 @@ MainComponent/
 ├── package.json             ← Deps: express, axios, dotenv, multer, node-cron, razorpay, @google/generative-ai
 │
 ├── routes/
-│   ├── api.js               ← /api/enroll, /api/webhook/wati, /api/waitlist, /api/user/:token, /api/payment/*
+│   ├── api.js               ← /api/enroll, /api/webhook/whatsapp, /api/waitlist, /api/user/:token, /api/payment/*
 │   └── admin.js             ← /api/admin/* (password-header auth)
 │
 ├── services/
-│   ├── wati.js              ← sendMessage, sendMessageSafe (1 retry), sendTemplateMessage
+│   ├── whatsapp.js          ← Meta Cloud API: sendMessage, sendMessageSafe (1 retry), sendTemplateMessage, verifyWebhookSignature/Challenge (DRY-RUN until creds set)
+│   ├── sms.js               ← MSG91: sendOtp, sendSms, generateOtp (DRY-RUN until MSG91_AUTH_KEY)
+│   ├── email.js             ← Resend: sendEmail, sendPaywallReceipt, sendAuditConfirmation, sendDay7EvolutionReport (DRY-RUN until RESEND_API_KEY)
 │   ├── gemini.js            ← scoreUserResponse, generateEvolutionAssessment, fallback scoring
 │   ├── scheduler.js         ← node-cron every 60s + checkMissedMessages on boot
-│   └── razorpay.js          ← createOrder, createPaymentLink, verifyPayment, verifyWebhookSignature
+│   └── razorpay.js          ← createOrder, createSubscription, verifyPayment, verifySubscriptionPayment, verifyWebhookSignature
+│   (lib/messaging-mode.js   ← shared all/allowlist/off kill-switch for WhatsApp+SMS+email)
 │
 ├── models/
 │   └── User.js              ← JSON-file CRUD (data/users.json, data/waitlist.json)
@@ -97,9 +100,11 @@ MainComponent/
 ```
 
 **Data flow (Orator):**
-`User submits form → POST /api/enroll → User.createUser → wati.sendMessage(welcome) → User replies "START NOW" → /api/webhook/wati → handleStartNow → wati sends Day 1 morning → user replies → handleDailyResponse → gemini.scoreUserResponse → User.addScore + addChronicle → wati sends evening feedback → cron sends Day N+1 next day → repeat → Day 7 → buildEvolutionReport → wati → "Reply CONTINUE to subscribe" → razorpay.createPaymentLink → user pays → ???`
+`User submits form → POST /api/enroll → User.createUser → whatsapp.sendMessage(welcome) → User replies "START NOW" → /api/webhook/whatsapp → handleStartNow → whatsapp sends Day 1 morning → user replies → handleDailyResponse → gemini.scoreUserResponse → User.addScore + addChronicle → whatsapp sends evening feedback → cron sends Day N+1 next day → repeat → Day 7 → buildEvolutionReport → whatsapp + email.sendDay7EvolutionReport → razorpay subscribe → user pays → /api/payment/webhook flips oratorActive + email.sendPaywallReceipt → /payment-confirmed`
 
-**The chain breaks at `???`.** There is no Razorpay → DB → user-upgrade webhook. Fix this.
+**Revenue loop closed (Night 3):** audit/paywall → `/api/payment/subscribe` → Razorpay checkout → `/payment-confirmed` (reads `/api/payment/status`); the `subscription.activated` webhook flips `oratorActive`/`lookmaxxingActive`, primes Day-1 scheduling, and fires the receipt email.
+
+**Channels (Night 3 — Wati removed):** WhatsApp = Meta Cloud API (`services/whatsapp.js`, DORMANT/DRY-RUN until Meta creds set). SMS/OTP = MSG91 (`services/sms.js`). Email = Resend (`services/email.js`). All share `WHATSAPP_SEND_MODE` (`all`/`allowlist`/`off`, default `allowlist`). See `WHATSAPP_CLOUD_API_SETUP.md`.
 
 ---
 
@@ -107,9 +112,9 @@ MainComponent/
 
 1. **`data/users.json` is wiped on every Render redeploy.** Render free-tier disk is ephemeral. Migration to Postgres is mandatory before any real user signs up.
 2. **Render free tier sleeps after 15 min of no traffic.** `node-cron` dies with it. Morning messages will not fire. Either move scheduler off the web dyno, or upgrade to a paid tier with always-on instance, or use an external pinger (cron-job.org → /health every 5 min) as a stopgap.
-3. **`.env` is committed to the repo.** Rotate every key (Gemini, Wati JWT, Razorpay) and add `.env` to `.gitignore` if not already.
+3. **`.env` is committed to the repo.** Rotate every key (Gemini, Razorpay; Wati JWT is now dead) and add `.env` to `.gitignore` if not already.
 4. **Admin password defaults to `maincharacter2026` in plaintext** and is sent via custom header. Replace with proper auth.
-5. **Webhook is open to the internet.** Wati requests are not signature-verified. Razorpay's webhook signature verifier exists but is not wired to any route.
+5. **WhatsApp number 9958533994 is in transition (Wati → Meta).** Until the founder finishes Meta Business Manager setup and pastes the `WHATSAPP_*` env vars, ALL outbound WhatsApp falls through to DRY-RUN (logged, no send) — this is expected and safe, not a bug. The incoming webhook (`/api/webhook/whatsapp`) verifies Meta's `x-hub-signature-256` once `WHATSAPP_APP_SECRET` is set (accepts unsigned + warns until then). Razorpay's webhook signature verifier IS wired (`/api/payment/webhook`).
 6. **Webhook self-forwarding via `http.request('localhost')`** in `server.js` is fragile. Remove and call the handler directly.
 7. **Phone is the only user identifier.** Lose the phone, lose the account. Add email as secondary identifier.
 8. **Free-text user replies are concatenated into Gemini prompts** with no sanitisation → prompt-injection vector. Wrap user input in delimiters and explicit instruction guards.
@@ -125,10 +130,18 @@ Set in Render dashboard (NOT in committed `.env`):
 | Key | Purpose | Required |
 |---|---|---|
 | `GEMINI_API_KEY` | Google Generative AI | yes |
-| `WATI_API_KEY` | Wati Bearer JWT | yes |
-| `WATI_BASE_URL` | e.g. `https://live-mt-server.wati.io/10165576` | yes |
-| `WATI_WEBHOOK_SECRET` | new — for verifying incoming webhooks | add |
+| `WHATSAPP_ACCESS_TOKEN` | Meta system-user token (Cloud API send) | yes (DRY-RUN until set) |
+| `WHATSAPP_PHONE_NUMBER_ID` | Meta phone number ID | yes (DRY-RUN until set) |
+| `WHATSAPP_BUSINESS_ACCOUNT_ID` | Meta WABA ID | yes |
+| `WHATSAPP_APP_SECRET` | Meta app secret — verifies `x-hub-signature-256` | add (open+warn until set) |
+| `WHATSAPP_VERIFY_TOKEN` | echoed in Meta's webhook GET handshake | add |
+| `MSG91_AUTH_KEY` | MSG91 auth key (SMS/OTP) | add (DRY-RUN until set) |
+| `MSG91_TEMPLATE_ID_OTP` | DLT-approved OTP template id | add |
+| `MSG91_SENDER_ID` | 6-letter sender id (e.g. `MAINCH`) | add |
+| `RESEND_API_KEY` | Resend transactional email | add (DRY-RUN until set) |
+| `RESEND_FROM_EMAIL` | e.g. `consultant@maincharacter.digitglobalservices.com` | add |
 | `ADMIN_PHONE` | founder's WhatsApp for alerts (with country code, no `+`) | yes |
+| `ADMIN_EMAIL` | founder's email for alerts + email allowlist owner | add |
 | `ADMIN_PASSWORD` | admin login | yes (rotate) |
 | `RAZORPAY_KEY_ID` | live key after KYC | yes |
 | `RAZORPAY_KEY_SECRET` | live secret | yes |
@@ -136,9 +149,8 @@ Set in Render dashboard (NOT in committed `.env`):
 | `UPGRADE_BASE_URL` | `https://maincharacter.digitglobalservices.com` | yes |
 | `DATABASE_URL` | new — Postgres connection string | add |
 | `REDIS_URL` | new — Upstash Redis for queue/cache | add |
-| `RESEND_API_KEY` | new — transactional email | add |
 | `SENTRY_DSN` | new — error monitoring | add |
-| `WATI_SEND_MODE` | `all` / `allowlist` / `off` — global send guard (defaults to `allowlist`) | yes |
+| `WHATSAPP_SEND_MODE` | `all` / `allowlist` / `off` — global send guard for WhatsApp+SMS+email (defaults to `allowlist`; legacy `WATI_SEND_MODE` still read for 30 days) | yes |
 | `WEB_PUSH_VAPID_PUBLIC` | VAPID public key for PWA push notifications | add |
 | `WEB_PUSH_VAPID_PRIVATE` | VAPID private key for PWA push notifications | add |
 | `R2_ACCOUNT_ID` | Cloudflare R2 (object storage for daily mirror photos + reveal videos) | add |
@@ -191,7 +203,7 @@ A feature is "done" only when ALL of these are true:
 | D7 Completion rate | users who finished Day 7 / D1 starts | 40% | 55% |
 | Trial → Paid | CONTINUE conversions / D7 completions | 8% | 15% |
 | MRR | active subscriptions × ARPU | ₹6,000 | ₹4,00,000 |
-| WhatsApp deliverability | Wati `delivered` / `sent` | 95% | 98% |
+| WhatsApp deliverability | Meta Cloud API `delivered` / `sent` | 95% | 98% |
 
 Surface these on `/admin` — the founder should see them on the dashboard, not in console logs.
 

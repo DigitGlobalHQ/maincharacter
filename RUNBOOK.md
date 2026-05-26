@@ -5,32 +5,34 @@ Practical playbook for incidents and routine ops. Pair with `/health` and the
 
 ---
 
-## 🔴 KILL SWITCH — stop all outgoing WhatsApp immediately
+## 🔴 KILL SWITCH — stop all outgoing messaging immediately
 
 Set in Render env and redeploy (or restart):
 
 ```
-WATI_SEND_MODE=off
+WHATSAPP_SEND_MODE=off
 ```
 
-`off` = dry-run, the app never calls the Wati API. Use this the moment you
-suspect a send loop. `allowlist` (the default) restricts sends to `ADMIN_PHONE`
-+ `WATI_ALLOWLIST`. `all` = normal production. Confirm via `GET /health` →
-`wati.sendMode`.
+`off` = dry-run, the app never calls any provider (WhatsApp, SMS, or email).
+Use this the moment you suspect a send loop. `allowlist` (the default) restricts
+sends to `ADMIN_PHONE` / `ADMIN_EMAIL` (+ `WHATSAPP_ALLOWLIST` / `EMAIL_ALLOWLIST`).
+`all` = normal production. Confirm via `GET /health` → `messaging.mode`.
 
 ---
 
-## Wati is down / messages not delivering
+## WhatsApp not delivering (or stuck in DRY-RUN)
 
-1. `GET /health` → confirm `config.wati: true`.
-2. Check logs for `[WATI:FAIL]` / `[WATI:RETRY]`. `sendMessageSafe` already
-   retries once and never throws (returns `null` on total failure), so the
-   funnel won't crash — messages are just dropped.
-3. If `sendMode` shows `allowlist`/`off`, that's the gate, not an outage —
+1. `GET /health` → `messaging.configured`. If `false`, the Meta credentials
+   aren't set yet — every send is an intentional DRY-RUN (not an outage). Set the
+   `WHATSAPP_*` env vars (see "flip WhatsApp from DRY-RUN to live" below).
+2. Check logs for `[WHATSAPP:DRY-RUN]` (creds/mode), `[WHATSAPP:FAIL]` /
+   `[WHATSAPP:RETRY]` (real send errors). `sendMessageSafe` retries once and never
+   throws (returns `null` on total failure), so the funnel won't crash.
+3. If `messaging.mode` shows `allowlist`/`off`, that's the gate, not an outage —
    flip to `all` when ready.
-4. If Wati's API is genuinely down, scheduled sends are lost (no queue yet —
-   see BACKLOG for a retry queue). On recovery, `checkMissedMessages()` on the
-   next boot re-sends today's missed morning messages.
+4. If Meta's API is genuinely down, scheduled sends are lost (no queue yet —
+   see BACKLOG). On recovery, `checkMissedMessages()` on the next boot re-sends
+   today's missed morning messages. As a stopgap, fall back to email/SMS.
 
 ## Gemini is rate-limited or erroring
 
@@ -59,7 +61,7 @@ Render free tier this resets on redeploy — prefer the admin API:
 - Get a token: `POST /api/admin/login` `{ "password": "<admin pw>" }`.
 - Inspect: `GET /api/admin/user/:phone` (Bearer).
 - Send a one-off message: `POST /api/admin/send-message` `{ phone, message }`
-  (subject to `WATI_SEND_MODE`).
+  (subject to `WHATSAPP_SEND_MODE`).
 
 There is no rank/subscription edit endpoint beyond `promote` yet; for
 `subscriptionStatus` changes, edit `data/users.json` directly on the host (or
@@ -87,7 +89,38 @@ on a paid always-on instance.
 - Rollback: in the Render dashboard, redeploy a previous successful deploy, or
   `git revert <sha> && git push`.
 - After any deploy, check `GET /health`: `status: healthy`, expected
-  `config.*`, and the intended `wati.sendMode`.
+  `config.*`, and the intended `messaging.mode`.
+
+---
+
+## How to flip WhatsApp from DRY-RUN to live
+
+WhatsApp is DORMANT until the Meta Cloud API credentials are present. Full setup:
+`WHATSAPP_CLOUD_API_SETUP.md`. Quick version:
+
+1. Paste into Render env: `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`,
+   `WHATSAPP_BUSINESS_ACCOUNT_ID`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`.
+2. Redeploy, then `curl https://maincharacter.digitglobalservices.com/health | jq .messaging`
+   → expect `"configured": true` and `"webhookGuard": "hmac"`.
+3. Send a test to ADMIN_PHONE: `POST /api/admin/send-message` `{ phone: ADMIN_PHONE, message: "◆ test" }`
+   (Bearer admin JWT). With `WHATSAPP_SEND_MODE=allowlist`, only ADMIN_PHONE delivers.
+4. When verified, set `WHATSAPP_SEND_MODE=all` to reach real users.
+
+## How to test MSG91 OTP without spending money
+
+- Keep `WHATSAPP_SEND_MODE=allowlist` so only ADMIN_PHONE can receive.
+- `POST /api/admin/test-sms` `{ "phone": "<ADMIN_PHONE>" }` (Bearer admin JWT)
+  sends a fresh OTP via MSG91 to that number (one SMS = a few paise). The
+  response includes `result` and `configured`; the OTP itself is hidden in
+  production. If `MSG91_AUTH_KEY` is unset, it returns a DRY-RUN (spends nothing).
+
+## How to roll back to Wati if the Cloud API fails
+
+You cannot — **Wati is gone** (removed Night 3, DECISIONS.md). There is no Wati
+fallback. If the Meta Cloud API is failing, set `WHATSAPP_SEND_MODE=off` (all
+WhatsApp becomes DRY-RUN, no errors) and rely on email (Resend) + SMS (MSG91)
+until Meta is healthy. The legacy `/api/webhook/wati` path 308-redirects to
+`/api/webhook/whatsapp` for 30 days; do not re-point anything at Wati.
 
 ## Webhooks rejecting (Razorpay 400)
 

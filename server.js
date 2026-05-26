@@ -36,6 +36,7 @@ const whatsapp = require('./services/whatsapp');
 const messagingMode = require('./lib/messaging-mode');
 const User = require('./models/User');
 const EarlyAccess = require('./models/EarlyAccess');
+const adminLib = require('./lib/admin');
 
 // ─── Messaging send-mode compatibility shim (Night-3 rename) ───
 // WHATSAPP_SEND_MODE is canonical; mirror the legacy WATI_SEND_MODE into it for a
@@ -210,7 +211,8 @@ app.get('/health', (req, res) => {
     config: {
       gemini: !!process.env.GEMINI_API_KEY,
       razorpay: !!process.env.RAZORPAY_KEY_ID,
-      adminPhone: !!process.env.ADMIN_PHONE,
+      adminPhone: adminLib.getAdminPhones().length > 0,
+      adminCount: adminLib.getAdminPhones().length,
       sentry: !!process.env.SENTRY_DSN,
       database: !!process.env.DATABASE_URL,
       sms: { configured: !!process.env.MSG91_AUTH_KEY },
@@ -276,7 +278,7 @@ app.listen(PORT, () => {
   console.log(`  SMS (MSG91):  ${process.env.MSG91_AUTH_KEY ? 'CONFIGURED' : 'DRY-RUN'}`);
   console.log(`  Email (Resend): ${process.env.RESEND_API_KEY ? 'CONFIGURED' : 'DRY-RUN'}`);
   console.log(`  Razorpay:     ${process.env.RAZORPAY_KEY_ID ? 'CONFIGURED' : 'NOT SET'}`);
-  console.log(`  Admin phone:  ${process.env.ADMIN_PHONE || 'NOT SET'}`);
+  console.log(`  Admin phones: ${adminLib.getAdminPhones().join(', ') || 'NOT SET'}`);
   console.log('─'.repeat(62));
   console.log('  Pages:');
   console.log('    /           — Landing page');

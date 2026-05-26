@@ -13,9 +13,9 @@ const whatsapp = require('../services/whatsapp');
 const email = require('../services/email');
 const gemini = require('../services/gemini');
 const razorpay = require('../services/razorpay');
+const admin = require('../lib/admin');
 const { DAYS, buildMorningMessage, buildEveningMessage, buildEvolutionReport } = require('../data/orator-content');
 
-const ADMIN_PHONE = process.env.ADMIN_PHONE || '';
 const BASE_URL = process.env.UPGRADE_BASE_URL || 'https://maincharacter.digitglobalservices.com';
 const WHATSAPP_NUMBER = '919958533994'; // WhatsApp Business number (Meta Cloud API)
 
@@ -70,6 +70,8 @@ router.post('/enroll', enrollValidators, async (req, res) => {
     });
 
     log('ENROLL', `${user.name} (${user.phone}) enrolled in ${user.pillar}`);
+
+    const ADMIN_PHONE = admin.primaryAdminPhone();
 
     // Send welcome WhatsApp message
     const welcomeMsg = `◆ MainCharacter\n\nWelcome, ${user.name}.\n\nI'm The Consultant.\n\nYour Orator Protocol is confirmed.\n\nReply *START NOW* to begin your Day 1 immediately.\nOr sit with this: think about the last time you spoke in a room that mattered. What happened?\n\nWhen you're ready — reply START NOW.`;
@@ -182,6 +184,7 @@ function parseIncomingMessage(body) {
  */
 async function processWhatsAppWebhook(body) {
   try {
+    const ADMIN_PHONE = admin.primaryAdminPhone();
     const parsed = parseIncomingMessage(body);
     if (parsed.statusOnly) return;
 

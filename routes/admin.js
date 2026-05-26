@@ -7,9 +7,15 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const AuditSession = require('../models/AuditSession');
+const Lookmax = require('../models/Lookmax');
 const whatsapp = require('../services/whatsapp');
 const sms = require('../services/sms');
 const auth = require('../lib/auth');
+const admin = require('../lib/admin');
+const { AESTHETIC_AXES } = require('../data/lookmax-prompts');
+
+const BASE_URL = process.env.UPGRADE_BASE_URL || 'https://maincharacter.digitglobalservices.com';
 
 let _log;
 function log(tag, msg) {
@@ -124,8 +130,8 @@ router.post('/send-message', requireAuth, async (req, res) => {
 // and it is a DRY-RUN until MSG91_AUTH_KEY is set. The OTP is not returned in
 // production to avoid logging a real code in a response.
 router.post('/test-sms', requireAuth, async (req, res) => {
-  const phone = (req.body && req.body.phone) || process.env.ADMIN_PHONE;
-  if (!phone) return res.status(400).json({ error: 'No phone and no ADMIN_PHONE set' });
+  const phone = (req.body && req.body.phone) || admin.primaryAdminPhone();
+  if (!phone) return res.status(400).json({ error: 'No phone and no admin phone set' });
   try {
     const otp = sms.generateOtp();
     const result = await sms.sendOtp(phone, otp);
@@ -183,6 +189,81 @@ router.post('/promote', requireAuth, (req, res) => {
 
   log('PROMOTE', `${user.name} → ${rank}`);
   res.json({ success: true, user: { name: user.name, rank: user.rank } });
+});
+
+// ─── Seed a test user for founder dogfood (Night-4, P1.3) ───
+// Skips Razorpay entirely: upserts a fully-activated user (Orator + Lookmaxxing
+// → Aura++ computes true) with a pre-completed synthetic audit and today's
+// protocol, then returns the admin-login deep link. Idempotent by phone.
+router.post('/seed-test-user', requireAuth, (req, res) => {
+  const { phone, name, weakestAxis } = req.body || {};
+  const cleanPhone = String(phone || '').replace(/\D/g, '');
+  if (!/^\d{10,13}$/.test(cleanPhone)) {
+    return res.status(400).json({ error: 'valid phone required' });
+  }
+  const weakest = AESTHETIC_AXES.includes(weakestAxis) ? weakestAxis : 'hairDensity';
+
+  // Synthetic 8-axis scores: mid-range everywhere, one clearly-weakest axis to
+  // drive protocol selection (DECISIONS.md Night-4 #2).
+  const scores = {};
+  for (const axis of AESTHETIC_AXES) scores[axis] = axis === weakest ? 35 : 65;
+
+  // Create + complete a synthetic AuditSession.
+  const session = AuditSession.createSession({ intent: 'founder-seed' });
+  AuditSession.updateSession(session.sessionToken, {
+    quizAnswers: { _seed: true, focus: weakest },
+    photos: [],
+    aestheticScores: scores,
+    weakestAxis: weakest,
+    hairReceding: { detected: weakest === 'hairDensity', norwoodEstimate: 2, hairlineScore: 35 },
+    // TODO copy review — synthetic seed for founder testing. Real audit copy
+    // comes through gemini.scoreAesthetic().
+    diagnosis:
+      '// TODO copy review — synthetic seed for founder testing. Real audit copy comes through gemini.scoreAesthetic().',
+    completedAt: new Date().toISOString(),
+  });
+
+  // Upsert the user (phone-primary). Existing → update, don't duplicate.
+  let user = User.getUserByPhone(cleanPhone);
+  if (!user) {
+    user = User.createUser({ name: (name || 'Founder').trim(), phone: cleanPhone, pillar: 'aesthetic' });
+  }
+  user = User.updateUser(cleanPhone, {
+    name: (name || user.name || 'Founder').trim(),
+    oratorActive: true,
+    lookmaxxingActive: true,
+    lookmaxxingStartedAt: user.lookmaxxingStartedAt || new Date().toISOString(),
+    mirrorLevel: 'raw',
+    auditSessionId: session.sessionToken,
+    subscriptionStatus: 'active',
+    rank: user.rank === 'unawakened' ? 'seeker' : user.rank,
+  });
+
+  // Generate today's protocol immediately (best-effort: the protocol service
+  // ships in P5; if absent at seed time the dashboard regenerates on first open).
+  try {
+    const protocol = require('../services/protocol');
+    const day = protocol.generateProtocol(user, { scores, weakestAxis: weakest });
+    Lookmax.setProtocolDay(user.token, day);
+  } catch (err) {
+    log('SEED-WARN', `protocol not generated yet: ${err.message}`);
+  }
+
+  log('SEED', `seeded ${cleanPhone} (${user.name}) weakest=${weakest} → Aura++`);
+  res.json({
+    user: {
+      token: user.token,
+      name: user.name,
+      phone: user.phone,
+      oratorActive: user.oratorActive,
+      lookmaxxingActive: user.lookmaxxingActive,
+      auraPlusPlus: User.computeAuraStatus(user).auraPlusPlus,
+      mirrorLevel: user.mirrorLevel,
+      weakestAxis: weakest,
+      auditSessionId: user.auditSessionId,
+    },
+    loginUrl: `${BASE_URL}/lookmax/admin-login?phone=${encodeURIComponent(cleanPhone)}`,
+  });
 });
 
 // ─── Export CSV ───

@@ -126,7 +126,32 @@ longer apply; kept for history.
       Superseded the Night-2 Wati `x-wati-signature` verifier (see ARCHIVED — WATI).
       FOUNDER ACTION: set `WHATSAPP_APP_SECRET` in Render (else open + boot warn).
 
+## NIGHT 4 — FOUNDER ACTIONS / DEFERRED
+- [ ] **Flip `PAYWALL_PUBLIC=true`** in Render only after dogfood validation — until
+      then `/paywall` serves the waitlist page and NO Razorpay charge can fire.
+- [ ] Set `ADMIN_PHONES` (comma-separated) + `ADMIN_EMAILS` in Render for multi-admin.
+- [ ] Set `JWT_SECRET` in Render (Lookmaxxing PWA token signing; falls back to ADMIN_JWT_SECRET).
+- [ ] **R2 photo migration (week 2):** mirror + hair photos currently save to
+      `/tmp/maincharacter-uploads/{userId}/` and are LOST on every Render redeploy.
+      Wire `services/photos.js` to Cloudflare R2 (R2_* env + @aws-sdk) for durable storage.
+- [ ] **ffmpeg weekly-reveal MP4 (week 2):** `public/lookmax/reveal.html` renders a
+      client-side canvas slideshow as the stub. Add ffmpeg to the Render container and
+      replace it with real MP4 generation. See AUTOPILOT_PROMPT_V2.md §P9 for the spec.
+- [ ] Web push: set `WEB_PUSH_VAPID_PUBLIC`/`WEB_PUSH_VAPID_PRIVATE` to enable PWA push
+      (currently the mirror nudge is WhatsApp-only and send-mode gated).
+- [ ] OTP login stays dormant until Meta display name is approved — then set
+      `WHATSAPP_OTP_ENABLED=true` (and `WHATSAPP_OTP_TEMPLATE` if not `otp_login`).
+
 ## COPY REVIEW QUEUE (founder must approve before shipping)
+- (Night 4, P5) **Entire `data/lookmax-content.js` PROTOCOL_LIBRARY** (22 do-items +
+  8 do-nots across skin/hair/jaw/posture/lifestyle) is drafted to the evidence spec
+  and flagged `// TODO copy review`. The founder (Customer #1) receives every item
+  unfiltered (minoxidil, ketoconazole, retinoid, "DO NOT use jaw exercisers"). Review
+  voice + medical framing before public launch. Same for `data/hair.js` Norwood
+  recommendation library and the Consultant-voice lines in services/hair.js + vision.consultantLine.
+- (Night 4, P0/P2-P8) New PWA user-facing strings (paywall-waitlist, login/admin-login,
+  mirror rotating lines, protocol headers, hair capture instructions, reveal caption +
+  stub note, dashboard cross-sell) are all flagged `// TODO copy review` in-file.
 - Payment confirmation + cancellation WhatsApp copy in routes/api.js
   (processPaymentEvent) was taken verbatim from the autopilot brief, not
   invented — confirm it reads correctly in The Consultant's voice.

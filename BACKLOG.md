@@ -130,3 +130,11 @@
   placeholders used only when Gemini is unavailable. Approve or replace.
 - (Night 2) The landing Lookmaxxing card + Aura++ section copy is verbatim from
   the brief; the "Two Quests"/"Two pillars" count edits are factual, not voice.
+- (Night 3, P4) Email templates in `data/email-templates/` (paywall-receipt,
+  audit-confirmation, day7-evolution-report) are drafted to The Consultant's
+  voice and flagged `<!-- TODO copy review -->`. Approve the headlines + body
+  before flipping email to live. The Day-7 fallback assessment line and the
+  receipt/CTA microcopy especially.
+- (Night 3, P5) Paywall page (`public/paywall.html`) card copy follows the brief
+  bullets verbatim; the Aura++ "Founder access to The Consultant chat" bullet is
+  flagged TODO copy review (not yet a shipped feature).

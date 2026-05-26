@@ -9,6 +9,7 @@ const { body, validationResult } = require('express-validator');
 const router = express.Router();
 const User = require('../models/User');
 const whatsapp = require('../services/whatsapp');
+const email = require('../services/email');
 const gemini = require('../services/gemini');
 const razorpay = require('../services/razorpay');
 const { DAYS, buildMorningMessage, buildEveningMessage, buildEvolutionReport } = require('../data/orator-content');
@@ -358,6 +359,15 @@ async function handleDailyResponse(user, text, msgType) {
           rank: 'seeker',
         });
 
+        // Also deliver the report by email when we have one (DRY-RUN/allowlist
+        // gated; no-op without an address). The WhatsApp report remains primary.
+        if (finalUser.email) {
+          const assessmentText = typeof assessment === 'string' ? assessment : (assessment && assessment.summary) || '';
+          email
+            .sendDay7EvolutionReport({ user: { ...finalUser, rank: 'seeker' }, assessment: assessmentText })
+            .catch((err) => log('ERROR', `Day-7 report email failed: ${err.message}`));
+        }
+
         log('REPORT', `Evolution Report sent to ${user.name}`);
       } catch (err) {
         log('ERROR', `Evolution Report failed: ${err.message}`);
@@ -585,13 +595,22 @@ async function processPaymentEvent(event) {
       if (!user.lookmaxxingStartedAt) updates.lookmaxxingStartedAt = new Date().toISOString();
     }
     User.updateUser(phone, updates);
-    const status = User.computeAuraStatus({ ...user, ...updates });
+    const updatedUser = { ...user, ...updates };
+    const status = User.computeAuraStatus(updatedUser);
     log('PAYMENT', `${user.name} (${phone}) → active via ${evt} [${pillars.join(',') || 'orator'}]${status.auraPlusPlus ? ' AURA++' : ''}`);
     // Copy supplied by founder in the autopilot brief (not invented).
     await whatsapp.sendMessageSafe(
       phone,
       `◆ The Chamber is open, ${user.name}.\n\nDay 8 arrives tomorrow at your preferred time.\n\n◆ MainCharacter`
     );
+    // P4.5: post-payment receipt email (DRY-RUN/allowlist-gated; no-op if no email).
+    if (updatedUser.email) {
+      const subscriptionId =
+        (event.payload && event.payload.subscription && event.payload.subscription.entity && event.payload.subscription.entity.id) || '';
+      email
+        .sendPaywallReceipt({ user: updatedUser, plan: notes.plan, subscriptionId })
+        .catch((err) => log('ERROR', `receipt email failed: ${err.message}`));
+    }
     return { handled: true, status: 'active', auraPlusPlus: status.auraPlusPlus, pillars };
   }
 

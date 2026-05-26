@@ -1,0 +1,71 @@
+<!doctype html>
+<!-- TODO copy review — Night-3 paywall receipt; Consultant voice, drafted to brief -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MainCharacter — Subscription Confirmed</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Sora:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body style="margin:0;padding:0;background:#070708;color:#f4f1ea;font-family:'Sora',Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#070708;padding:40px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#0d0d0f;border:1px solid #1d1d20;border-radius:14px;overflow:hidden;">
+            <tr>
+              <td style="padding:40px 40px 8px;text-align:center;">
+                <div style="color:#e8b84b;letter-spacing:3px;font-size:12px;text-transform:uppercase;">◆ MainCharacter</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 40px 8px;">
+                <h1 style="font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:500;color:#f4f1ea;font-size:34px;line-height:1.2;margin:0;text-align:center;">
+                  The Chamber is open, {{name}}.
+                </h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px 40px 24px;text-align:center;color:#b9b6ae;font-size:15px;line-height:1.7;">
+                Your {{planLabel}} subscription is confirmed. Nothing changes except the depth.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 40px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #1d1d20;border-bottom:1px solid #1d1d20;">
+                  <tr>
+                    <td style="padding:16px 0;color:#8a877f;font-size:13px;">Plan</td>
+                    <td style="padding:16px 0;color:#f4f1ea;font-size:13px;text-align:right;">{{planLabel}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:0 0 16px;color:#8a877f;font-size:13px;">Amount</td>
+                    <td style="padding:0 0 16px;color:#f4f1ea;font-size:13px;text-align:right;">{{amount}} / month</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:0 0 16px;color:#8a877f;font-size:13px;">Next billing</td>
+                    <td style="padding:0 0 16px;color:#f4f1ea;font-size:13px;text-align:right;">{{nextBillingDate}}</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px 40px;text-align:center;">
+                <a href="{{dashboardUrl}}" style="display:inline-block;background:#e8b84b;color:#070708;text-decoration:none;font-weight:600;font-size:14px;padding:14px 32px;border-radius:8px;">
+                  Enter your dashboard
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px 40px 40px;text-align:center;color:#5f5d58;font-size:12px;line-height:1.6;">
+                Reference: {{subscriptionId}}<br />
+                ◆ MainCharacter · The Consultant
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

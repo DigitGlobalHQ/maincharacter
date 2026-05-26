@@ -514,7 +514,10 @@ router.post('/payment/subscribe', async (req, res) => {
       const primaryPillar = planPillars.includes('orator') ? 'orator' : 'aesthetic';
       user = User.createUser({ name: (name || 'Seeker').trim(), phone: cleanPhone, pillar: primaryPillar });
     }
+    // Upsert details (phone-primary). For an existing user, refresh name/email/
+    // audit link rather than creating a duplicate (P5.3).
     const updates = { pendingPlan: resolvedPlan, pendingPillars: planPillars };
+    if (name && name.trim()) updates.name = name.trim();
     if (email) updates.email = email;
     if (auditSessionToken) updates.auditSessionId = auditSessionToken;
     User.updateUser(cleanPhone, updates);

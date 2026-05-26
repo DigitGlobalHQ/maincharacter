@@ -92,6 +92,16 @@ async function run() {
     const auditBody = await audit.text();
     check('GET /audit → 200', audit.status === 200);
     check('/audit serves the Aesthetic Audit funnel', /The Aesthetic Audit/.test(auditBody));
+
+    // paywall (Night-3 P5)
+    const paywall = await fetch(`${BASE}/paywall`);
+    const paywallBody = await paywall.text();
+    check('GET /paywall → 200', paywall.status === 200);
+    check('/paywall has all three plan cards', /The Orator/.test(paywallBody) && /Lookmaxxing/.test(paywallBody) && /Aura\+\+/.test(paywallBody));
+
+    // legacy Wati webhook retired → 308 redirect
+    const watiRedirect = await fetch(`${BASE}/api/webhook/wati`, { method: 'POST', redirect: 'manual' });
+    check('POST /api/webhook/wati → 308 redirect', watiRedirect.status === 308);
     const session = await fetch(`${BASE}/api/audit/session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

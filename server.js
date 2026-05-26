@@ -132,6 +132,17 @@ app.get('/dashboard/:token', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
+// Paywall (P5) — 3-card subscribe page (Orator / Lookmaxxing / Aura++).
+app.get('/paywall', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'paywall.html'));
+});
+
+// Audit result magic-link target (audit-confirmation email). Serves the audit
+// SPA; deep result rehydration from the link is a V4 item (BACKLOG).
+app.get('/audit/result/:token', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'audit.html'));
+});
+
 // Upgrade/Pricing
 app.get('/upgrade', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'upgrade.html'));

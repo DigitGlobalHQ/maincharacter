@@ -311,12 +311,12 @@
   }
 
   function toPaywall() {
-    // P4 paywall ships separately; route through the existing upgrade page,
-    // carrying the audit session + any bundle intent.
+    // Hand off to the paywall (P5), carrying the audit session + any bundle
+    // intent so the paywall can show the 1-line Aura summary and pre-select.
     const intent = new URLSearchParams(location.search).get('intent');
-    const q = new URLSearchParams({ from: 'audit', session: sessionToken || '' });
-    if (intent) q.set('to', intent === 'bundle' ? 'auraplus' : intent);
-    location.href = '/upgrade?' + q.toString();
+    const q = new URLSearchParams({ auditSessionToken: sessionToken || '' });
+    if (intent) q.set('intent', intent);
+    location.href = '/paywall?' + q.toString();
   }
 </script>
 </body>

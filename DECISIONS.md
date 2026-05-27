@@ -200,3 +200,33 @@ of the run; reverted it. Rationale: the codebase authenticates with pure-JS
 `bcryptjs` everywhere (lib/auth.js), and a native build can fail on the Render
 deploy and take the whole app down (DECISIONS.md Night-2 P0.3). All Night-4
 password hashing continues through `bcryptjs`.
+
+---
+
+## 2026-05-28 — Phase 1 + Phase 1.5 Discovery & Planning run (analysis/draft only)
+
+### Persisted the security audit to file myself
+`security-compliance-agent` returned its full pre-launch audit inline but did not write
+`security/audit-pre-public-launch.md`. The orchestrator wrote the file from the agent's
+returned content verbatim. Rationale: the deliverable path was a required output, and the
+content was complete — re-running the agent would have burned tokens for no new information.
+
+### gemini.js:85 prompt-injection fix deferred (not written this run)
+The security audit found `generateEvolutionAssessment()` (services/gemini.js:85) concatenates
+`user.name` + raw user replies into a Gemini prompt with no delimiter/guard, unlike the other
+three guarded call sites. The fix was NOT written this run because the Phase 1.5 task is
+analysis/draft-only with a hard stop before any code. Instead it was logged as item #8 in
+FOUNDER_ACTIONS_THIS_WEEK.md as an isolated, founder-authorizable ~1hr fix independent of the
+Top-3 build. Rationale: respect the explicit "do not start Phase 2 build" boundary while not
+losing the finding.
+
+### bcrypt vs bcryptjs in the founder checklist
+FOUNDER_ACTIONS item #6 (set ADMIN_PASSWORD_HASH) specifies `bcryptjs`, confirmed against
+lib/auth.js and the prior Night-4 decision that reverted a native `bcrypt` addition. Rationale:
+native bcrypt can fail the Render build; the whole codebase hashes via bcryptjs.
+
+### Women-market question scoped as research-only
+`growth/future-market-question-women.md` is research notes for a LATER decision. Recommendation
+recorded: separate sibling brand (shared backend), revisit at ~₹40L MRR sustained 3 months.
+No features proposed, no focus split — men-first stands. Rationale: matches the founder's
+explicit "do not recommend splitting focus now" instruction.

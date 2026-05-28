@@ -124,9 +124,15 @@ describe('audit → paywall handoff (audit.html)', () => {
     expect(auditHtml).toContain('/paywall?');
     expect(auditHtml).toContain('auditSessionToken');
   });
-  it('paywall reads the audit result for the summary line', () => {
+  it('paywall loads the shared audit-echo helper which fetches the audit result and renders the summary', () => {
+    // F2 refactor: the fetch + AXIS_LABELS are consolidated in /shared/audit-echo.js
+    // to prevent drift between paywall.html and paywall-waitlist.html.
     const pw = fs.readFileSync(path.join(__dirname, '..', 'public', 'paywall.html'), 'utf8');
-    expect(pw).toContain('/api/audit/result/');
-    expect(pw).toContain('Aura Score');
+    const sharedEcho = fs.readFileSync(path.join(__dirname, '..', 'public', 'shared', 'audit-echo.js'), 'utf8');
+    // paywall.html loads the shared helper
+    expect(pw).toContain('/shared/audit-echo.js');
+    // the shared helper does the fetch and renders the Aura Score line
+    expect(sharedEcho).toContain('/api/audit/result/');
+    expect(sharedEcho).toContain('Aura Score');
   });
 });

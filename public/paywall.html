@@ -176,6 +176,7 @@
     <div class="footer">◆ MainCharacter · The Consultant</div>
   </div>
 
+<script src="/shared/audit-echo.js"></script>
 <script>
   const params = new URLSearchParams(location.search);
   const auditSessionToken = params.get('auditSessionToken') || '';
@@ -187,27 +188,9 @@
   }
 
   // Audit → paywall handoff: show the 1-line Aura summary.
-  const AXIS_LABELS = {
-    skinClarity: 'Skin clarity', jawDefinition: 'Jaw definition', eyeArea: 'Eye area',
-    hairDensity: 'Hair density', posture: 'Posture', facialHarmony: 'Facial harmony',
-    expression: 'Expression', bodyComposition: 'Body composition',
-  };
-  async function loadAuditSummary() {
-    if (!auditSessionToken) return;
-    try {
-      const res = await fetch('/api/audit/result/' + encodeURIComponent(auditSessionToken));
-      if (!res.ok) return; // expired or not complete — show nothing
-      const data = await res.json();
-      const vals = Object.values(data.scores || {});
-      if (!vals.length) return;
-      const aura = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
-      const leverage = AXIS_LABELS[data.weakestAxis] || 'your weakest axis';
-      const el = document.getElementById('auditSummary');
-      el.innerHTML = 'Your Aura Score: <b>' + aura + '/100</b>. ' + leverage + ' is your leverage point.';
-      el.style.display = 'block';
-    } catch (_e) { /* non-fatal */ }
-  }
-  loadAuditSummary();
+  // AXIS_LABELS and fetch logic consolidated in /shared/audit-echo.js (F2).
+  // The degradation guard (if (!res.ok) return) is inside loadAuditEcho — intact.
+  loadAuditEcho(auditSessionToken, 'auditSummary');
 
   function normalizePhone(raw) {
     let p = String(raw || '').replace(/\D/g, '');

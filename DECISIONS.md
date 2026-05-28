@@ -423,3 +423,16 @@ non-zero exposure (a real visitor could attempt and fail confusingly). Flipped b
 **Deferred `#coming-soon-modal` backdrop listener into `DOMContentLoaded`:** The modal div is declared after the closing `</script>` tag, so `getElementById('coming-soon-modal')` returned `null` at IIFE execution time — throwing `TypeError: Cannot read properties of null (reading 'addEventListener')` on every page load. Wrapped the three-line listener wiring in `document.addEventListener('DOMContentLoaded', …)` so it runs after the full DOM is parsed. Three regression tests added to `tests/landing.test.js` to guard this ordering permanently.
 
 **Regression (a89c646) — `</script>` literal inside a JS comment truncated the script block:** The explanatory comment text referenced the literal string `</script>`, which the HTML parser treated as the actual end-tag, truncating the IIFE and causing `SyntaxError: Unexpected end of input`. Fixed by rewriting the comment to avoid the substring. A new test in `tests/landing.test.js` ("no `</script>` literal inside script bodies") now parses all script blocks and asserts none contains the closing-tag literal — preventing the same class of bug in future edits.
+
+---
+
+## 2026-05-28 — NOW-1: F1 waitlist audit echo, F2 shared helper, F3 recovery link
+
+### F1 — Waitlist audit echo (`public/paywall-waitlist.html`)
+Inserted one `.audit-summary` block between the lede and the form in `paywall-waitlist.html`. The block is hidden by default and shown only on a successful `GET /api/audit/result/:token` fetch via the shared `loadAuditEcho` helper. On 404/409/network error it stays hidden — the form is unaffected. Rationale: carries the personalisation momentum from Scene 6 into the ask, closing audit P0-3 seam, without risking any degradation on expired/missing tokens.
+
+### F2 — Shared audit-echo consolidation (`public/shared/audit-echo.js`)
+Extracted `AXIS_LABELS` map and `loadAuditSummary` logic from `paywall.html` into a new file `public/shared/audit-echo.js` (served by the existing `express.static` for `public/`). Both `paywall.html` and `paywall-waitlist.html` load it via `<script src="/shared/audit-echo.js">`. The degradation guard (`if (!res.ok) return`) is preserved inside `loadAuditEcho`. Rationale: single source of truth prevents the axis-label map from drifting between the two pages; zero new infrastructure (plain static file, no bundler).
+
+### F3 — "Keep this reading" recovery link (`public/audit.html`)
+Added a ghost-button affordance below the Scene 6 result content. On mobile UAs with `navigator.share` it invokes the native share sheet; on all other contexts it writes `${origin}/audit/result/${sessionToken}` to the clipboard and shows a one-line confirmation that fades after 4s (with `prefers-reduced-motion` guard). The confirmation text and button label are marked `[COPY DRAFT — founder approval]`. The `data-event="recover_link_action"` attribute is present for future KPI wiring. DPDPA check performed: `GET /api/audit/result/:token` returns scores/diagnosis/weakestAxis only — no photo URLs. `GET /audit/result/:token` (server.js:169) serves `audit.html` — no API response at all. Shareable link is safe.

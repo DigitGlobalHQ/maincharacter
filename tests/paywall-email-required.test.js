@@ -89,8 +89,10 @@ describe('paywall.html — email validation regex (Orator-only path unchanged)',
 
   it('email remains optional when only Orator is selected (no requireEmail guard)', () => {
     // The requireEmail guard only fires when pillars.includes('lookmaxxing')
-    // Verify the guard is conditional — not a blanket required
-    const scriptBlock = html.match(/<script[\s\S]*?<\/script>/i)?.[0] || '';
-    expect(scriptBlock).toContain('requireEmail && !email');
+    // Verify the guard is conditional — not a blanket required.
+    // Search all script content (paywall.html may have multiple <script> tags
+    // including an external <script src="..."> added by F2 consolidation).
+    const allScriptContent = (html.match(/<script[\s\S]*?<\/script>/gi) || []).join('\n');
+    expect(allScriptContent).toContain('requireEmail && !email');
   });
 });

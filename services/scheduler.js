@@ -163,6 +163,46 @@ async function checkMissedMessages() {
 }
 
 /**
+ * Daily 7:30 IST web-push mirror nudge (B4).
+ * Iterates active Lookmaxxing users with push subscriptions and sends them a
+ * mirror nudge notification. Behind MIRROR_PUSH_ENABLED flag (default false).
+ * Founder flips to true once copy is ratified.
+ *
+ * @returns {Promise<{ sent: number, skipped: boolean }>}
+ */
+async function sendMirrorPushNudges() {
+  // Feature flag guard — default off
+  if (process.env.MIRROR_PUSH_ENABLED !== 'true') {
+    return { sent: 0, skipped: true };
+  }
+
+  const push = require('./push');
+  const allUsers = User.getAllUsers();
+  let sent = 0;
+
+  for (const user of Object.values(allUsers)) {
+    if (!user.lookmaxxingActive) continue;
+    const subs = user.push_subscriptions || [];
+    if (subs.length === 0) continue;
+
+    try {
+      const result = await push.sendToUser(user.token, {
+        title: '◆ MainCharacter',
+        // TODO copy review: notification body — deferred pending copy-consultant approval
+        body: '<!-- TODO copy -->',
+        url: '/lookmax/mirror',
+      });
+      if (result && result.sent > 0) sent++;
+      log('PUSH-NUDGE', `→ ${user.token} result=${result && result.result}`);
+    } catch (err) {
+      log('ERROR', `push nudge for ${user.token}: ${err.message}`);
+    }
+  }
+
+  return { sent };
+}
+
+/**
  * Start the scheduler.
  */
 function start() {
@@ -179,6 +219,19 @@ function start() {
     }
   });
 
+  // Daily 7:30 IST web-push mirror nudge (B4 — MIRROR_PUSH_ENABLED flag).
+  // Cron is UTC; 7:30 IST = 02:00 UTC.
+  cron.schedule('0 2 * * *', async () => {
+    try {
+      const result = await sendMirrorPushNudges();
+      if (!result.skipped) {
+        log('PUSH-NUDGE', `daily mirror push: sent=${result.sent}`);
+      }
+    } catch (err) {
+      log('ERROR', `push nudge cron: ${err.message}`);
+    }
+  });
+
   // Check for missed messages on startup (after 5 second delay to let server init)
   setTimeout(() => {
     checkMissedMessages().catch(err => {
@@ -189,4 +242,4 @@ function start() {
   log('INIT', 'Scheduler started');
 }
 
-module.exports = { start, sendMorningMessages, sendMirrorNudges, checkMissedMessages };
+module.exports = { start, sendMorningMessages, sendMirrorNudges, sendMirrorPushNudges, checkMissedMessages };

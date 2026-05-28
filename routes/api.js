@@ -5,6 +5,7 @@
  */
 
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
 const router = express.Router();
 const User = require('../models/User');
@@ -13,6 +14,7 @@ const whatsapp = require('../services/whatsapp');
 const email = require('../services/email');
 const gemini = require('../services/gemini');
 const razorpay = require('../services/razorpay');
+const events = require('../services/events');
 const admin = require('../lib/admin');
 const { DAYS, buildMorningMessage, buildEveningMessage, buildEvolutionReport } = require('../data/orator-content');
 
@@ -26,6 +28,63 @@ function log(tag, msg) {
   if (/warn/i.test(tag)) return _log.warn(tag, msg);
   return _log.info(tag, msg);
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// POST /api/events — KPI event sink (B5)
+// ═══════════════════════════════════════════════════════════════════
+// Dedicated in-memory rate limiter: 60 events / IP / min, sliding window.
+// Silent reject (204) above limit — never 429, never disclose throttle state
+// to potential scrapers. Capped FIFO at 1000 IPs mirrors the L-2 fix pattern.
+const _eventsIpWindow = new Map(); // ip → [timestamps]
+const EVENTS_WINDOW_MS = 60 * 1000;
+const EVENTS_MAX_PER_WINDOW = 60;
+const EVENTS_MAP_CAP = 1000;
+
+function eventsRateLimit(req, res, next) {
+  const ip =
+    (req.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
+    (req.socket && req.socket.remoteAddress) ||
+    'unknown';
+  const now = Date.now();
+  const cutoff = now - EVENTS_WINDOW_MS;
+
+  let timestamps = _eventsIpWindow.get(ip) || [];
+  // Prune old timestamps outside the window
+  timestamps = timestamps.filter((t) => t > cutoff);
+
+  if (timestamps.length >= EVENTS_MAX_PER_WINDOW) {
+    // Silent drop — return 204 to not disclose throttle state
+    return res.sendStatus(204);
+  }
+
+  timestamps.push(now);
+
+  // FIFO eviction: if map is at cap, remove the oldest IP entry
+  if (!_eventsIpWindow.has(ip) && _eventsIpWindow.size >= EVENTS_MAP_CAP) {
+    const oldestKey = _eventsIpWindow.keys().next().value;
+    _eventsIpWindow.delete(oldestKey);
+  }
+  _eventsIpWindow.set(ip, timestamps);
+  next();
+}
+
+router.post('/events', eventsRateLimit, (req, res) => {
+  const { name, props, anonId } = req.body || {};
+  // Unknown event names are silently dropped (204) — never reveal the allowlist
+  if (!name || !events.ALLOWED_EVENTS.has(name)) {
+    return res.sendStatus(204);
+  }
+  // Props size guard (2 KB)
+  const propsStr = JSON.stringify(props || {});
+  if (propsStr.length > 2048) {
+    return res.sendStatus(204);
+  }
+  const cleanProps = events.sanitizeProps(props || {});
+  // Write fire-and-forget — never await in route handlers
+  events.trackAnonymous(name, cleanProps, anonId || 'unknown')
+    .catch(() => {}); // EVENTS-WRITE-FAIL already logged inside the sink
+  return res.sendStatus(204);
+});
 
 // ═══════════════════════════════════════════════════════════════════
 // POST /api/enroll — New user enrollment

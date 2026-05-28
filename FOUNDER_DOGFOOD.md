@@ -11,7 +11,7 @@ the numbered steps in order. The entire session takes about 40 minutes.
 **Step 1 — Log into /admin and grant yourself comp access.**
 
 Navigate to `https://maincharacter.digitglobalservices.com/admin` and enter
-your admin password (`Aurora-Mirror-2026!`). Once logged in, scroll to the
+your admin password (`$ADMIN_PASSWORD`). Once logged in, scroll to the
 "Dogfood Tools" panel. Confirm the target email reads `digitglobal.org@gmail.com`.
 Click "Grant my own access" and confirm. The result line shows your magic-link URL.
 
@@ -20,7 +20,7 @@ Or via curl:
 ```bash
 curl -s -X POST https://maincharacter.digitglobalservices.com/api/admin/login \
   -H "Content-Type: application/json" \
-  -d '{"password":"Aurora-Mirror-2026!"}' | grep token
+  -d '{"password":"$ADMIN_PASSWORD"}' | grep token
 # → copy the token value
 
 curl -s -X POST https://maincharacter.digitglobalservices.com/api/admin/grant \
@@ -131,7 +131,7 @@ heldCount=0, per NOW-2 §3.4b clause 4.)
 # 1. Get admin token
 TOKEN=$(curl -s -X POST https://maincharacter.digitglobalservices.com/api/admin/login \
   -H "Content-Type: application/json" \
-  -d '{"password":"Aurora-Mirror-2026!"}' | python3 -c "import sys,json;d=json.load(sys.stdin);print(d['token'])")
+  -d '{"password":"$ADMIN_PASSWORD"}' | python3 -c "import sys,json;d=json.load(sys.stdin);print(d['token'])")
 
 # 2. Grant comp access — returns magicLinkUrl to land in /lookmax/
 curl -s -X POST https://maincharacter.digitglobalservices.com/api/admin/grant \
@@ -187,11 +187,15 @@ if you want comp status again, run `grant` after.
 
 ---
 
-## Admin password rotation (required before going public)
+## Admin password rotation (URGENT — the prior plaintext leaked into git history)
 
-The admin password is currently `Aurora-Mirror-2026!` stored as a bcryptjs hash
-in `ADMIN_PASSWORD_HASH`. This is set correctly. Do not change it until you have
-a new hash ready. To generate a new hash:
+⚠ The admin password that was in this file (and in MAINCHARACTER_HANDOFF.md and
+the security audit doc) was committed to the repo in commits `5b69ec8`,
+`d0eb64e`. **Rotate the admin password immediately.** Anyone who reads the git
+log between 2026-05-28 dogfood-agent-commit and the rotation knows the prior
+plaintext.
+
+To generate a new hash:
 
 ```bash
 node -e "console.log(require('./lib/auth').hashPassword('YOUR-NEW-PASSWORD'))"

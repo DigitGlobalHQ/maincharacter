@@ -130,8 +130,9 @@ disclosed lawful basis. Lawyer review + new pages. External long pole; start now
   after N attempts** (the lookmax-auth cooldown pattern at `routes/lookmax-auth.js:101-129`
   was NOT copied here). 10 attempts/min × 60 min × 24 h = 14,400 guesses/day per IP. A
   10-character mixed-case admin password is still well out of reach, but a weak one
-  (e.g. `Aurora-Mirror-2026!` — entropy ≈ 60 bits, manageable for a determined attacker
-  given enough IPs) is uncomfortable. There is also **no admin IP allowlist** option.
+  (e.g. an English-noun + year + symbol pattern — entropy ≈ 60 bits, manageable for
+  a determined attacker given enough IPs) is uncomfortable. There is also **no admin
+  IP allowlist** option.
 - **What's at risk:** admin compromise = full user-DB read + broadcast WhatsApp send +
   rank-promotion. The blast radius is exactly the user base.
 - **Fix:** (a) reuse the `ipCooldown` pattern from `routes/lookmax-auth.js` for

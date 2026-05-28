@@ -75,6 +75,17 @@ Each model export is wrapped by `_adapt(jsonFn, pgFn)`: when pg is active and
 healthy the pg implementation runs, but any pg error transparently falls back to
 the JSON path so a transient Neon outage never breaks the funnel.
 
+### storage.put() uses the module-level getS3() pattern for lazy client creation
+The S3Client is constructed on first put/getSignedUrl/delete call rather than
+at module load time, so tests that override R2_* env vars before requiring the
+module see the correct config; this avoids a require-time freeze on cold boots.
+
+### R2 CORS note: signed URLs work without CORS preflight for <img src>
+For browser `<img src="...signed-url...">` renders, no CORS preflight is fired
+(GET requests with no custom headers are simple requests under CORS rules);
+the founder only needs to add an R2 CORS rule if the frontend fetches signed
+URLs via JS `fetch()` with custom headers.
+
 ### events.js uses its own pg.Pool (separate from lib/db.js)
 The events sink already had its own pool before B0; we kept it separate to
 avoid coupling the high-frequency fire-and-forget write path to the same pool

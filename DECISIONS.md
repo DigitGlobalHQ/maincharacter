@@ -315,3 +315,49 @@ the paywall-receipt.html structure). All human-readable copy slots are marked
 `[copy-consultant TBD]` per spec §5. The template renders the `{{magicLinkUrl}}` token
 and the `{{name}}` token correctly. Frontend-agent must replace the markup and copy before
 the flag is flipped to `LOOKMAX_EMAIL_LOGIN=true` in production.
+
+---
+
+## 2026-05-28 — Login Gate frontend shipped (4 commits)
+
+### magic-link.html template filled with full inline-style HTML
+Full paywall-receipt.html-convention email built: table-based, preheader hidden div,
+Cormorant italic headline, body (4 sentences per approved copy), gold CTA button, fallback
+URL row, security note, signature. All copy from founder-approved spec-login-gate-copy.md
+Section B. The preheader token `{{preheader}}` is rendered by renderTemplate() which blanks
+any unsupplied tokens — sendMagicLink() in email.js does not yet pass preheader so it
+renders as empty (blank preheader is harmless — client falls back to body text).
+Rationale: spec says frontend-agent fills the template; stub replacement satisfies the
+build-brief requirement; preheader can be wired in a follow-up when sendMagicLink() is
+extended.
+
+### paywall.html email-required: client-side only, server enforces
+Email field becomes `aria-required` + submit-blocked when Lookmaxxing is in the pillar
+selection. The `(optional — for receipts)` span is hidden via JS when the field becomes
+required. Label text itself is NOT changed (locked copy until copy-consultant provides
+a conditional version per brief §5). The `data-required="lookmax"` attribute is a
+semantic marker for future automated selectors. Rationale: brief §5 says "do NOT touch
+the email label… until copy-consultant provides a conditional version"; the error message
+on submit is the v1 enforcement.
+
+### login.html: token-on-load consumes immediately; admin-only mode degrades gracefully
+When `/api/lookmax/auth/method` network errors, the page falls back to `stateAdmin` (same
+as admin-only flag). This is the conservative choice — an unreachable server should not
+hang the page in the loading state. The resend button is re-cloned on each startResendCountdown()
+call to detach any prior click listeners (avoids listener accumulation on multiple resend taps).
+window.__LM_RESEND_DELAY_MS and window.__PC_POLL_INTERVAL_MS / window.__PC_POLL_TIMEOUT_MS
+are the documented test seams per design spec §6.6.
+
+### payment-confirmed.html: app.js NOT loaded; localStorage written directly
+app.js is deliberately absent on payment-confirmed.html (brief §5: "would pull in the nav,
+install-prompt, SW registration on a page that does not want any of them"). The one-line
+localStorage.setItem('lookmax.token', jwt) uses the same key the app.js LM.setToken()
+writes (verified: app.js line 7 uses 'lookmax.token'). Rationale: brief §5 explicitly
+says to use this pattern rather than loading app.js.
+
+### confirmed.mirrorCta left as FOUNDER COPY placeholder
+The mirror button default label is "Open the mirror" and the supporting line is
+"The mirror is ready when you are." per the spec placeholder. These are intentionally
+non-approved defaults — a FOUNDER COPY comment in the HTML flags them for replacement.
+Rationale: spec §5 and brief §4 both state confirmed.mirrorCta is [FOUNDER COPY];
+frontend-agent must not improvise in The Consultant's voice for this slot.

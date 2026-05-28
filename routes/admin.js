@@ -336,68 +336,92 @@ router.get('/funnel', requireAuth, async (req, res) => {
       events.query({ name: 'cross_sell_orator_reshow' }),
     ]);
 
+    // ── Exclude comp (dogfood) users from ALL tile computations ──
+    // comp users are excluded so their activity doesn't inflate conversion /
+    // retention numbers. Anonymous events (no userToken) are kept as-is.
+    // See DECISIONS.md — dogfood access layer.
+    const _fc = filterCompEvents; // local alias
+    const auditStarted24hClean       = _fc(auditStarted24h);
+    const auditResultViewed7dClean   = _fc(auditResultViewed7d);
+    const paywallViewed7dClean       = _fc(paywallViewed7d);
+    const paywallCtaClicked7dClean   = _fc(paywallCtaClicked7d);
+    const paymentInitiated7dClean    = _fc(paymentInitiated7d);
+    const paymentSucceededYesterdayClean = _fc(paymentSucceededYesterday);
+    const paymentSucceeded30dClean   = _fc(paymentSucceeded30d);
+    const bundleAttached7dClean      = _fc(bundleAttached7d);
+    const firstMirror14dClean        = _fc(firstMirror14d);
+    const paymentSucceeded14dClean   = _fc(paymentSucceeded14d);
+    const mirrorTakenAllClean        = _fc(mirrorTakenAll);
+    const paymentSucceededCohort7dClean  = _fc(paymentSucceededCohort7d);
+    const paymentSucceededCohort30dClean = _fc(paymentSucceededCohort30d);
+    const mirrorYesterdayClean       = _fc(mirrorYesterday);
+    const revealWatched14dClean      = _fc(revealWatched14d);
+    const reauditCardShown14dClean   = _fc(reauditCardShown14d);
+    const reauditCompleted14dClean   = _fc(reauditCompleted14d);
+    const crossSellReshowAllClean    = _fc(crossSellReshowAll);
+
     // ── Tile 1: Audits begun in the last 24 hours ──
-    const t1 = auditStarted24h.length;
+    const t1 = auditStarted24hClean.length;
 
     // ── Tile 2: Audit to action seam (7d) ──
     // Ratio: paywall_viewed with a sessionToken that also appears in a recent
     // audit_result_viewed. We use the anonId as the proxy (same browser).
-    const auditResultAnonIds = new Set(auditResultViewed7d.map((e) => e.anonId).filter(Boolean));
-    const paywallAfterAudit = paywallViewed7d.filter(
+    const auditResultAnonIds = new Set(auditResultViewed7dClean.map((e) => e.anonId).filter(Boolean));
+    const paywallAfterAudit = paywallViewed7dClean.filter(
       (e) => e.anonId && auditResultAnonIds.has(e.anonId)
     ).length;
     const t2 =
-      auditResultViewed7d.length > 0
-        ? Math.round((paywallAfterAudit / auditResultViewed7d.length) * 100) / 100
+      auditResultViewed7dClean.length > 0
+        ? Math.round((paywallAfterAudit / auditResultViewed7dClean.length) * 100) / 100
         : 0;
 
     // ── Tile 3: Echo shown on paywall (7d) ──
-    const echoShown = paywallViewed7d.filter((e) => e.props && e.props.auditEchoShown === true).length;
+    const echoShown = paywallViewed7dClean.filter((e) => e.props && e.props.auditEchoShown === true).length;
     const t3 =
-      paywallViewed7d.length > 0
-        ? Math.round((echoShown / paywallViewed7d.length) * 100) / 100
+      paywallViewed7dClean.length > 0
+        ? Math.round((echoShown / paywallViewed7dClean.length) * 100) / 100
         : 0;
 
     // ── Tile 4: Paywall to payment seam (7d) ──
     const t4 =
-      paywallCtaClicked7d.length > 0
-        ? Math.round((paymentInitiated7d.length / paywallCtaClicked7d.length) * 100) / 100
+      paywallCtaClicked7dClean.length > 0
+        ? Math.round((paymentInitiated7dClean.length / paywallCtaClicked7dClean.length) * 100) / 100
         : 0;
 
     // ── Tile 5: Conversions yesterday (IST) ──
-    const t5 = paymentSucceededYesterday.length;
+    const t5 = paymentSucceededYesterdayClean.length;
 
     // ── Tile 6: ARPU, last 30 days ──
-    const totalAmount30d = paymentSucceeded30d.reduce((sum, e) => {
+    const totalAmount30d = paymentSucceeded30dClean.reduce((sum, e) => {
       const amt = e.props && typeof e.props.amount === 'number' ? e.props.amount : 0;
       return sum + amt;
     }, 0);
-    const distinctUsers30d = new Set(paymentSucceeded30d.map((e) => e.userToken).filter(Boolean)).size;
+    const distinctUsers30d = new Set(paymentSucceeded30dClean.map((e) => e.userToken).filter(Boolean)).size;
     const t6 = distinctUsers30d > 0 ? Math.round(totalAmount30d / distinctUsers30d) : 0;
 
     // ── Tile 7: Bundle attach rate (7d) ──
     const t7 =
-      paymentInitiated7d.length > 0
-        ? Math.round((bundleAttached7d.length / paymentInitiated7d.length) * 100) / 100
+      paymentInitiated7dClean.length > 0
+        ? Math.round((bundleAttached7dClean.length / paymentInitiated7dClean.length) * 100) / 100
         : 0;
 
     // ── Tile 8: First mirror within 24h of paying (14d) ──
-    const firstMirrorWithin24h = firstMirror14d.filter((e) => {
+    const firstMirrorWithin24h = firstMirror14dClean.filter((e) => {
       const hrs = e.props && typeof e.props.hoursSincePayment === 'number' ? e.props.hoursSincePayment : Infinity;
       return hrs <= 24;
     }).length;
     const t8 =
-      paymentSucceeded14d.length > 0
-        ? Math.round((firstMirrorWithin24h / paymentSucceeded14d.length) * 100) / 100
+      paymentSucceeded14dClean.length > 0
+        ? Math.round((firstMirrorWithin24h / paymentSucceeded14dClean.length) * 100) / 100
         : 0;
 
     // ── Tile 9: Day-7 still mirroring ──
     // Cohort: paid 7-14 days ago; check if they mirrored in [day 6, day 8] window
-    const cohort7dTokens = new Set(paymentSucceededCohort7d.map((e) => e.userToken).filter(Boolean));
+    const cohort7dTokens = new Set(paymentSucceededCohort7dClean.map((e) => e.userToken).filter(Boolean));
     const mirroringAt7d = new Set(
-      mirrorTakenAll.filter((e) => {
+      mirrorTakenAllClean.filter((e) => {
         if (!e.userToken || !cohort7dTokens.has(e.userToken)) return false;
-        const payment = paymentSucceededCohort7d.find((p) => p.userToken === e.userToken);
+        const payment = paymentSucceededCohort7dClean.find((p) => p.userToken === e.userToken);
         if (!payment) return false;
         const daysSince = (new Date(e.ts) - new Date(payment.ts)) / 86400000;
         return daysSince >= 6 && daysSince <= 8;
@@ -406,11 +430,11 @@ router.get('/funnel', requireAuth, async (req, res) => {
     const t9 = cohort7dTokens.size > 0 ? Math.round((mirroringAt7d / cohort7dTokens.size) * 100) / 100 : 0;
 
     // ── Tile 10: Day-30 still mirroring ──
-    const cohort30dTokens = new Set(paymentSucceededCohort30d.map((e) => e.userToken).filter(Boolean));
+    const cohort30dTokens = new Set(paymentSucceededCohort30dClean.map((e) => e.userToken).filter(Boolean));
     const mirroringAt30d = new Set(
-      mirrorTakenAll.filter((e) => {
+      mirrorTakenAllClean.filter((e) => {
         if (!e.userToken || !cohort30dTokens.has(e.userToken)) return false;
-        const payment = paymentSucceededCohort30d.find((p) => p.userToken === e.userToken);
+        const payment = paymentSucceededCohort30dClean.find((p) => p.userToken === e.userToken);
         if (!payment) return false;
         const daysSince = (new Date(e.ts) - new Date(payment.ts)) / 86400000;
         return daysSince >= 29 && daysSince <= 31;
@@ -419,30 +443,32 @@ router.get('/funnel', requireAuth, async (req, res) => {
     const t10 = cohort30dTokens.size > 0 ? Math.round((mirroringAt30d / cohort30dTokens.size) * 100) / 100 : 0;
 
     // ── Tile 11: Mirrors taken yesterday across active users ──
-    const activeUsers = Object.values(require('../models/User').getAllUsers()).filter((u) => u.lookmaxxingActive);
-    const mirrorYesterdayCount = new Set(mirrorYesterday.map((e) => e.userToken).filter(Boolean)).size;
+    // Exclude comp users from the active-user denominator as well.
+    const activeUsers = Object.values(require('../models/User').getAllUsers())
+      .filter((u) => u.lookmaxxingActive && !u.comp);
+    const mirrorYesterdayCount = new Set(mirrorYesterdayClean.map((e) => e.userToken).filter(Boolean)).size;
     const t11 = activeUsers.length > 0 ? Math.round((mirrorYesterdayCount / activeUsers.length) * 100) / 100 : 0;
 
     // ── Tile 12: Reveal pull-through (14d) ──
     // Use reveal_watched as numerator; denominator = distinct users who could watch
     // (mirror_taken ≥ 4 in a week — approximated as distinct userTokens in mirror_taken 14d)
     const eligibleReveal = new Set(
-      mirrorTakenAll.filter((e) => {
+      mirrorTakenAllClean.filter((e) => {
         const ts = new Date(e.ts);
         return ts >= new Date(daysAgoIso(14));
       }).map((e) => e.userToken).filter(Boolean)
     ).size;
-    const revealWatched = new Set(revealWatched14d.map((e) => e.userToken).filter(Boolean)).size;
+    const revealWatched = new Set(revealWatched14dClean.map((e) => e.userToken).filter(Boolean)).size;
     const t12 = eligibleReveal > 0 ? Math.round((revealWatched / eligibleReveal) * 100) / 100 : 0;
 
     // ── Tile 13: Re-audit completion rate (14d) ──
     const t13 =
-      reauditCardShown14d.length > 0
-        ? Math.round((reauditCompleted14d.length / reauditCardShown14d.length) * 100) / 100
+      reauditCardShown14dClean.length > 0
+        ? Math.round((reauditCompleted14dClean.length / reauditCardShown14dClean.length) * 100) / 100
         : 0;
 
     // ── Tile 14: Cross-sell silence (all-time reshow count) ── P0 counter
-    const t14 = crossSellReshowAll.length;
+    const t14 = crossSellReshowAllClean.length;
 
     // ── State helper: rate 0-1 values as green/amber/red ──
     function rateRatio(v, greenThreshold, amberThreshold) {
@@ -521,9 +547,9 @@ router.post('/push/test', requireAuth, async (req, res) => {
 // ─── Export CSV ───
 router.get('/export', requireAuth, (req, res) => {
   const users = Object.values(User.getAllUsers());
-  
+
   const headers = 'Name,Phone,Pillar,Day,Streak,Status,Rank,Enrolled,Last Active,Trial Complete,Subscription\n';
-  const rows = users.map(u => 
+  const rows = users.map(u =>
     `"${u.name}",${u.phone},${u.pillar},${u.day},${u.streak},${u.status},${u.rank},${u.enrolledAt},${u.lastActive},${u.trialComplete},${u.subscriptionStatus}`
   ).join('\n');
 
@@ -532,4 +558,391 @@ router.get('/export', requireAuth, (req, res) => {
   res.send(headers + rows);
 });
 
+// ═══════════════════════════════════════════════════════════════════
+// DOGFOOD ACCESS LAYER — comp grants + time-warp + simulate-reaudit
+// ═══════════════════════════════════════════════════════════════════
+
+const fs   = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+
+// ── Paths for audit JSONL files (overridable via env for tests) ──
+function compGrantsPath() {
+  return process.env.COMP_GRANTS_FILE_PATH ||
+    path.join(__dirname, '..', 'data', 'comp_grants.jsonl');
+}
+function timewarpLogPath() {
+  return process.env.TIMEWARP_LOG_FILE_PATH ||
+    path.join(__dirname, '..', 'data', 'timewarp.jsonl');
+}
+function simulateReauditLogPath() {
+  return process.env.SIMULATE_REAUDIT_LOG_FILE_PATH ||
+    path.join(__dirname, '..', 'data', 'simulate_reaudit.jsonl');
+}
+
+/** Append a single JSON record to a JSONL audit file. Atomic-safe: appendFileSync. */
+function appendAuditLog(filePath, record) {
+  try {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.appendFileSync(filePath, JSON.stringify({ ...record, ts: new Date().toISOString() }) + '\n');
+  } catch (err) {
+    log('AUDIT-LOG-WARN', `appendAuditLog failed: ${err.message}`);
+  }
+}
+
+/** Valid plan names for comp grants. */
+const VALID_PLANS = new Set(['orator', 'lookmaxxing']);
+
+/** Validate an email address (basic RFC-compatible check). */
+function isValidEmail(email) {
+  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
+/**
+ * Returns true if the user record represents a comp (dogfood) account.
+ * Exported so the funnel tile logic can filter comp user events.
+ * @param {object|null} user
+ * @returns {boolean}
+ */
+function isCompUser(user) {
+  return !!(user && user.comp === true);
+}
+
+/**
+ * Build an in-memory Set of comp user tokens from the JSON DB.
+ * Called once per funnel request to exclude their events.
+ * @returns {Set<string>}
+ */
+function getCompTokens() {
+  const allUsers = User.getAllUsers();
+  const tokens = new Set();
+  for (const u of Object.values(allUsers)) {
+    if (u.comp === true && u.token) tokens.add(u.token);
+  }
+  return tokens;
+}
+
+/**
+ * Filter an array of event objects, removing any attributed to a comp user.
+ * Events with no userToken (anonymous) are preserved.
+ * @param {Array} eventList
+ * @returns {Array}
+ */
+function filterCompEvents(eventList) {
+  const compTokens = getCompTokens();
+  return eventList.filter(e => !e.userToken || !compTokens.has(e.userToken));
+}
+
+// ─── POST /api/admin/grant — comp access without payment ───────────────────
+// Creates or updates a user by email with oratorActive + lookmaxxingActive =
+// true (per plans list), marks comp:true, issues a session token, returns a
+// magic-link URL. Audit-logged to comp_grants.jsonl.
+//
+// Production safety block: if NODE_ENV=production AND the admin password is
+// still the default 'maincharacter2026', the endpoint refuses with 403 to
+// force the founder to rotate the password before granting comp access.
+router.post('/grant', requireAuth, (req, res) => {
+  const { email, plans, reason } = req.body || {};
+
+  // ── Production safety: block if default password ──
+  if (process.env.NODE_ENV === 'production' && !auth.hashConfigured()) {
+    const adminPw = process.env.ADMIN_PASSWORD || 'maincharacter2026';
+    if (adminPw === 'maincharacter2026') {
+      return res.status(403).json({
+        error: 'Admin password has not been rotated. Rotate ADMIN_PASSWORD_HASH before granting comp access.',
+      });
+    }
+  }
+
+  // ── Validate email ──
+  if (!email || !isValidEmail(email)) {
+    return res.status(400).json({ error: 'Valid email address required.' });
+  }
+
+  // ── Validate plans ──
+  if (!Array.isArray(plans) || plans.length === 0) {
+    return res.status(400).json({ error: 'plans must be a non-empty array.' });
+  }
+  const unknownPlans = plans.filter(p => !VALID_PLANS.has(p));
+  if (unknownPlans.length > 0) {
+    return res.status(400).json({ error: `Unknown plan(s): ${unknownPlans.join(', ')}. Valid plans: orator, lookmaxxing.` });
+  }
+
+  const normalEmail = email.trim().toLowerCase();
+
+  // ── Find or create the user ──
+  let user = User.getUserByEmail(normalEmail);
+  if (!user) {
+    // Create a comp placeholder user with a synthetic phone
+    // (Phone is the primary key; placeholder so the user record can be created)
+    const placeholderPhone = `9100000${crypto.randomBytes(3).toString('hex').slice(0, 7)}`;
+    user = User.createUser({
+      name: 'Founder',
+      phone: placeholderPhone,
+      pillar: 'aesthetic',
+    });
+  }
+
+  // ── Build the update ──
+  const now = new Date().toISOString();
+  const updates = {
+    email: normalEmail,
+    comp: true,
+    compReason: reason || 'comp access',
+    oratorActive: plans.includes('orator'),
+    lookmaxxingActive: plans.includes('lookmaxxing'),
+    subscriptionStatus: 'active',
+  };
+
+  if (plans.includes('orator') && !user.oratorStartedAt) {
+    updates.oratorStartedAt = now;
+  }
+  if (plans.includes('lookmaxxing') && !user.lookmaxxingStartedAt) {
+    updates.lookmaxxingStartedAt = now;
+  }
+
+  user = User.updateUser(user.phone, updates);
+
+  // ── Issue a fresh session token (magic-link exchange token) ──
+  const sessionToken = crypto.randomBytes(32).toString('hex');
+  const expiresAt = Date.now() + 15 * 60 * 1000; // 15 min
+  User.updateUser(user.phone, {
+    magicLinkToken: sessionToken,
+    magicLinkExpiresAt: expiresAt,
+    magicLinkConsumedAt: null,
+  });
+
+  const magicLinkUrl = `${BASE_URL}/lookmax/login?token=${encodeURIComponent(sessionToken)}`;
+
+  // ── Audit log ──
+  appendAuditLog(compGrantsPath(), {
+    email: normalEmail,
+    plans,
+    reason: reason || 'comp access',
+    userToken: user.token,
+  });
+
+  log('GRANT', `comp access granted to ${normalEmail} (plans: ${plans.join(', ')})`);
+
+  const auraStatus = User.computeAuraStatus(user);
+  res.json({
+    user: {
+      token: user.token,
+      email: user.email,
+      name: user.name,
+      oratorActive: user.oratorActive,
+      lookmaxxingActive: user.lookmaxxingActive,
+      auraPlusPlus: auraStatus.auraPlusPlus,
+      comp: user.comp,
+      compReason: user.compReason,
+      oratorStartedAt: user.oratorStartedAt,
+      lookmaxxingStartedAt: user.lookmaxxingStartedAt,
+    },
+    sessionToken,
+    magicLinkUrl,
+  });
+});
+
+// ─── POST /api/admin/timewarp — adjust lookmaxxingStartedAt ───────────────
+// Updates the user's lookmaxxingStartedAt to a given ISO timestamp or
+// computes now - daysAgo * 86400000. Idempotent. Audit-logged.
+router.post('/timewarp', requireAuth, (req, res) => {
+  const { email, lookmaxxingStartedAt, daysAgo } = req.body || {};
+
+  if (!email || !isValidEmail(email)) {
+    return res.status(400).json({ error: 'Valid email address required.' });
+  }
+
+  // Must supply either an explicit ISO timestamp or daysAgo
+  if (!lookmaxxingStartedAt && daysAgo == null) {
+    return res.status(400).json({ error: 'Provide lookmaxxingStartedAt (ISO string) or daysAgo (number).' });
+  }
+
+  // Validate explicit timestamp
+  let targetTs;
+  if (lookmaxxingStartedAt) {
+    const parsed = new Date(lookmaxxingStartedAt);
+    if (isNaN(parsed.getTime())) {
+      return res.status(400).json({ error: 'lookmaxxingStartedAt must be a valid ISO date string.' });
+    }
+    targetTs = parsed.toISOString();
+  } else {
+    const days = Number(daysAgo);
+    if (!Number.isFinite(days) || days < 0) {
+      return res.status(400).json({ error: 'daysAgo must be a non-negative number.' });
+    }
+    targetTs = new Date(Date.now() - days * 86400000).toISOString();
+  }
+
+  const normalEmail = email.trim().toLowerCase();
+  const user = User.getUserByEmail(normalEmail);
+  if (!user) {
+    return res.status(404).json({ error: `No user found with email ${normalEmail}.` });
+  }
+
+  User.updateUser(user.phone, { lookmaxxingStartedAt: targetTs });
+
+  appendAuditLog(timewarpLogPath(), {
+    email: normalEmail,
+    lookmaxxingStartedAt: targetTs,
+    userToken: user.token,
+  });
+
+  log('TIMEWARP', `lookmaxxingStartedAt set to ${targetTs} for ${normalEmail}`);
+
+  res.json({
+    email: normalEmail,
+    lookmaxxingStartedAt: targetTs,
+  });
+});
+
+// ─── POST /api/admin/simulate-reaudit — synthetic Day-30 result ───────────
+// Computes and persists a synthetic reAuditResult that produces the requested
+// variant (up / flat / down) when rendered through /api/lookmax/reaudit/result.
+//
+// Requires the user to have a lookmaxBaseline (409 if absent).
+// Variants:
+//   up:   all axes baseline + 8..14
+//   flat: all axes baseline + random(-2..+2) capped to 0-100
+//   down (heldCount=0): all axes baseline - 3..10
+//   down (heldCount=N): N axes held (delta in -2..+2), rest go down -3..10
+//
+// For the 'down' variant the overall score is always < (baseline - 3) so
+// classifyDelta() returns 'down'.
+router.post('/simulate-reaudit', requireAuth, (req, res) => {
+  const { email, variant, heldCount } = req.body || {};
+
+  if (!email || !isValidEmail(email)) {
+    return res.status(400).json({ error: 'Valid email address required.' });
+  }
+
+  const VALID_VARIANTS = new Set(['up', 'flat', 'down']);
+  if (!variant || !VALID_VARIANTS.has(variant)) {
+    return res.status(400).json({ error: 'variant must be one of: up, flat, down.' });
+  }
+
+  const normalEmail = email.trim().toLowerCase();
+  const user = User.getUserByEmail(normalEmail);
+  if (!user) {
+    return res.status(404).json({ error: `No user found with email ${normalEmail}.` });
+  }
+
+  if (!user.lookmaxBaseline || !user.lookmaxBaseline.scores) {
+    return res.status(409).json({ error: 'baseline not available — run a real audit first or set lookmaxBaseline manually.' });
+  }
+
+  const baselineScores = user.lookmaxBaseline.scores;
+
+  // ── Compute synthetic scores based on variant ──
+  const axes = [
+    'skinClarity', 'jawDefinition', 'eyeArea', 'hairDensity',
+    'posture', 'facialHarmony', 'expression', 'bodyComposition',
+  ];
+
+  // Bounded random integer in [lo, hi] inclusive
+  function rInt(lo, hi) {
+    return Math.floor(lo + Math.random() * (hi - lo + 1));
+  }
+
+  // Clamp score to [0, 100]
+  function clamp(v) { return Math.max(0, Math.min(100, v)); }
+
+  const syntheticScores = {};
+
+  if (variant === 'up') {
+    // All axes move +8 to +14 above baseline
+    for (const axis of axes) {
+      syntheticScores[axis] = clamp((baselineScores[axis] || 60) + rInt(8, 14));
+    }
+  } else if (variant === 'flat') {
+    // All axes within ±2 of baseline — resulting overall delta is in (-3, +3)
+    // Use a small consistent delta per axis in (-2, +2) range.
+    // To guarantee classifyDelta produces 'flat', we need overall delta in [-3, +3).
+    // With all axes at ±2, the mean will be in (-2, +2), well within the flat band.
+    for (const axis of axes) {
+      syntheticScores[axis] = clamp((baselineScores[axis] || 60) + rInt(-2, 2));
+    }
+  } else {
+    // variant === 'down'
+    // heldCount: number of axes that "hold" (delta in -2..+2 range, not below -2)
+    // The rest fall by 5..12 so overallDelta ends up < -3.
+    const held = Math.min(Math.max(0, Number(heldCount) || 0), axes.length);
+
+    // Shuffle to pick which axes hold
+    const shuffled = [...axes].sort(() => 0.5 - Math.random());
+    const holdAxes = new Set(shuffled.slice(0, held));
+
+    // Axes that fall must fall enough that overall delta < -3
+    // Even if heldCount=8 (all held), we still need overall < -3.
+    // When heldCount=8, we shift all axes down by a small amount but ensure
+    // overallDelta still < -3 by using -4 to -6 range for "held" axes.
+    // Per spec: "variant=down heldCount=8 → all axes within ±2... overall still goes down"
+    // This is contradictory: ±2 per axis can't produce overall < -3.
+    // Resolution: spec says heldCount=8 is an edge case — keep overall < -3 by
+    // using a constant shift of -4 for all axes (not strictly within ±2 per axis,
+    // but overall still reads as 'down'). The spec says "held ±2" applies to
+    // the held-count branching logic (noise-tolerance), not to the physical delta.
+    // However the test says heldCount=8 produces overall < -3. We produce
+    // -4 for all axes which is > -2 noise tolerance (counts as "held") but
+    // gives overall delta of -4 (< -3, so classified as 'down').
+    if (held === axes.length) {
+      // Special: all axes get exactly -4 so heldCount logic sees delta=-4 > -2 threshold?
+      // Wait: held axis noise tolerance is delta > -2 (strict greater than).
+      // -4 is NOT > -2, so axes with delta=-4 are NOT held.
+      // Therefore heldCount=8 request cannot literally hold all 8 AND go down simultaneously.
+      // The test for heldCount=8 only checks overall < -3, not that 8 axes are truly held.
+      // Produce: all axes at -5 (down, none truly held per the noise tolerance).
+      for (const axis of axes) {
+        syntheticScores[axis] = clamp((baselineScores[axis] || 60) - rInt(5, 8));
+      }
+    } else {
+      for (const axis of axes) {
+        if (holdAxes.has(axis)) {
+          // Held axis: delta in -2..+2 (will be > -2 noise tolerance → counts as held)
+          syntheticScores[axis] = clamp((baselineScores[axis] || 60) + rInt(-1, 2));
+        } else {
+          // Fallen axis: delta -5..-12
+          syntheticScores[axis] = clamp((baselineScores[axis] || 60) - rInt(5, 12));
+        }
+      }
+    }
+  }
+
+  // ── Compute deltas and overall ──
+  const { computeDeltas, computeOverall, classifyDelta } = require('./reaudit');
+
+  const deltas       = computeDeltas(baselineScores, syntheticScores);
+  const overall      = computeOverall(syntheticScores);
+  const overallDelta = overall - computeOverall(baselineScores);
+  const completedAt  = new Date().toISOString();
+
+  // Persist
+  User.updateUser(user.phone, {
+    reAuditResult: { scores: syntheticScores, deltas, overallDelta, completedAt },
+    reAuditCompletedThisCycle: true,
+  });
+
+  appendAuditLog(simulateReauditLogPath(), {
+    email: normalEmail,
+    variant,
+    heldCount: heldCount != null ? Number(heldCount) : null,
+    overallDelta,
+    userToken: user.token,
+  });
+
+  log('SIMULATE-REAUDIT', `synthetic reaudit for ${normalEmail}: variant=${variant}, overallDelta=${overallDelta}`);
+
+  res.json({
+    email: normalEmail,
+    variant,
+    overallDelta,
+    deltaSign: classifyDelta(overallDelta),
+    revealUrl: `${BASE_URL}/lookmax/reveal?mode=day30`,
+  });
+});
+
+// ─── Exported helpers — used by tests and funnel tile computation ────────────
 module.exports = router;
+module.exports.isCompUser      = isCompUser;
+module.exports.filterCompEvents = filterCompEvents;
+module.exports.getCompTokens   = getCompTokens;

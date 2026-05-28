@@ -71,7 +71,6 @@
       font-size: 14px;
       color: var(--muted);
       margin-bottom: 12px;
-      /* TODO copy: spec calls for discretion frame — design-lookmax-hair.md §2.3 */
     }
 
     /* ── Privacy beat ─────────────────────────────────────────── */
@@ -81,7 +80,6 @@
       font-size: 0.78rem;
       color: var(--muted);
       margin-top: 12px;
-      /* TODO copy: spec calls for privacy beat string — design-lookmax-hair.md §2.3 */
     }
 
     /* ── Leverage-axis line ───────────────────────────────────── */
@@ -91,7 +89,6 @@
       font-size: 15px;
       color: var(--gold);
       margin-bottom: 14px;
-      /* TODO copy: spec calls for leverage-axis line — design-lookmax-hair.md §2.2 */
     }
 
     /* ── Leverage nudge ───────────────────────────────────────── */
@@ -101,7 +98,6 @@
       font-size: 14px;
       color: var(--muted);
       margin-top: 14px;
-      /* TODO copy: spec calls for leverage nudge — design-lookmax-hair.md §2.5 */
     }
 
     /* ── Aria-live region for leverage nudge (awaits copy approval) ── */
@@ -125,8 +121,8 @@
 
     <!-- ── Capture view ─────────────────────────────────────────── -->
     <div id="captureView" class="hidden">
-      <!-- TODO copy: capture-view frame line — design-lookmax-hair.md §2.3 -->
-      <div class="capture-frame" aria-hidden="true"></div>
+      <!-- COPY APPROVED 2026-05-28 (#13): see product/copy-pending-approval-2026-05-28.md -->
+      <div class="capture-frame" aria-hidden="true">A weekly read, kept between you and the mirror.</div>
 
       <h1 style="margin-bottom:8px">This week's hair audit.</h1>
       <p class="muted" style="margin-bottom:16px">
@@ -149,8 +145,8 @@
         aria-label="Analyse hair photos"
       >Analyse</button>
 
-      <!-- TODO copy: privacy beat — design-lookmax-hair.md §2.3 -->
-      <p class="privacy-beat" aria-hidden="true"></p>
+      <!-- COPY APPROVED 2026-05-28 (#14): see product/copy-pending-approval-2026-05-28.md -->
+      <p class="privacy-beat" aria-hidden="true">We score the photos. We do not publish them. ◆</p>
 
       <div class="err" id="capErr" role="alert" aria-live="polite"></div>
     </div>
@@ -198,8 +194,8 @@
         // compact=true: Norwood row + score lines only (no consultant, no do/do-nots)
         lastEl.innerHTML = renderResult(h.latest, true);
       } else {
-        // First-time edge: no prior reading
-        lastEl.innerHTML = ''; // TODO copy: "The first reading begins this week." — design-lookmax-hair.md §4
+        // COPY APPROVED 2026-05-28 (#17): first-ever-reading empty line — see product/copy-pending-approval-2026-05-28.md
+        lastEl.innerHTML = '<p class="muted" style="font-family:\'Cormorant Garamond\',serif;font-style:italic;font-size:14px">The first reading begins this week.</p>';
       }
     }
 
@@ -287,10 +283,16 @@
       }
 
       // Full result view
-      // Leverage-axis conditional lines deferred (copy not approved)
-      // TODO copy: leverage-axis line — design-lookmax-hair.md §2.2
-      // TODO copy: leverage nudge (below consultant, positive delta + wasLeverageAxis) — design-lookmax-hair.md §2.5
+      // COPY APPROVED 2026-05-28 (#15): leverage-axis line — conditional on wasLeverageAxis="true"
+      // COPY APPROVED 2026-05-28 (#16): leverage nudge — conditional on wasLeverageAxis===true && delta > 0
+      const leverageAxisLine = r.wasLeverageAxis
+        ? `<p class="leverage-line" data-leverage-axis="true">Hair density was the leverage point on Day 1. This is the read.</p>`
+        : '';
+      const leverageNudge = (r.wasLeverageAxis && r.deltaVsFirst != null && r.deltaVsFirst > 0)
+        ? `<p class="leverage-nudge">The axis the audit named is the axis that is moving.</p>`
+        : '';
       return `
+        ${leverageAxisLine}
         <h1 style="margin-bottom:6px">Your hairline, read honestly.</h1>
         <div class="card">
           <div class="muted" style="font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">Norwood stage</div>
@@ -305,6 +307,7 @@
           </div>
         </div>
         ${r.consultantLine ? `<div class="consultant">${LM.escapeHtml(r.consultantLine)}</div>` : ''}
+        ${leverageNudge}
         <div class="card">
           <h3 style="font-size:18px">Do</h3>
           <ul class="reclist">

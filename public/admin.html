@@ -310,6 +310,88 @@
     .stats-bar { grid-template-columns: repeat(2, 1fr); }
     body { padding: 12px; }
   }
+
+  /* ─── KPI Funnel Tiles (B5) ─── */
+  .funnel-section {
+    margin-bottom: 24px;
+  }
+  .funnel-section h2 {
+    font-size: 0.75rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 14px;
+    font-weight: 600;
+  }
+  .funnel-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .funnel-tile {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 16px 14px;
+    min-height: 100px;
+    position: relative;
+    transition: border-color .2s;
+  }
+  .funnel-tile.state-green { border-left: 3px solid var(--green); }
+  .funnel-tile.state-amber { border-left: 3px solid #FbbF24; }
+  .funnel-tile.state-red   { border-left: 3px solid var(--red); }
+  .funnel-tile__title {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 10px;
+    line-height: 1.4;
+  }
+  .funnel-tile__value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--gold-bright);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .funnel-tile__meta {
+    font-size: 0.72rem;
+    color: var(--text-faint);
+    line-height: 1.4;
+  }
+  .funnel-tile__ts {
+    font-size: 0.66rem;
+    color: var(--text-faint);
+    margin-top: 8px;
+    opacity: 0.7;
+  }
+  /* Loading pulse */
+  @keyframes pulse { 0%,100%{opacity:.3} 50%{opacity:1} }
+  .funnel-tile--loading .funnel-tile__value {
+    animation: pulse 1.2s ease-in-out infinite;
+    color: var(--gold);
+  }
+  /* Retry link */
+  .funnel-retry {
+    font-size: 0.7rem;
+    color: var(--gold);
+    cursor: pointer;
+    text-decoration: underline;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+  .funnel-retry:hover { color: var(--gold-bright); }
+
+  @media (max-width: 768px) {
+    .funnel-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 480px) {
+    .funnel-grid { grid-template-columns: 1fr; }
+    .funnel-tile { min-height: 44px; }
+  }
 </style>
 </head>
 <body>
@@ -334,6 +416,14 @@
 
   <!-- Stats -->
   <div class="stats-bar" id="stats-bar"></div>
+
+  <!-- KPI Funnel Tiles (B5) -->
+  <div class="funnel-section">
+    <h2>◆ Funnel Pulse</h2>
+    <div class="funnel-grid" id="funnel-grid">
+      <!-- Tiles are rendered by loadFunnel() -->
+    </div>
+  </div>
 
   <!-- Detail Panel -->
   <div id="detail-panel">
@@ -402,6 +492,10 @@ function doLogin() {
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('admin-dashboard').style.display = 'block';
       loadData();
+      loadFunnel();
+      // Poll funnel tiles every 60 seconds (no websocket needed)
+      if (funnelInterval) clearInterval(funnelInterval);
+      funnelInterval = setInterval(loadFunnel, 60000);
     })
     .catch(() => {
       document.getElementById('login-error').style.display = 'block';
@@ -544,6 +638,91 @@ function doBroadcast() {
     document.getElementById('broadcast-msg').value = '';
   });
 }
+
+// ─── KPI Funnel Tiles (B5) ─────────────────────────────────────────────────
+
+const FUNNEL_TILES = [
+  { key: 'auditsBegun24h',       title: 'Audits begun in the last 24 hours.',      fmt: 'int' },
+  { key: 'auditToAction',        title: 'Audit to action seam.',                   fmt: 'pct' },
+  { key: 'echoOnPaywall',        title: 'Echo shown on paywall.',                  fmt: 'pct' },
+  { key: 'paywallToPayment',     title: 'Paywall to payment seam.',                fmt: 'pct' },
+  { key: 'conversionsYesterday', title: 'Conversions yesterday.',                  fmt: 'int' },
+  { key: 'arpu30d',              title: 'ARPU, last 30 days.',                     fmt: 'inr' },
+  { key: 'bundleAttachRate',     title: 'Bundle attach rate.',                     fmt: 'pct' },
+  { key: 'firstMirrorWithin24h', title: 'First mirror within 24 hours of paying.', fmt: 'pct' },
+  { key: 'day7StillMirroring',   title: 'Day-7 still mirroring.',                  fmt: 'pct' },
+  { key: 'day30StillMirroring',  title: 'Day-30 still mirroring.',                 fmt: 'pct' },
+  { key: 'mirrorsTakenYesterday',title: 'Mirrors taken yesterday across active users.', fmt: 'pct' },
+  { key: 'revealPullThrough',    title: 'Reveal pull-through.',                    fmt: 'pct' },
+  { key: 'reauditCompletionRate',title: 'Re-Audit completion rate.',               fmt: 'pct' },
+  { key: 'crossSellSilence',     title: 'Cross-sell silence (re-show count must be 0).', fmt: 'int' },
+];
+
+function formatValue(v, fmt) {
+  if (v == null) return '—';
+  if (fmt === 'pct') return (v * 100).toFixed(1) + '%';
+  if (fmt === 'inr') return '₹' + v.toLocaleString('en-IN');
+  return String(v);
+}
+
+function renderFunnelLoading() {
+  const grid = document.getElementById('funnel-grid');
+  if (!grid) return;
+  grid.innerHTML = FUNNEL_TILES.map(t =>
+    `<div class="funnel-tile funnel-tile--loading">
+      <div class="funnel-tile__title">${t.title}</div>
+      <div class="funnel-tile__value">◆</div>
+      <div class="funnel-tile__meta">Loading…</div>
+    </div>`
+  ).join('');
+}
+
+function renderFunnelError() {
+  const grid = document.getElementById('funnel-grid');
+  if (!grid) return;
+  grid.innerHTML = FUNNEL_TILES.map(t =>
+    `<div class="funnel-tile state-red">
+      <div class="funnel-tile__title">${t.title}</div>
+      <div class="funnel-tile__value">—</div>
+      <div class="funnel-tile__meta"><button class="funnel-retry" onclick="loadFunnel()">Retry</button></div>
+    </div>`
+  ).join('');
+}
+
+function renderFunnelData(data) {
+  const grid = document.getElementById('funnel-grid');
+  if (!grid) return;
+  const now = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  grid.innerHTML = FUNNEL_TILES.map(t => {
+    const tile = data[t.key] || {};
+    const val = tile.value != null ? tile.value : null;
+    const state = tile.state || 'amber';
+    const formatted = formatValue(val, t.fmt);
+    return `<div class="funnel-tile state-${state}">
+      <div class="funnel-tile__title">${t.title}</div>
+      <div class="funnel-tile__value">${formatted}</div>
+      <div class="funnel-tile__ts">as of ${now}</div>
+    </div>`;
+  }).join('');
+}
+
+function loadFunnel() {
+  renderFunnelLoading();
+  fetch('/api/admin/funnel', { headers: authHeaders() })
+    .then(r => {
+      if (r.status === 401) {
+        document.getElementById('admin-dashboard').style.display = 'none';
+        document.getElementById('login-screen').style.display = 'flex';
+        return null;
+      }
+      if (!r.ok) throw new Error('funnel error');
+      return r.json();
+    })
+    .then(data => { if (data) renderFunnelData(data); })
+    .catch(() => renderFunnelError());
+}
+
+let funnelInterval = null;
 </script>
 
 </body>

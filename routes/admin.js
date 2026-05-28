@@ -266,6 +266,235 @@ router.post('/seed-test-user', requireAuth, (req, res) => {
   });
 });
 
+// ─── KPI Funnel Tiles (B5) ───
+// GET /api/admin/funnel — returns 14 KPI tiles derived from the event sink.
+// Auth: existing requireAuth middleware (Bearer JWT or legacy x-admin-password).
+// Performance: reads JSONL line-by-line via events.query; fine for ≤100k events.
+// See DECISIONS.md B5 for query-performance caveat.
+router.get('/funnel', requireAuth, async (req, res) => {
+  try {
+    const events = require('../services/events');
+    const now = new Date();
+    const nowIso = now.toISOString();
+
+    // Helpers
+    const daysAgoIso = (n) => new Date(Date.now() - n * 86400000).toISOString();
+    const istMidnight = () => {
+      // IST = UTC+5:30; derive yesterday's IST midnight as UTC
+      const d = new Date();
+      d.setUTCHours(d.getUTCHours() - 5);
+      d.setUTCMinutes(d.getUTCMinutes() - 30);
+      const yest = new Date(d);
+      yest.setUTCDate(yest.getUTCDate() - 1);
+      yest.setUTCHours(0, 0, 0, 0);
+      // Convert back to UTC
+      return new Date(yest.getTime() + 5.5 * 60 * 60 * 1000);
+    };
+    const istYesterdayStart = istMidnight();
+    const istYesterdayEnd = new Date(istYesterdayStart.getTime() + 86400000);
+
+    // Fetch all relevant event types in parallel (each is a stream of the JSONL)
+    const [
+      auditStarted24h,
+      auditResultViewed7d,
+      paywallViewed7d,
+      paywallCtaClicked7d,
+      paymentInitiated7d,
+      paymentSucceededAll,
+      paymentSucceededYesterday,
+      paymentSucceeded30d,
+      bundleAttached7d,
+      firstMirror14d,
+      paymentSucceeded14d,
+      mirrorTakenAll,
+      paymentSucceededCohort7d,
+      paymentSucceededCohort30d,
+      mirrorYesterday,
+      revealWatched14d,
+      reauditCardShown14d,
+      reauditCompleted14d,
+      crossSellReshowAll,
+    ] = await Promise.all([
+      events.query({ name: 'audit_started', since: daysAgoIso(1) }),
+      events.query({ name: 'audit_result_viewed', since: daysAgoIso(7) }),
+      events.query({ name: 'paywall_viewed', since: daysAgoIso(7) }),
+      events.query({ name: 'paywall_cta_clicked', since: daysAgoIso(7) }),
+      events.query({ name: 'payment_initiated', since: daysAgoIso(7) }),
+      events.query({ name: 'payment_succeeded' }),
+      events.query({ name: 'payment_succeeded', since: istYesterdayStart.toISOString(), until: istYesterdayEnd.toISOString() }),
+      events.query({ name: 'payment_succeeded', since: daysAgoIso(30) }),
+      events.query({ name: 'bundle_attached', since: daysAgoIso(7) }),
+      events.query({ name: 'lookmax_first_mirror_taken', since: daysAgoIso(14) }),
+      events.query({ name: 'payment_succeeded', since: daysAgoIso(14) }),
+      events.query({ name: 'mirror_taken' }),
+      events.query({ name: 'payment_succeeded', since: daysAgoIso(14), until: daysAgoIso(7) }),
+      events.query({ name: 'payment_succeeded', since: daysAgoIso(37), until: daysAgoIso(30) }),
+      events.query({ name: 'mirror_taken', since: istYesterdayStart.toISOString(), until: istYesterdayEnd.toISOString() }),
+      events.query({ name: 'reveal_watched', since: daysAgoIso(14) }),
+      events.query({ name: 'reaudit_card_shown', since: daysAgoIso(14) }),
+      events.query({ name: 'reaudit_completed', since: daysAgoIso(14) }),
+      events.query({ name: 'cross_sell_orator_reshow' }),
+    ]);
+
+    // ── Tile 1: Audits begun in the last 24 hours ──
+    const t1 = auditStarted24h.length;
+
+    // ── Tile 2: Audit to action seam (7d) ──
+    // Ratio: paywall_viewed with a sessionToken that also appears in a recent
+    // audit_result_viewed. We use the anonId as the proxy (same browser).
+    const auditResultAnonIds = new Set(auditResultViewed7d.map((e) => e.anonId).filter(Boolean));
+    const paywallAfterAudit = paywallViewed7d.filter(
+      (e) => e.anonId && auditResultAnonIds.has(e.anonId)
+    ).length;
+    const t2 =
+      auditResultViewed7d.length > 0
+        ? Math.round((paywallAfterAudit / auditResultViewed7d.length) * 100) / 100
+        : 0;
+
+    // ── Tile 3: Echo shown on paywall (7d) ──
+    const echoShown = paywallViewed7d.filter((e) => e.props && e.props.auditEchoShown === true).length;
+    const t3 =
+      paywallViewed7d.length > 0
+        ? Math.round((echoShown / paywallViewed7d.length) * 100) / 100
+        : 0;
+
+    // ── Tile 4: Paywall to payment seam (7d) ──
+    const t4 =
+      paywallCtaClicked7d.length > 0
+        ? Math.round((paymentInitiated7d.length / paywallCtaClicked7d.length) * 100) / 100
+        : 0;
+
+    // ── Tile 5: Conversions yesterday (IST) ──
+    const t5 = paymentSucceededYesterday.length;
+
+    // ── Tile 6: ARPU, last 30 days ──
+    const totalAmount30d = paymentSucceeded30d.reduce((sum, e) => {
+      const amt = e.props && typeof e.props.amount === 'number' ? e.props.amount : 0;
+      return sum + amt;
+    }, 0);
+    const distinctUsers30d = new Set(paymentSucceeded30d.map((e) => e.userToken).filter(Boolean)).size;
+    const t6 = distinctUsers30d > 0 ? Math.round(totalAmount30d / distinctUsers30d) : 0;
+
+    // ── Tile 7: Bundle attach rate (7d) ──
+    const t7 =
+      paymentInitiated7d.length > 0
+        ? Math.round((bundleAttached7d.length / paymentInitiated7d.length) * 100) / 100
+        : 0;
+
+    // ── Tile 8: First mirror within 24h of paying (14d) ──
+    const firstMirrorWithin24h = firstMirror14d.filter((e) => {
+      const hrs = e.props && typeof e.props.hoursSincePayment === 'number' ? e.props.hoursSincePayment : Infinity;
+      return hrs <= 24;
+    }).length;
+    const t8 =
+      paymentSucceeded14d.length > 0
+        ? Math.round((firstMirrorWithin24h / paymentSucceeded14d.length) * 100) / 100
+        : 0;
+
+    // ── Tile 9: Day-7 still mirroring ──
+    // Cohort: paid 7-14 days ago; check if they mirrored in [day 6, day 8] window
+    const cohort7dTokens = new Set(paymentSucceededCohort7d.map((e) => e.userToken).filter(Boolean));
+    const mirroringAt7d = new Set(
+      mirrorTakenAll.filter((e) => {
+        if (!e.userToken || !cohort7dTokens.has(e.userToken)) return false;
+        const payment = paymentSucceededCohort7d.find((p) => p.userToken === e.userToken);
+        if (!payment) return false;
+        const daysSince = (new Date(e.ts) - new Date(payment.ts)) / 86400000;
+        return daysSince >= 6 && daysSince <= 8;
+      }).map((e) => e.userToken)
+    ).size;
+    const t9 = cohort7dTokens.size > 0 ? Math.round((mirroringAt7d / cohort7dTokens.size) * 100) / 100 : 0;
+
+    // ── Tile 10: Day-30 still mirroring ──
+    const cohort30dTokens = new Set(paymentSucceededCohort30d.map((e) => e.userToken).filter(Boolean));
+    const mirroringAt30d = new Set(
+      mirrorTakenAll.filter((e) => {
+        if (!e.userToken || !cohort30dTokens.has(e.userToken)) return false;
+        const payment = paymentSucceededCohort30d.find((p) => p.userToken === e.userToken);
+        if (!payment) return false;
+        const daysSince = (new Date(e.ts) - new Date(payment.ts)) / 86400000;
+        return daysSince >= 29 && daysSince <= 31;
+      }).map((e) => e.userToken)
+    ).size;
+    const t10 = cohort30dTokens.size > 0 ? Math.round((mirroringAt30d / cohort30dTokens.size) * 100) / 100 : 0;
+
+    // ── Tile 11: Mirrors taken yesterday across active users ──
+    const activeUsers = Object.values(require('../models/User').getAllUsers()).filter((u) => u.lookmaxxingActive);
+    const mirrorYesterdayCount = new Set(mirrorYesterday.map((e) => e.userToken).filter(Boolean)).size;
+    const t11 = activeUsers.length > 0 ? Math.round((mirrorYesterdayCount / activeUsers.length) * 100) / 100 : 0;
+
+    // ── Tile 12: Reveal pull-through (14d) ──
+    // Use reveal_watched as numerator; denominator = distinct users who could watch
+    // (mirror_taken ≥ 4 in a week — approximated as distinct userTokens in mirror_taken 14d)
+    const eligibleReveal = new Set(
+      mirrorTakenAll.filter((e) => {
+        const ts = new Date(e.ts);
+        return ts >= new Date(daysAgoIso(14));
+      }).map((e) => e.userToken).filter(Boolean)
+    ).size;
+    const revealWatched = new Set(revealWatched14d.map((e) => e.userToken).filter(Boolean)).size;
+    const t12 = eligibleReveal > 0 ? Math.round((revealWatched / eligibleReveal) * 100) / 100 : 0;
+
+    // ── Tile 13: Re-audit completion rate (14d) ──
+    const t13 =
+      reauditCardShown14d.length > 0
+        ? Math.round((reauditCompleted14d.length / reauditCardShown14d.length) * 100) / 100
+        : 0;
+
+    // ── Tile 14: Cross-sell silence (all-time reshow count) ── P0 counter
+    const t14 = crossSellReshowAll.length;
+
+    // ── State helper: rate 0-1 values as green/amber/red ──
+    function rateRatio(v, greenThreshold, amberThreshold) {
+      if (v >= greenThreshold) return 'green';
+      if (v >= amberThreshold) return 'amber';
+      return 'red';
+    }
+    function rateCount(v, greenMin) {
+      if (v >= greenMin) return 'green';
+      if (v > 0) return 'amber';
+      return 'red';
+    }
+
+    const computedAt = nowIso;
+    const tile = (value, state) => ({ value, state, computedAt });
+
+    res.json({
+      // Tile 1 — Audits begun in the last 24 hours
+      auditsBegun24h: tile(t1, rateCount(t1, 1)),
+      // Tile 2 — Audit to action seam (Result → Action %)
+      auditToAction: tile(t2, rateRatio(t2, 0.1, 0.05)),
+      // Tile 3 — Echo shown on paywall %
+      echoOnPaywall: tile(t3, rateRatio(t3, 0.7, 0.4)),
+      // Tile 4 — Paywall to payment seam %
+      paywallToPayment: tile(t4, rateRatio(t4, 0.5, 0.2)),
+      // Tile 5 — Conversions yesterday
+      conversionsYesterday: tile(t5, rateCount(t5, 1)),
+      // Tile 6 — ARPU, last 30 days (₹)
+      arpu30d: tile(t6, rateCount(t6, 799)),
+      // Tile 7 — Bundle attach rate %
+      bundleAttachRate: tile(t7, rateRatio(t7, 0.3, 0.1)),
+      // Tile 8 — First mirror within 24h of paying %
+      firstMirrorWithin24h: tile(t8, rateRatio(t8, 0.5, 0.25)),
+      // Tile 9 — Day-7 still mirroring %
+      day7StillMirroring: tile(t9, rateRatio(t9, 0.4, 0.2)),
+      // Tile 10 — Day-30 still mirroring %
+      day30StillMirroring: tile(t10, rateRatio(t10, 0.3, 0.15)),
+      // Tile 11 — Mirrors taken yesterday across active users %
+      mirrorsTakenYesterday: tile(t11, rateRatio(t11, 0.6, 0.3)),
+      // Tile 12 — Reveal pull-through %
+      revealPullThrough: tile(t12, rateRatio(t12, 0.5, 0.2)),
+      // Tile 13 — Re-Audit completion rate %
+      reauditCompletionRate: tile(t13, rateRatio(t13, 0.4, 0.2)),
+      // Tile 14 — Cross-sell silence (P0 counter — must always be 0)
+      crossSellSilence: tile(t14, t14 === 0 ? 'green' : 'red'),
+    });
+  } catch (err) {
+    log('ERROR', `funnel failed: ${err.message}`);
+    res.status(500).json({ error: 'Something has interrupted the work. Try again in a moment.' });
+  }
+});
+
 // ─── Export CSV ───
 router.get('/export', requireAuth, (req, res) => {
   const users = Object.values(User.getAllUsers());

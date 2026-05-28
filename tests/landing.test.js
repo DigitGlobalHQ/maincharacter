@@ -29,7 +29,9 @@ describe('landing.html — locked copy (byte-identical guard)', () => {
 describe('landing.html — 2-pillar update (P2.1)', () => {
   it('Lookmaxxing card replaces the Aesthetic card and links to /audit', () => {
     expect(html).toContain('<h3 class="pcard__name">Lookmaxxing</h3>');
-    expect(html).toContain("window.location.href='/audit'");
+    // The card now uses an <a href="/audit"> for keyboard accessibility (design spec §11)
+    // instead of the old onclick=window.location.href pattern.
+    expect(html).toContain('href="/audit"');
     expect(html).toContain('Get Your Aura Reading');
     // Day-30 promise (not Day-7) for Lookmaxxing.
     expect(html).toContain('By Day 30 you will see the version of you the camera has been waiting to capture.');

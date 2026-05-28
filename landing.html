@@ -539,6 +539,27 @@ h1, h2, h3, h4 {
 .pcard--aesthetic .pcard__stat-fill { background: var(--aesthetic); }
 .pcard--sage .pcard__stat-fill { background: var(--sage); }
 
+/* Lookmaxxing pillar — format chips replacing fake stat bar (design-lookmax-landing-pillar-card.md) */
+.pcard__chips {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 1.6rem;
+  flex-wrap: wrap;
+}
+
+.pcard__chip {
+  border: 1px solid rgba(232,184,75,0.25);
+  border-radius: 100px;
+  padding: 4px 10px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  white-space: nowrap;
+}
+
 .pcard__hook {
   font-family: var(--font-serif);
   font-style: italic;
@@ -1151,19 +1172,33 @@ button:focus-visible {
       </div>
 
       <!-- LOOKMAXXING (formerly Aesthetic — violet pcard--aesthetic class retained) -->
-      <div class="pcard pcard--aesthetic" onclick="window.location.href='/audit'" style="cursor:pointer;">
+      <!-- Stat-bar replaced with format-metadata chips per design-lookmax-landing-pillar-card.md §2 -->
+      <a href="/audit"
+        class="pcard pcard--aesthetic"
+        style="display:block;color:inherit;text-decoration:none;cursor:pointer;"
+        data-event="pillar_card_clicked"
+        data-pillar="lookmaxxing"
+        aria-label="Lookmaxxing — Get Your Aura Reading">
         <div class="pcard__bar"></div>
         <div class="pcard__glow"></div>
         <div class="pcard__body">
           <div class="pcard__number">II</div>
           <h3 class="pcard__name">Lookmaxxing</h3>
           <div class="pcard__tag">Physical Presence</div>
-          <div class="pcard__stat-bar"><div class="pcard__stat-fill"></div></div>
+          <!-- Format chips: copy is [COPY DRAFT — pending founder approval] per design spec §9/§10 -->
+          <div class="pcard__chips" aria-hidden="true">
+            <span class="pcard__chip">[COPY DRAFT — pending founder approval]</span>
+            <span class="pcard__chip">[COPY DRAFT — pending founder approval]</span>
+            <span class="pcard__chip">[COPY DRAFT — pending founder approval]</span>
+          </div>
           <p class="pcard__hook">"The room reads you before you speak."</p>
           <p class="pcard__promise">By Day 30 you will see the version of you the camera has been waiting to capture.</p>
-          <div class="pcard__cta">Get Your Aura Reading <span>→</span></div>
+          <div class="pcard__cta"
+            data-event="pillar_cta_clicked"
+            data-pillar="lookmaxxing"
+            data-cta-text="get-your-aura-reading">Get Your Aura Reading <span>→</span></div>
         </div>
-      </div>
+      </a>
     </div>
 
     <!-- Sage moved out of the choosable quests for the 2-pillar launch -->

@@ -1,6 +1,7 @@
 <!doctype html>
-<!-- Daily Protocol checklist (Night-4, P5.3). Items expand for instruction +
-     evidence tier; do-nots are violet reminders, not actions. -->
+<!-- Daily Protocol checklist (Night-4, P5.3 → design-spec refactor).
+     Items: tier chip promoted to header row, box hit-area extended to 44px,
+     do-nots frame, CTA glow at ≥80%, streak label. -->
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -12,28 +13,135 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/lookmax/app.css" />
   <script src="/track.js" defer></script>
+  <style>
+    /* ── Tier chip on header row ──────────────────────────────── */
+    .check .title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .check .title-row .title { flex: 1; font-size: 15px; color: var(--ink); }
+    .check .title-row .tier-chip {
+      flex-shrink: 0;
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-family: 'Sora', sans-serif;
+      font-weight: 400;
+    }
+    .check .title-row .tier-chip::before { content: '· '; }
+
+    /* ── Box extended 44×44 tap target ──────────────────────── */
+    .check .box {
+      position: relative;
+      flex: 0 0 22px;
+      height: 22px;
+      border: 1px solid var(--gold);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gold);
+      margin-top: 2px;
+      cursor: pointer;
+    }
+    .check .box::before {
+      content: '';
+      position: absolute;
+      inset: -11px;
+    }
+
+    /* ── CTA glow when ≥80% complete ─────────────────────────── */
+    .btn--complete-ready {
+      box-shadow: 0 0 0 2px rgba(232,184,75,0.25), 0 0 24px rgba(232,184,75,0.18);
+      transition: box-shadow 0.6s ease;
+    }
+    #completeBtn { min-height: 44px; }
+
+    /* ── Supporting line above CTA (≥80%) ────────────────────── */
+    #ctaSupport {
+      display: none;
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 15px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      /* TODO copy: spec calls for approved text here — design-lookmax-protocol.md §2.3 */
+    }
+
+    /* ── Do-nots frame line ───────────────────────────────────── */
+    #doNotsFrame {
+      display: none;
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 14px;
+      color: var(--muted);
+      margin: 18px 0 10px;
+      /* TODO copy: spec calls for approved frame line — design-lookmax-protocol.md §2.2 */
+    }
+
+    /* ── Inline item-check error ──────────────────────────────── */
+    .check-err {
+      font-size: 12px;
+      color: var(--bad);
+      margin-top: 4px;
+      min-height: 16px;
+    }
+
+    /* ── Reduced motion ───────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+      .btn--complete-ready { transition: none; }
+    }
+  </style>
 </head>
 <body>
   <div class="page">
     <div class="topbar">
-      <div class="who">◆ Today’s Protocol</div>
+      <div class="who">◆ Today's Protocol</div>
       <div class="badges"><span class="badge badge--streak" id="streakBadge">—</span></div>
     </div>
 
     <h1 style="margin-bottom:4px">The work for today.</h1>
-    <p class="muted" id="progressLine" style="margin-bottom:18px">—</p>
+    <p class="muted" id="progressLine" aria-live="polite" style="margin-bottom:18px">—</p>
 
-    <div id="items"></div>
-    <div id="doNots" style="margin-top:12px"></div>
+    <!-- Loading placeholder -->
+    <div id="loadingPlaceholder" class="center muted" style="padding:24px 0">◆</div>
 
-    <button class="btn btn--solid" id="completeBtn" style="margin-top:18px">Complete the day</button>
-    <div class="err center" id="msg" style="color:var(--muted)"></div>
+    <div id="items" aria-label="Protocol checklist" role="list"></div>
+
+    <!-- Do-nots frame (shown only when doNots exist) -->
+    <div id="doNotsFrame" aria-hidden="true">
+      <!-- TODO copy: spec calls for do-nots frame line — design-lookmax-protocol.md §2.2 -->
+    </div>
+    <div id="doNots" style="margin-top:0"></div>
+
+    <!-- Supporting line (shown when ≥80% complete and not locked) -->
+    <div id="ctaSupport" aria-live="polite">
+      <!-- TODO copy: spec calls for approved ≥80% line — design-lookmax-protocol.md §2.3 -->
+    </div>
+
+    <button class="btn btn--solid" id="completeBtn" style="margin-top:8px">Complete the day</button>
+    <div class="err center" id="msg" style="color:var(--muted)" role="status" aria-live="polite"></div>
   </div>
 
   <script src="/lookmax/app.js"></script>
   <script>
     const TIER = { 1: 'RCT-supported', 2: 'Mechanism-supported', 3: 'Observational' };
     let state = null;
+
+    // ── KPI: page view ────────────────────────────────────────────────────────
+    // Fires after state is loaded so we can carry totalCount, completedCount, isLocked
+    function trackPageView() {
+      if (window.mc && state) {
+        window.mc.track('protocol_viewed', {
+          totalCount: state.totalCount,
+          completedCount: state.completedCount,
+          isLocked: !!state.isLocked,
+        });
+      }
+    }
 
     (async function () {
       const user = await LM.requireSession();
@@ -43,47 +151,105 @@
     })();
 
     async function refresh() {
-      try { state = await LM.api('/api/lookmax/protocol/today'); }
-      catch { document.getElementById('msg').textContent = 'No protocol yet. Take a mirror to generate one.'; return; }
+      document.getElementById('loadingPlaceholder').style.display = '';
+      try {
+        state = await LM.api('/api/lookmax/protocol/today');
+        document.getElementById('loadingPlaceholder').style.display = 'none';
+      } catch {
+        document.getElementById('loadingPlaceholder').style.display = 'none';
+        document.getElementById('msg').textContent = 'No protocol yet. Take a mirror to generate one.';
+        return;
+      }
       render();
+      trackPageView();
     }
 
     function render() {
       document.getElementById('streakBadge').textContent = 'Day ' + (state.streak || 0);
-      document.getElementById('progressLine').textContent = `${state.completedCount} of ${state.totalCount} complete` + (state.isLocked ? ' · locked' : '');
+      document.getElementById('progressLine').textContent =
+        `${state.completedCount} of ${state.totalCount} complete` + (state.isLocked ? ' · locked' : '');
 
+      // Items — tier chip promoted to title-row
       document.getElementById('items').innerHTML = (state.items || []).map((it) => `
-        <div class="check ${it.checked ? 'checked' : ''}" data-id="${it.itemId}">
-          <div class="box" data-toggle="${it.itemId}">${it.checked ? '◆' : ''}</div>
-          <div class="body" data-expand="${it.itemId}">
-            <div class="title">${LM.escapeHtml(it.title)}</div>
-            <div class="instruction">${LM.escapeHtml(it.instruction || '')}<br /><span class="tier">${TIER[it.evidenceTier] || 'Observational'}</span></div>
+        <div class="check ${it.checked ? 'checked' : ''}" data-id="${it.itemId}" role="listitem">
+          <div class="box" data-toggle="${it.itemId}" aria-label="${it.checked ? 'Uncheck' : 'Check'} ${LM.escapeHtml(it.title)}" role="checkbox" aria-checked="${!!it.checked}">
+            ${it.checked ? '◆' : ''}
+          </div>
+          <div class="body" data-expand="${it.itemId}" role="button" aria-expanded="${it.itemId === (state._openId || '') ? 'true' : 'false'}" tabindex="0">
+            <div class="title-row">
+              <span class="title">${LM.escapeHtml(it.title)}</span>
+              <span class="tier-chip">${TIER[it.evidenceTier] || 'Observational'}</span>
+            </div>
+            <div class="instruction">${LM.escapeHtml(it.instruction || '')}</div>
+            ${it.error ? `<div class="check-err">${LM.escapeHtml(it.error)}</div>` : ''}
           </div>
         </div>`).join('');
 
+      // Do-nots
+      const hasDoNots = state.doNots && state.doNots.length;
+      const doNotsFrame = document.getElementById('doNotsFrame');
+      doNotsFrame.style.display = hasDoNots ? '' : 'none';
+      doNotsFrame.setAttribute('aria-hidden', hasDoNots ? 'false' : 'true');
+
       document.getElementById('doNots').innerHTML = (state.doNots || []).map((d) => `
-        <div class="donot"><span class="mark">⊘</span><div><div class="title">${LM.escapeHtml(d.title)}</div>
-        <div class="muted" style="font-size:12px;margin-top:4px">${LM.escapeHtml(d.instruction || '')}</div></div></div>`).join('');
+        <div class="donot"><span class="mark">⊘</span><div>
+          <div class="title">${LM.escapeHtml(d.title)}</div>
+          <div class="muted" style="font-size:12px;margin-top:4px">${LM.escapeHtml(d.instruction || '')}</div>
+        </div></div>`).join('');
 
+      // CTA state
       const btn = document.getElementById('completeBtn');
-      btn.disabled = !!state.isLocked;
-      btn.textContent = state.isLocked ? 'Day complete ◆' : 'Complete the day';
+      const pct = state.totalCount ? state.completedCount / state.totalCount : 0;
+      const readyGlow = pct >= 0.8 && !state.isLocked;
 
-      // wire toggles + expanders
-      document.querySelectorAll('[data-toggle]').forEach((el) => el.addEventListener('click', (e) => {
-        e.stopPropagation(); toggle(el.dataset.toggle);
-      }));
-      document.querySelectorAll('[data-expand]').forEach((el) => el.addEventListener('click', () => {
-        el.closest('.check').classList.toggle('open');
-      }));
+      btn.disabled = !!state.isLocked;
+      if (state.isLocked) {
+        btn.textContent = 'Day complete ◆';
+        btn.classList.remove('btn--complete-ready');
+      } else if (state.completedCount === 0 && state.totalCount > 0) {
+        btn.textContent = 'Complete the day';
+        btn.classList.remove('btn--complete-ready');
+      } else {
+        // Dynamic label: "Complete the day — N more to go" (copy-draft)
+        // TODO copy: spec calls for approved dynamic label — design-lookmax-protocol.md §2.3
+        const remaining = state.totalCount - state.completedCount;
+        btn.textContent = remaining > 0 ? 'Complete the day' : 'Complete the day ◆';
+        if (readyGlow) btn.classList.add('btn--complete-ready');
+        else btn.classList.remove('btn--complete-ready');
+      }
+
+      // Supporting line (≥80% and not locked)
+      document.getElementById('ctaSupport').style.display = readyGlow ? '' : 'none';
+
+      // Wire toggles + expanders
+      document.querySelectorAll('[data-toggle]').forEach((el) => {
+        el.addEventListener('click', (e) => { e.stopPropagation(); toggle(el.dataset.toggle); });
+      });
+      document.querySelectorAll('[data-expand]').forEach((el) => {
+        el.addEventListener('click', () => {
+          const check = el.closest('.check');
+          check.classList.toggle('open');
+          if (window.mc) window.mc.track('protocol_item_expanded');
+        });
+        el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
+      });
     }
 
     async function toggle(itemId) {
       if (state.isLocked) return;
       const item = state.items.find((i) => i.itemId === itemId);
       const next = !item.checked;
-      try { await LM.api('/api/lookmax/protocol/check', { method: 'POST', body: JSON.stringify({ itemId, checked: next }) }); }
-      catch { return; }
+      item.error = null; // clear previous error
+      try {
+        await LM.api('/api/lookmax/protocol/check', { method: 'POST', body: JSON.stringify({ itemId, checked: next }) });
+        if (window.mc) window.mc.track(next ? 'protocol_item_checked' : 'protocol_item_unchecked', { itemId });
+      } catch {
+        // Inline error per spec §4 — was silently swallowed before
+        // TODO copy: spec calls for "Did not save. Try again." — design-lookmax-protocol.md §4
+        item.error = 'Did not save. Try again.';
+        render();
+        return;
+      }
       item.checked = next;
       state.completedCount = state.items.filter((i) => i.checked).length;
       render();
@@ -91,14 +257,19 @@
 
     document.getElementById('completeBtn').addEventListener('click', async () => {
       if (state.isLocked) return;
+      if (window.mc) window.mc.track('protocol_day_close_attempted');
       try {
         const r = await LM.api('/api/lookmax/protocol/complete-day', { method: 'POST' });
         state.isLocked = true; state.streak = r.streak;
         document.getElementById('msg').textContent = r.streakIncremented
           ? 'The day is closed. The streak holds. ◆'
           : 'The day is closed. Eighty percent carries the streak — aim higher tomorrow. ◆';
+        if (window.mc) window.mc.track('protocol_day_closed', { streakIncremented: r.streakIncremented, completionPct: state.totalCount ? state.completedCount / state.totalCount : 0 });
         render();
-      } catch { document.getElementById('msg').textContent = 'Could not lock the day. Try again.'; }
+      } catch {
+        document.getElementById('msg').textContent = 'Could not lock the day. Try again.';
+        if (window.mc) window.mc.track('protocol_day_close_failed');
+      }
     });
   </script>
 </body>

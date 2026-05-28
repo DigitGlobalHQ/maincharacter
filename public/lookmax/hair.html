@@ -1,6 +1,9 @@
 <!doctype html>
-<!-- Hair receding tracker (Night-4, P6.1). Weekly cadence; two photos (front +
-     crown); Norwood visualisation + evidence-based recommendations. -->
+<!-- Hair tracker (Night-4, P6.1 → design-spec refactor).
+     Norwood: gold fill removed, ◆ mark above active stage.
+     Compact locked view: Norwood row + score lines only.
+     Privacy beat + capture frame (copy-deferred).
+     data-leverage-axis attr for QA. -->
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -13,50 +16,156 @@
   <link rel="stylesheet" href="/lookmax/app.css" />
   <script src="/track.js" defer></script>
   <style>
+    /* ── Norwood row — neutral outline, ◆ mark above active ──── */
     .norwood { display: flex; gap: 6px; justify-content: space-between; margin: 14px 0; }
     .nw { flex: 1; text-align: center; }
-    .nw .dome { height: 30px; border: 1px solid var(--line); border-radius: 16px 16px 4px 4px; }
-    .nw.on .dome { background: var(--gold); border-color: var(--gold); }
+    /* Mark row: holds ◆ only for active stage */
+    .nw__mark { height: 14px; font-size: 12px; line-height: 1; color: var(--gold); margin-bottom: 2px; }
+    /* Dome: neutral outline for ALL stages — no gold fill */
+    .nw .dome {
+      height: 30px;
+      border: 1px solid var(--muted);
+      border-radius: 16px 16px 4px 4px;
+      background: transparent;
+    }
+    /* Active stage: gold border on dome only (no fill) */
+    .nw.on .dome { border-color: var(--gold); }
+    /* Stage number */
     .nw .n { font-size: 10px; color: var(--muted); margin-top: 4px; }
     .nw.on .n { color: var(--gold); }
-    .slot { border: 1px dashed var(--line); border-radius: 12px; padding: 18px; text-align: center; color: var(--muted); margin-bottom: 10px; cursor: pointer; }
+
+    /* ── Photo slots ──────────────────────────────────────────── */
+    .slot {
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+      padding: 18px;
+      text-align: center;
+      color: var(--muted);
+      margin-bottom: 10px;
+      cursor: pointer;
+      min-height: 56px;
+    }
     .slot.filled { border-style: solid; border-color: rgba(232,184,75,0.5); color: var(--gold); }
-    .reclist li { padding: 6px 0 6px 20px; position: relative; font-size: 14px; color: #cfccc4; }
-    .reclist li::before { content: '◆'; position: absolute; left: 0; color: var(--gold); font-size: 9px; top: 8px; }
+
+    /* ── Recommendation lists ─────────────────────────────────── */
+    .reclist li {
+      padding: 6px 0 6px 20px;
+      position: relative;
+      font-size: 14px;
+      color: #cfccc4;
+    }
+    .reclist li::before {
+      content: '◆';
+      position: absolute;
+      left: 0;
+      color: var(--gold);
+      font-size: 9px;
+      top: 8px;
+    }
     .reclist.dont li::before { content: '⊘'; color: var(--aesthetic); }
+
+    /* ── Capture frame line ───────────────────────────────────── */
+    .capture-frame {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 12px;
+      /* TODO copy: spec calls for discretion frame — design-lookmax-hair.md §2.3 */
+    }
+
+    /* ── Privacy beat ─────────────────────────────────────────── */
+    .privacy-beat {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 12px;
+      /* TODO copy: spec calls for privacy beat string — design-lookmax-hair.md §2.3 */
+    }
+
+    /* ── Leverage-axis line ───────────────────────────────────── */
+    .leverage-line {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 15px;
+      color: var(--gold);
+      margin-bottom: 14px;
+      /* TODO copy: spec calls for leverage-axis line — design-lookmax-hair.md §2.2 */
+    }
+
+    /* ── Leverage nudge ───────────────────────────────────────── */
+    .leverage-nudge {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 14px;
+      /* TODO copy: spec calls for leverage nudge — design-lookmax-hair.md §2.5 */
+    }
+
+    /* ── Aria-live region for leverage nudge (awaits copy approval) ── */
+    #leverageNudgeRegion { min-height: 0; }
+
+    /* ── Touch target on analyse button ──────────────────────── */
+    #analyzeBtn { min-height: 44px; }
   </style>
 </head>
 <body>
   <div class="page">
     <div class="topbar"><div class="who">◆ Hair Tracker</div></div>
 
-    <!-- Locked (within weekly window) -->
+    <!-- ── Locked view ──────────────────────────────────────────── -->
     <div id="lockedView" class="hidden">
       <h1 style="margin-bottom:8px">Next hair audit unlocks soon.</h1>
       <p class="muted" id="lockedSub" style="margin-bottom:16px"></p>
+      <!-- Compact last reading (Norwood row + score lines only) -->
       <div id="lastAnalysis"></div>
     </div>
 
-    <!-- Capture -->
+    <!-- ── Capture view ─────────────────────────────────────────── -->
     <div id="captureView" class="hidden">
-      <h1 style="margin-bottom:8px">This week’s hair audit.</h1>
-      <p class="muted" style="margin-bottom:16px">Stand in flat overhead light. Camera at the same height as your scalp. Take two photos: one straight-on, one from above (crown). The honest angle, not the angle.</p>
+      <!-- TODO copy: capture-view frame line — design-lookmax-hair.md §2.3 -->
+      <div class="capture-frame" aria-hidden="true"></div>
+
+      <h1 style="margin-bottom:8px">This week's hair audit.</h1>
+      <p class="muted" style="margin-bottom:16px">
+        Stand in flat overhead light. Camera at the same height as your scalp.
+        Take two photos: one straight-on, one from above (crown).
+        The honest angle, not the angle.
+      </p>
+
       <div class="slot" id="slotFront" data-for="front">Front / hairline photo — tap to add</div>
       <div class="slot" id="slotCrown" data-for="crown">Crown / from-above photo — tap to add</div>
+
       <input id="fileFront" type="file" accept="image/*" capture="user" class="hidden" />
       <input id="fileCrown" type="file" accept="image/*" capture="environment" class="hidden" />
-      <button class="btn btn--solid" id="analyzeBtn" disabled>Analyse</button>
-      <div class="err" id="capErr"></div>
+
+      <button
+        class="btn btn--solid"
+        id="analyzeBtn"
+        disabled
+        data-event="hair_submitted"
+        aria-label="Analyse hair photos"
+      >Analyse</button>
+
+      <!-- TODO copy: privacy beat — design-lookmax-hair.md §2.3 -->
+      <p class="privacy-beat" aria-hidden="true"></p>
+
+      <div class="err" id="capErr" role="alert" aria-live="polite"></div>
     </div>
 
-    <!-- Analysis -->
-    <div id="analysisView" class="hidden center" style="padding-top:40px">
-      <div class="score-big" style="font-size:3rem;color:var(--muted)">⌃</div>
+    <!-- ── Analysis view ────────────────────────────────────────── -->
+    <div id="analysisView" class="hidden center" style="padding-top:40px" aria-live="polite" role="status">
+      <div class="score-big" style="font-size:3rem;color:var(--muted)">◆</div>
       <div class="rotline">Reading the hairline cone…</div>
     </div>
 
-    <!-- Result -->
+    <!-- ── Result view ──────────────────────────────────────────── -->
     <div id="resultView" class="hidden"></div>
+
+    <!-- Aria-live region for leverage nudge (filled when copy approved) -->
+    <div id="leverageNudgeRegion" aria-live="polite"></div>
   </div>
 
   <script src="/lookmax/app.js"></script>
@@ -70,20 +179,35 @@
       LM.renderNav('hair');
       let h;
       try { h = await LM.api('/api/lookmax/hair/history'); } catch { h = { unlocked: true, readings: [] }; }
-      if (h.unlocked) showCapture();
-      else showLocked(h);
+      if (h.unlocked) {
+        showCapture();
+        if (window.mc) window.mc.track('hair_viewed', { unlocked: true, daysUntilNext: 0 });
+      } else {
+        showLocked(h);
+        if (window.mc) window.mc.track('hair_locked_view_shown');
+        if (window.mc) window.mc.track('hair_viewed', { unlocked: false, daysUntilNext: h.daysUntilNext || 0 });
+      }
     })();
 
     function showLocked(h) {
       document.getElementById('lockedView').classList.remove('hidden');
-      document.getElementById('lockedSub').textContent = `Next reading in ${h.daysUntilNext} days. Weekly cadence keeps the signal clean.`;
-      if (h.latest) document.getElementById('lastAnalysis').innerHTML = renderResult(h.latest, true);
+      document.getElementById('lockedSub').textContent =
+        `Next reading in ${h.daysUntilNext} days. Weekly cadence keeps the signal clean.`;
+      const lastEl = document.getElementById('lastAnalysis');
+      if (h.latest) {
+        // compact=true: Norwood row + score lines only (no consultant, no do/do-nots)
+        lastEl.innerHTML = renderResult(h.latest, true);
+      } else {
+        // First-time edge: no prior reading
+        lastEl.innerHTML = ''; // TODO copy: "The first reading begins this week." — design-lookmax-hair.md §4
+      }
     }
 
     function showCapture() {
       document.getElementById('captureView').classList.remove('hidden');
       bindSlot('front'); bindSlot('crown');
     }
+
     function bindSlot(kind) {
       const slot = document.getElementById('slot' + cap(kind));
       const input = document.getElementById('file' + cap(kind));
@@ -91,8 +215,11 @@
       input.addEventListener('change', (e) => {
         const f = e.target.files && e.target.files[0];
         if (!f) return;
-        files[kind] = f; slot.classList.add('filled'); slot.textContent = cap(kind) + ' photo added ✓';
+        files[kind] = f;
+        slot.classList.add('filled');
+        slot.textContent = cap(kind) + ' photo added';
         document.getElementById('analyzeBtn').disabled = !(files.front && files.crown);
+        if (window.mc) window.mc.track('hair_photo_added', { kind });
       });
     }
 
@@ -106,36 +233,90 @@
       const t0 = Date.now();
       try {
         const r = await LM.api('/api/lookmax/hair/photo', { method: 'POST', body: fd });
+        if (window.mc) window.mc.track('hair_scored', { norwood: r.norwood, hairlineScore: r.hairlineScore, confidence: r.confidence });
         setTimeout(() => {
           document.getElementById('analysisView').classList.add('hidden');
           const rv = document.getElementById('resultView');
-          rv.classList.remove('hidden'); rv.innerHTML = renderResult(r, false);
+          rv.classList.remove('hidden');
+          rv.setAttribute('data-leverage-axis', r.wasLeverageAxis ? 'true' : 'false');
+          rv.innerHTML = renderResult(r, false);
+          if (window.mc) window.mc.track('hair_result_shown');
         }, Math.max(0, 8000 - (Date.now() - t0)));
       } catch (e) {
         document.getElementById('analysisView').classList.add('hidden');
         document.getElementById('captureView').classList.remove('hidden');
         document.getElementById('capErr').textContent = 'Analysis failed. Try again in better light.';
+        if (window.mc) window.mc.track('hair_scoring_failed');
       }
     });
 
     function renderResult(r, compact) {
-      const nw = Array.from({ length: 7 }, (_, i) => i + 1).map((n) =>
-        `<div class="nw ${n === r.norwood ? 'on' : ''}"><div class="dome"></div><div class="n">${n}</div></div>`).join('');
+      // Norwood row: outline domes, ◆ mark above active stage only
+      const nw = Array.from({ length: 7 }, (_, i) => i + 1).map((n) => {
+        const isOn = n === r.norwood;
+        return `<div class="nw ${isOn ? 'on' : ''}">` +
+          `<div class="nw__mark">${isOn ? '◆' : ''}</div>` +
+          `<div class="dome"></div>` +
+          `<div class="n">${n}</div>` +
+          `</div>`;
+      }).join('');
+
       const recession = r.confidence === 'low' || r.recessionMm == null
         ? 'insufficient data — try better lighting next week'
         : r.recessionMm + ' mm';
-      const delta = r.deltaVsFirst != null ? ` (${r.deltaVsFirst > 0 ? '+' : ''}${r.deltaVsFirst} vs first reading)` : '';
+      const delta = r.deltaVsFirst != null
+        ? ` (${r.deltaVsFirst > 0 ? '+' : ''}${r.deltaVsFirst} vs first reading)`
+        : '';
       const rec = r.recommendations || { do: [], doNot: [] };
+
+      if (compact) {
+        // Compact locked view: Norwood row + score lines only
+        return `
+          <div class="card">
+            <div class="muted" style="font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">Norwood</div>
+            <div class="norwood">${nw}</div>
+            <div style="display:flex;justify-content:space-between;font-size:14px">
+              <span>Hairline score</span>
+              <b style="color:var(--gold)">${r.hairlineScore}/100${delta}</b>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:14px;margin-top:6px">
+              <span>Recession</span>
+              <span class="muted">${recession}</span>
+            </div>
+          </div>`;
+      }
+
+      // Full result view
+      // Leverage-axis conditional lines deferred (copy not approved)
+      // TODO copy: leverage-axis line — design-lookmax-hair.md §2.2
+      // TODO copy: leverage nudge (below consultant, positive delta + wasLeverageAxis) — design-lookmax-hair.md §2.5
       return `
-        ${compact ? '' : '<h1 style="margin-bottom:6px">Your hairline, read honestly.</h1>'}
-        <div class="card"><div class="muted" style="font-size:12px;letter-spacing:1px;text-transform:uppercase">Norwood stage</div>
+        <h1 style="margin-bottom:6px">Your hairline, read honestly.</h1>
+        <div class="card">
+          <div class="muted" style="font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">Norwood stage</div>
           <div class="norwood">${nw}</div>
-          <div style="display:flex;justify-content:space-between;font-size:14px"><span>Hairline score</span><b style="color:var(--gold)">${r.hairlineScore}/100${delta}</b></div>
-          <div style="display:flex;justify-content:space-between;font-size:14px;margin-top:6px"><span>Recession</span><span class="muted">${recession}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:14px">
+            <span>Hairline score</span>
+            <b style="color:var(--gold)">${r.hairlineScore}/100${delta}</b>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:14px;margin-top:6px">
+            <span>Recession</span>
+            <span class="muted">${recession}</span>
+          </div>
         </div>
         ${r.consultantLine ? `<div class="consultant">${LM.escapeHtml(r.consultantLine)}</div>` : ''}
-        <div class="card"><h3 style="font-size:18px">Do</h3><ul class="reclist">${(rec.do || []).map((d) => `<li>${LM.escapeHtml(typeof d === 'string' ? d : d.title)}${d.evidenceTier ? ` <span class="tier">${TIER[d.evidenceTier]}</span>` : ''}</li>`).join('')}</ul></div>
-        <div class="card card--look"><h3 style="font-size:18px">Do not</h3><ul class="reclist dont">${(rec.doNot || []).map((d) => `<li>${LM.escapeHtml(typeof d === 'string' ? d : d.title)}</li>`).join('')}</ul></div>`;
+        <div class="card">
+          <h3 style="font-size:18px">Do</h3>
+          <ul class="reclist">
+            ${(rec.do || []).map((d) => `<li>${LM.escapeHtml(typeof d === 'string' ? d : d.title)}${d.evidenceTier ? ` <span class="tier">${TIER[d.evidenceTier] || ''}</span>` : ''}</li>`).join('')}
+          </ul>
+        </div>
+        <div class="card card--look">
+          <h3 style="font-size:18px">Do not</h3>
+          <ul class="reclist dont">
+            ${(rec.doNot || []).map((d) => `<li>${LM.escapeHtml(typeof d === 'string' ? d : d.title)}</li>`).join('')}
+          </ul>
+        </div>`;
     }
 
     function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }

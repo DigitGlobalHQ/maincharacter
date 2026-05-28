@@ -392,6 +392,83 @@
     .funnel-grid { grid-template-columns: 1fr; }
     .funnel-tile { min-height: 44px; }
   }
+
+  /* ─── Dogfood Tools Panel ─── */
+  .dogfood-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-top: 24px;
+  }
+  .dogfood-panel h3 {
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 14px;
+  }
+  .dogfood-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .dogfood-btn {
+    padding: 10px 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    cursor: pointer;
+    text-align: left;
+    line-height: 1.4;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .dogfood-btn:hover { border-color: var(--gold); color: var(--text); }
+  .dogfood-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .dogfood-confirm {
+    display: none;
+    background: var(--bg-card2);
+    border: 1px solid var(--gold);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .dogfood-confirm.visible { display: block; }
+  .dogfood-confirm-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .dogfood-confirm-yes {
+    padding: 6px 16px;
+    background: transparent;
+    border: 1px solid var(--gold);
+    border-radius: 4px;
+    color: var(--gold);
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+  .dogfood-confirm-yes:hover { background: var(--gold-dim); }
+  .dogfood-confirm-cancel {
+    padding: 6px 16px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-faint);
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+  .dogfood-result {
+    font-size: 0.78rem;
+    color: var(--green);
+    margin-top: 8px;
+    display: none;
+    word-break: break-all;
+  }
+  .dogfood-result.err { color: var(--red); }
+  .dogfood-result.visible { display: block; }
 </style>
 </head>
 <body>
@@ -462,6 +539,65 @@
       </select>
       <button class="msg-send" onclick="doBroadcast()">Broadcast →</button>
       <span id="broadcast-status" style="font-size:0.78rem;color:var(--text-faint);"></span>
+    </div>
+  </div>
+
+  <!-- Dogfood Tools — admin-only, gated behind the existing admin JWT -->
+  <div class="dogfood-panel">
+    <h3>◆ Dogfood Tools</h3>
+    <p style="font-size:0.75rem;color:var(--text-faint);margin-bottom:14px;">
+      Grant comp access, fast-forward timers, and simulate Day-30 reveal variants without touching Razorpay.
+      Actions are audit-logged. Email pre-filled from your admin session.
+    </p>
+
+    <!-- Inline confirm area — shared by all buttons -->
+    <div class="dogfood-confirm" id="dogfood-confirm">
+      <div id="dogfood-confirm-text"></div>
+      <div class="dogfood-confirm-row">
+        <button class="dogfood-confirm-yes" id="dogfood-confirm-yes">Confirm</button>
+        <button class="dogfood-confirm-cancel" onclick="cancelDogfood()">Cancel</button>
+      </div>
+    </div>
+    <div class="dogfood-result" id="dogfood-result"></div>
+
+    <!-- Email override (defaults to founder email; founder can change here) -->
+    <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <label style="font-size:0.75rem;color:var(--text-faint);">Target email:</label>
+      <input type="email" id="dogfood-email" value="digitglobal.org@gmail.com"
+        style="padding:6px 10px;background:var(--bg-card2);border:1px solid var(--border);
+               border-radius:4px;color:var(--text);font-size:0.78rem;width:240px;outline:none;">
+    </div>
+
+    <div class="dogfood-grid">
+      <button class="dogfood-btn" onclick="dogfoodAction('grant')">
+        Grant my own access<br>
+        <span style="font-size:0.68rem;color:var(--text-faint);">Orator + Lookmaxxing (Aura++)</span>
+      </button>
+
+      <button class="dogfood-btn" onclick="dogfoodAction('timewarp')">
+        Time-warp to Day 30<br>
+        <span style="font-size:0.68rem;color:var(--text-faint);">Sets lookmaxxingStartedAt = now − 30 days</span>
+      </button>
+
+      <button class="dogfood-btn" onclick="dogfoodAction('simulate-up')">
+        Simulate reveal — UP<br>
+        <span style="font-size:0.68rem;color:var(--text-faint);">All axes +8 to +14 above baseline</span>
+      </button>
+
+      <button class="dogfood-btn" onclick="dogfoodAction('simulate-flat')">
+        Simulate reveal — FLAT<br>
+        <span style="font-size:0.68rem;color:var(--text-faint);">All axes within ±2 of baseline</span>
+      </button>
+
+      <button class="dogfood-btn" onclick="dogfoodAction('simulate-down-held8')">
+        Simulate reveal — DOWN (held=8)<br>
+        <span style="font-size:0.68rem;color:var(--text-faint);">All axes fell; score below Day 1</span>
+      </button>
+
+      <button class="dogfood-btn" onclick="dogfoodAction('simulate-down-held0')">
+        Simulate reveal — DOWN (held=0)<br>
+        <span style="font-size:0.68rem;color:var(--text-faint);">No axes held — drops "held" sentence</span>
+      </button>
     </div>
   </div>
 </div>
@@ -723,6 +859,118 @@ function loadFunnel() {
 }
 
 let funnelInterval = null;
+
+// ─── Dogfood Tools ────────────────────────────────────────────────────────────
+
+let _dogfoodPending = null;
+
+const DOGFOOD_CONFIGS = {
+  grant: {
+    label: 'Grant comp access (Orator + Lookmaxxing) — no Razorpay transaction.',
+    action: async (email) => {
+      const r = await fetch('/api/admin/grant', {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ email, plans: ['orator', 'lookmaxxing'], reason: 'founder dogfood' }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || r.status);
+      return `Access granted. Magic-link: ${d.magicLinkUrl}`;
+    },
+  },
+  timewarp: {
+    label: 'Set lookmaxxingStartedAt to now − 30 days. The Day-30 re-audit card will appear on the dashboard.',
+    action: async (email) => {
+      const r = await fetch('/api/admin/timewarp', {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ email, daysAgo: 30 }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || r.status);
+      return `lookmaxxingStartedAt set to ${d.lookmaxxingStartedAt}. Reload /lookmax/ to see the re-audit card.`;
+    },
+  },
+  'simulate-up': {
+    label: 'Write a synthetic Day-30 result where all axes improved (+8 to +14). Then reload /lookmax/reveal?mode=day30.',
+    action: async (email) => simulateReaudit(email, 'up', null),
+  },
+  'simulate-flat': {
+    label: 'Write a synthetic Day-30 result where all axes are flat (within ±2 of baseline). Then reload /lookmax/reveal?mode=day30.',
+    action: async (email) => simulateReaudit(email, 'flat', null),
+  },
+  'simulate-down-held8': {
+    label: 'Write a synthetic DOWN result with heldCount=8 (all axes fell, "held" sentence present). Then reload /lookmax/reveal?mode=day30.',
+    action: async (email) => simulateReaudit(email, 'down', 8),
+  },
+  'simulate-down-held0': {
+    label: 'Write a synthetic DOWN result with heldCount=0 (no axes held, "held" sentence dropped). Then reload /lookmax/reveal?mode=day30.',
+    action: async (email) => simulateReaudit(email, 'down', 0),
+  },
+};
+
+async function simulateReaudit(email, variant, heldCount) {
+  const body = { email, variant };
+  if (heldCount !== null) body.heldCount = heldCount;
+  const r = await fetch('/api/admin/simulate-reaudit', {
+    method: 'POST',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(body),
+  });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || r.status);
+  return `Synthetic ${variant} result written (overallDelta=${d.overallDelta}). Visit: ${d.revealUrl}`;
+}
+
+function dogfoodAction(key) {
+  const cfg = DOGFOOD_CONFIGS[key];
+  if (!cfg) return;
+  const email = (document.getElementById('dogfood-email') || {}).value || '';
+  _dogfoodPending = { key, email, cfg };
+
+  const confirm = document.getElementById('dogfood-confirm');
+  const text = document.getElementById('dogfood-confirm-text');
+  const result = document.getElementById('dogfood-result');
+
+  text.textContent = `Target: ${email || '(no email entered)'}. ${cfg.label}`;
+  confirm.classList.add('visible');
+  result.classList.remove('visible', 'err');
+  result.textContent = '';
+
+  document.getElementById('dogfood-confirm-yes').onclick = executeDogfood;
+}
+
+function cancelDogfood() {
+  _dogfoodPending = null;
+  document.getElementById('dogfood-confirm').classList.remove('visible');
+  document.getElementById('dogfood-result').classList.remove('visible', 'err');
+}
+
+async function executeDogfood() {
+  if (!_dogfoodPending) return;
+  const { email, cfg } = _dogfoodPending;
+  const yesBtn = document.getElementById('dogfood-confirm-yes');
+  const result = document.getElementById('dogfood-result');
+
+  yesBtn.disabled = true;
+  yesBtn.textContent = '…';
+  result.classList.remove('visible', 'err');
+
+  try {
+    const msg = await cfg.action(email);
+    result.textContent = msg;
+    result.classList.add('visible');
+    result.classList.remove('err');
+  } catch (err) {
+    result.textContent = `Something has interrupted the work: ${err.message}`;
+    result.classList.add('visible', 'err');
+  } finally {
+    yesBtn.disabled = false;
+    yesBtn.textContent = 'Confirm';
+    document.getElementById('dogfood-confirm').classList.remove('visible');
+    _dogfoodPending = null;
+  }
+}
 </script>
 
 </body>

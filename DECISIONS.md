@@ -827,3 +827,13 @@ contracts, copy, and test seams preserved.
 - login: 1 TODO copy comment (#stateLoading body line)
 - payment-confirmed: 1 TODO copy comment (Orator-only disabled-button)
 Total: 28 strings awaiting copy-consultant approval + founder sign-off.
+
+---
+
+## 2026-05-29 — Stage-1 Audit Engine: Gemini prompt contract (Wave 1C)
+
+### AUDIT_SYSTEM_PROMPT encodes context-vs-quest rule, safe-task allow-list, and hard prohibitions at the prompt level
+Safety is enforced in the prompt itself, not only in app logic — per spec §7 and the gemini-prompt-engineer agent definition. The allow-lists and prohibition triggers are enumerated inline so the model cannot reason around them by ignoring post-hoc filtering. The canonical fallback phrase ("This is one for a qualified professional.") is the only permitted output when a hard-prohibition trigger is hit; no instruction follows it.
+
+### Forbidden medical terms appear only in the [HARD PROHIBITIONS] section of the prompt
+Words such as "retinoid", "medication", "supplement", "fasting", and "procedure" are enumerated explicitly as refusal triggers inside the [HARD PROHIBITIONS] section header block. They do not appear in any instructional context elsewhere in the prompt. The test suite asserts this structurally by finding each occurrence and confirming it falls within the prohibition section bounds.

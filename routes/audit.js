@@ -65,11 +65,12 @@ router.post(
       const photos = [];
       for (const kind of kinds) {
         const f = files[kind][0];
+        // Task 2a: compress before upload via putPhoto (same quality for baseline + daily).
         // B0: use canonical baseline key convention for R2 persistence.
-        // If R2 is configured, put() stores at audit/{sessionToken}/baseline-{slot}.jpg.
+        // If R2 is configured, putPhoto() stores at audit/{sessionToken}/baseline-{slot}.jpg.
         // If not, fall back to local storage via saveImage().
         const canonicalKey = storage.auditBaselineKey(sessionToken, kind);
-        const putResult = await storage.put(canonicalKey, f.buffer, f.mimetype);
+        const putResult = await storage.putPhoto(canonicalKey, f.buffer, f.mimetype);
         let storageKey, url, backend;
         if (putResult.key) {
           // R2 success — build the r2: prefix for readImage compatibility

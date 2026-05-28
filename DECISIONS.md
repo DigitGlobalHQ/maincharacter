@@ -5,6 +5,59 @@ Format: date, decision, 2-sentence rationale.
 
 ---
 
+## 2026-05-28 — Task 1: Durability verification scripts (B0 wiring confirmed)
+
+### backfill script is founder-runnable on Render shell; DATABASE_URL not local
+`scripts/backfill-json-to-pg.js` exists and is idempotent. Because DATABASE_URL
+is only set in the Render dashboard (not locally), the script must be run in the
+Render shell: `node scripts/backfill-json-to-pg.js`. The test `tests/durability-prod-shape.test.js`
+skips gracefully when DATABASE_URL or R2 vars are absent (8 skipped in CI without DB).
+
+### verify-r2-roundtrip.js uses a manually crafted 1×1 PNG (no fixture file)
+The PNG is assembled using Node's built-in `zlib.deflateSync` and a table-based
+CRC-32 implementation to avoid any external image dep at the script level.
+The round-trip checks: put → getSignedUrl → fetch → assert 200 + byte-count → delete.
+
+---
+
+## 2026-05-28 — Task 2: Photo hygiene (compression + retention + DPDPA)
+
+### putPhoto() uses JPEG quality 78, max-edge 1600 px, EXIF stripped via sharp withMetadata(false)
+Quality 78 is the mobile-standard sweet spot for face photos (~200-300 KB for a
+typical 1600px selfie), matching WebP Q80 perceptually but with broader decode
+support on older devices. Auto-orient via `.rotate()` ensures iOS portrait shots
+render correctly without client-side rotation logic.
+
+### Pruner called AFTER upload with ALL current keys (including the new one)
+The API `pruneMirrors(userId, allKeys)` / `pruneHair(userId, allKeys)` receives
+all keys INCLUDING the just-uploaded key. Caller builds this list from `Lookmax.getMirrors()`.
+Delete count = `keys.length - keep`. This is consistent with "the 8th-oldest is
+deleted when the new photo arrives" from the brief.
+
+### Pruner runs fire-and-forget, never blocks the HTTP response
+Photo pruning is non-critical (worst case: temporary storage overage); the response
+is sent immediately after addMirror/addHair and the prune runs in a detached Promise.
+Any pruner error is logged as WARN but never surfaces to the user.
+
+### DPDPA endpoints in routes/lookmax.js behind DPDPA_RIGHTS_ENABLED (default true)
+Both endpoints (`DELETE /api/lookmax/me/data` and `GET /api/lookmax/me/data/export`)
+are live by default so the compliance posture is established before user traffic arrives.
+The `?dry-run=true` escape hatch on DELETE lets the founder test safely without data loss.
+
+### data-rights.jsonl audit log (append-only, non-blocking)
+Every invocation of the export or delete endpoint appends a JSON line to
+`data/data-rights.jsonl` with `{ ts, userId, action, ip }`. This is the DPDPA
+§14 grievance-admissible audit trail. A database-backed `data_rights_log` table
+is deferred until Postgres migration is complete (BACKLOG).
+
+### export endpoint returns 24h signed URLs, never raw R2 keys
+All R2 keys gathered from mirror/hair/baseline records are converted to presigned
+URLs (24h TTL) before inclusion in the export response. Raw `r2:` prefixed keys
+never appear in any client-facing response (DPDPA compliance + CLAUDE.md §4 DPDPA
+guard note).
+
+---
+
 ## 2026-05-28 — Dogfood access layer (founder comp grants + time-warp + simulate-reaudit)
 
 ### comp users identified by `user.comp === true` flag; excluded from all 19 funnel event arrays

@@ -72,13 +72,16 @@ router.post('/mirror', upload.single('photo'), async (req, res) => {
     const user = req.lookmaxUser;
     if (!req.file) return res.status(400).json({ error: 'photo required' });
 
-    // B0: persist daily mirror to R2 using the canonical mirrorKey convention.
-    // Falls back to the existing local photos service when R2 is not configured.
+    // Task 2a: compress before upload (putPhoto vs put).
+    // Task 2b: retention pruner — run BEFORE adding the new mirror so we have
+    //   the existing keys; then after addMirror, pass all keys (including new)
+    //   to pruneMirrors.
     // DPDPA: the r2Key is stored server-side on the Lookmax record only — never
     // returned to the client in this response or any API endpoint.
     const mirrorDate = storage.istDate();
     const r2Key = storage.mirrorKey(user.token, mirrorDate);
-    const putResult = await storage.put(r2Key, req.file.buffer, req.file.mimetype || 'image/jpeg');
+    const putResult = await storage.putPhoto(r2Key, req.file.buffer, req.file.mimetype || 'image/jpeg');
+    log.info('MIRROR-COMPRESS', `${user.token}: ${putResult.originalBytes}B → ${putResult.compressedBytes}B (ratio=${putResult.ratio.toFixed(2)})`);
     let photoPath;
     if (putResult.key) {
       photoPath = `r2:${putResult.key}`;
@@ -106,6 +109,21 @@ router.post('/mirror', upload.single('photo'), async (req, res) => {
 
     Lookmax.addMirror(user.token, { photoPath, axes, overallScore: overall, mirrorLevel: level });
     User.updateUser(user.phone, { mirrorLevel: level, lastMirrorAt: new Date().toISOString(), lookmaxStreak: streak });
+
+    // Task 2b — retention pruner: enforce last-7-mirror window.
+    // Collect all r2: mirror keys for this user (including the one just added)
+    // and prune oldest so only 7 survive.  Fire-and-forget — never block response.
+    Promise.resolve().then(async () => {
+      const allMirrors = Lookmax.getMirrors(user.token);
+      const mirrorR2Keys = allMirrors
+        .filter((m) => m.photoPath && m.photoPath.startsWith('r2:'))
+        .map((m) => m.photoPath.slice('r2:'.length));
+      if (mirrorR2Keys.length > 7) {
+        await storage.pruneMirrors(user.token, mirrorR2Keys).catch((e) => {
+          log.warn('PRUNE-MIRROR', `pruner error: ${e.message}`);
+        });
+      }
+    }).catch(() => {});
 
     // Deltas
     const deltaVsYesterday = {};
@@ -213,8 +231,25 @@ router.post(
 
       const frontBuf = f.front[0].buffer;
       const crownBuf = f.crown[0].buffer;
-      const savedFront = await photos.saveUserPhoto({ userId: user.token, buffer: frontBuf, kind: 'hair-front', mimeType: f.front[0].mimetype });
-      const savedCrown = await photos.saveUserPhoto({ userId: user.token, buffer: crownBuf, kind: 'hair-crown', mimeType: f.crown[0].mimetype });
+      const hairDate = storage.istDate();
+
+      // Task 2a: compress before upload via putPhoto.
+      const frontKey = storage.hairKey(user.token, `${hairDate}-front`);
+      const crownKey = storage.hairKey(user.token, `${hairDate}-crown`);
+      const frontPut = await storage.putPhoto(frontKey, frontBuf, f.front[0].mimetype || 'image/jpeg');
+      const crownPut = await storage.putPhoto(crownKey, crownBuf, f.crown[0].mimetype || 'image/jpeg');
+
+      let savedFront, savedCrown;
+      if (frontPut.key) {
+        savedFront = { path: `r2:${frontPut.key}` };
+      } else {
+        savedFront = await photos.saveUserPhoto({ userId: user.token, buffer: frontBuf, kind: 'hair-front', mimeType: f.front[0].mimetype });
+      }
+      if (crownPut.key) {
+        savedCrown = { path: `r2:${crownPut.key}` };
+      } else {
+        savedCrown = await photos.saveUserPhoto({ userId: user.token, buffer: crownBuf, kind: 'hair-crown', mimeType: f.crown[0].mimetype });
+      }
 
       const result = await vision.scoreHair({
         front: { data: frontBuf.toString('base64'), mimeType: f.front[0].mimetype || 'image/jpeg' },
@@ -231,6 +266,21 @@ router.post(
         recessionMm: result.recessionMm,
         confidence: result.confidence,
       });
+
+      // Task 2b — retention pruner: enforce last-4 hair window.
+      Promise.resolve().then(async () => {
+        const allHair = Lookmax.getHair(user.token);
+        const hairR2Keys = [];
+        for (const h of allHair) {
+          if (h.frontPath && h.frontPath.startsWith('r2:')) hairR2Keys.push(h.frontPath.slice('r2:'.length));
+          if (h.crownPath && h.crownPath.startsWith('r2:')) hairR2Keys.push(h.crownPath.slice('r2:'.length));
+        }
+        if (hairR2Keys.length > 4) {
+          await storage.pruneHair(user.token, hairR2Keys).catch((e) => {
+            log.warn('PRUNE-HAIR', `pruner error: ${e.message}`);
+          });
+        }
+      }).catch(() => {});
 
       const recommendations = hairSvc.recommendationsForNorwood(result.norwood);
       const deltaVsFirst = first ? rec.hairlineScore - first.hairlineScore : null;
@@ -518,6 +568,223 @@ router.get('/reveal/job/:jobId', (req, res) => {
     resultUrl: job.resultUrl || null,
     error: job.status === 'error' ? (job.error || 'render_failed') : null,
   });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// TASK 2c — DPDPA data-rights endpoints
+//
+// DPDPA-2023 (Digital Personal Data Protection Act):
+//   Sec 11: right of access (export)
+//   Sec 13: right of erasure (delete)
+//
+// Both endpoints are behind DPDPA_RIGHTS_ENABLED (default true).
+// Invocations logged to data/data-rights.jsonl for audit trail.
+// ═══════════════════════════════════════════════════════════════════
+
+const DATA_RIGHTS_LOG =
+  process.env.DATA_RIGHTS_LOG_PATH ||
+  require('path').join(__dirname, '..', 'data', 'data-rights.jsonl');
+
+/** Append one audit-log line (fire-and-forget, never throws). */
+function logDataRight(action, userId, ip) {
+  const line = JSON.stringify({
+    ts: new Date().toISOString(),
+    userId,
+    action,
+    ip: ip || 'unknown',
+  });
+  const fs = require('fs');
+  const path = require('path');
+  try {
+    fs.mkdirSync(path.dirname(DATA_RIGHTS_LOG), { recursive: true });
+    fs.appendFileSync(DATA_RIGHTS_LOG, line + '\n');
+  } catch { /* non-fatal */ }
+}
+
+/** Feature-flag guard — defaults to true (live for compliance posture). */
+function dpdpaEnabled() {
+  return process.env.DPDPA_RIGHTS_ENABLED !== 'false';
+}
+
+/**
+ * GET /api/lookmax/me/data/export
+ * DPDPA §11 — right of access.
+ * Returns a single JSON document with all user data + presigned photo URLs.
+ * Auth required. No raw R2 keys in response.
+ */
+router.get('/me/data/export', async (req, res) => {
+  if (!dpdpaEnabled()) return res.status(403).json({ error: 'data rights not enabled' });
+  const user = req.lookmaxUser;
+  logDataRight('export', user.token, req.ip);
+
+  try {
+    // ── Collect all R2 photo keys for this user ────────────────────
+    const Lookmax = require('../models/Lookmax');
+    const AuditSession = require('../models/AuditSession');
+
+    const mirrors = Lookmax.getMirrors(user.token) || [];
+    const hair    = Lookmax.getHair(user.token) || [];
+
+    // Collect r2: prefixed paths and convert to signed URLs
+    const allR2Keys = [];
+    for (const m of mirrors) {
+      if (m.photoPath && m.photoPath.startsWith('r2:')) {
+        allR2Keys.push(m.photoPath.slice('r2:'.length));
+      }
+    }
+    for (const h of hair) {
+      if (h.frontPath && h.frontPath.startsWith('r2:')) allR2Keys.push(h.frontPath.slice('r2:'.length));
+      if (h.crownPath && h.crownPath.startsWith('r2:')) allR2Keys.push(h.crownPath.slice('r2:'.length));
+    }
+    // Baseline from auditSession
+    if (user.auditSessionId) {
+      try {
+        const session = AuditSession.getSession(user.auditSessionId);
+        if (session && session.photos) {
+          for (const p of session.photos) {
+            if (p.storageKey && p.storageKey.startsWith('r2:')) {
+              allR2Keys.push(p.storageKey.slice('r2:'.length));
+            }
+          }
+        }
+      } catch { /* ignore expired sessions */ }
+    }
+    // lookmaxBaseline.photoStorageKeys
+    if (user.lookmaxBaseline && user.lookmaxBaseline.photoStorageKeys) {
+      for (const k of Object.values(user.lookmaxBaseline.photoStorageKeys)) {
+        const key = k && k.startsWith('r2:') ? k.slice('r2:'.length) : k;
+        if (key) allR2Keys.push(key);
+      }
+    }
+
+    // Generate 24h presigned URLs — DPDPA §11 "right to obtain a copy"
+    const TTL_24H = 24 * 60 * 60;
+    const photoUrls = [];
+    for (const key of allR2Keys) {
+      const url = await storage.getSignedUrl(key, TTL_24H);
+      if (url) photoUrls.push(url);
+    }
+
+    // ── Sanitised user block (no PII leakage beyond what user provided) ──
+    const safeUser = {
+      name: user.name,
+      phone: user.phone,
+      email: user.email || null,
+      pillar: user.pillar,
+      rank: user.rank,
+      mirrorLevel: user.mirrorLevel,
+      oratorActive: user.oratorActive,
+      lookmaxxingActive: user.lookmaxxingActive,
+      enrolledAt: user.enrolledAt,
+      createdAt: user.enrolledAt || user.createdAt,
+      lookmaxStreak: user.lookmaxStreak || 0,
+    };
+
+    // ── Events for this user (if Postgres backend active) ─────────────
+    let userEvents = [];
+    try {
+      const events = require('../services/events');
+      userEvents = await events.query({ userToken: user.token });
+    } catch { /* non-fatal */ }
+
+    // ── AuditSessions for this user ───────────────────────────────────
+    let audits = [];
+    try {
+      // JSON model: scan all sessions for matching userToken
+      const AuditSession = require('../models/AuditSession');
+      // getAllSessions is not in the public API; load from file directly
+      const fs = require('fs');
+      const sessionsFile = process.env.AUDIT_SESSIONS_FILE_PATH ||
+        require('path').join(__dirname, '..', 'data', 'audit-sessions.json');
+      if (fs.existsSync(sessionsFile)) {
+        const all = JSON.parse(fs.readFileSync(sessionsFile, 'utf8'));
+        audits = Object.values(all)
+          .filter((s) => s.userToken === user.token)
+          .map((s) => ({
+            sessionToken: s.sessionToken,
+            completedAt: s.completedAt,
+            aestheticScores: s.aestheticScores,
+            weakestAxis: s.weakestAxis,
+            diagnosis: s.diagnosis,
+            // No photoStorageKeys — they're converted to URLs above
+          }));
+      }
+    } catch { /* non-fatal */ }
+
+    res.json({
+      exportedAt: new Date().toISOString(),
+      schema: 1,
+      user: safeUser,
+      audits,
+      events: userEvents,
+      photoUrls,   // HTTPS signed URLs only — no raw R2 keys
+    });
+  } catch (err) {
+    log.error('DPDPA-EXPORT', err.message);
+    res.status(500).json({ error: 'Something has interrupted the work. Try again in a moment, or write to support.' }); // TODO copy review
+  }
+});
+
+/**
+ * DELETE /api/lookmax/me/data
+ * DPDPA §13 — right of erasure.
+ *
+ * ?dry-run=true  — returns { ok: true, deletedAt, dryRun: true } without
+ *                  actually deleting anything. Founder can test safely.
+ *
+ * Without dry-run:
+ *   - Deletes all R2 photos for the user
+ *   - Sets user.deletedAt (soft-delete)
+ *   - Returns { ok: true, deletedAt }
+ *
+ * Auth required. Logs to data-rights.jsonl.
+ */
+router.delete('/me/data', async (req, res) => {
+  if (!dpdpaEnabled()) return res.status(403).json({ error: 'data rights not enabled' });
+  const user = req.lookmaxUser;
+  const isDryRun = req.query['dry-run'] === 'true';
+  const deletedAt = new Date().toISOString();
+
+  logDataRight(isDryRun ? 'delete-dry-run' : 'delete', user.token, req.ip);
+
+  if (isDryRun) {
+    return res.json({ ok: true, dryRun: true, deletedAt });
+  }
+
+  try {
+    // ── 1. Delete all R2 photos ────────────────────────────────────
+    const Lookmax = require('../models/Lookmax');
+    const mirrors = Lookmax.getMirrors(user.token) || [];
+    const hair    = Lookmax.getHair(user.token) || [];
+
+    const r2Keys = [];
+    for (const m of mirrors) {
+      if (m.photoPath && m.photoPath.startsWith('r2:')) r2Keys.push(m.photoPath.slice('r2:'.length));
+    }
+    for (const h of hair) {
+      if (h.frontPath && h.frontPath.startsWith('r2:')) r2Keys.push(h.frontPath.slice('r2:'.length));
+      if (h.crownPath && h.crownPath.startsWith('r2:')) r2Keys.push(h.crownPath.slice('r2:'.length));
+    }
+    if (user.lookmaxBaseline && user.lookmaxBaseline.photoStorageKeys) {
+      for (const k of Object.values(user.lookmaxBaseline.photoStorageKeys)) {
+        const key = k && k.startsWith('r2:') ? k.slice('r2:'.length) : k;
+        if (key) r2Keys.push(key);
+      }
+    }
+
+    for (const key of r2Keys) {
+      await storage.delete(key).catch(() => { /* best-effort */ });
+    }
+
+    // ── 2. Soft-delete the user (set deletedAt) ───────────────────
+    User.updateUser(user.phone, { deletedAt });
+
+    log.info('DPDPA-DELETE', `user ${user.token} soft-deleted; ${r2Keys.length} R2 objects removed`);
+    res.json({ ok: true, deletedAt });
+  } catch (err) {
+    log.error('DPDPA-DELETE', err.message);
+    res.status(500).json({ error: 'Something has interrupted the work. Try again in a moment, or write to support.' }); // TODO copy review
+  }
 });
 
 module.exports = router;

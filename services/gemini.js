@@ -10,13 +10,15 @@ const { createLogger } = require('../lib/log');
 
 const log = createLogger('GEMINI');
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+// gemini-2.0-flash shuts down 2026-06-01. Default to 2.5-flash; override via env if needed.
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 let genAI = null;
 let model = null;
 
 if (GEMINI_API_KEY) {
   genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-  model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-  log.info('INIT', 'Initialised');
+  model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+  log.info('INIT', `Initialised with model=${GEMINI_MODEL}`);
 } else {
   log.info('INIT', 'No API key — fallback mode');
 }

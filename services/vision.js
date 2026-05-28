@@ -22,12 +22,14 @@ const {
 
 const log = createLogger('VISION');
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+// gemini-2.0-flash shuts down 2026-06-01. Default to 2.5-flash; share env with services/gemini.js.
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
 let model = null;
 if (GEMINI_API_KEY) {
   const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-  model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-  log.info('INIT', 'Initialised');
+  model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+  log.info('INIT', `Initialised with model=${GEMINI_MODEL}`);
 } else {
   log.info('INIT', 'No API key — fallback mode');
 }

@@ -6,7 +6,9 @@ services:
     name: maincharacter
     runtime: node
     plan: free
-    buildCommand: npm install
+    # ffmpeg required for Weekly Reveal MP4 composer (services/video.js, B4).
+    # Render's free Node image does not ship with it; apt-install at build time.
+    buildCommand: apt-get update && apt-get install -y --no-install-recommends ffmpeg && npm install
     startCommand: npm start
     envVars:
       - key: NODE_ENV

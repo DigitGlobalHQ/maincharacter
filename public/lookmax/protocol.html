@@ -68,7 +68,6 @@
       font-size: 15px;
       color: var(--muted);
       margin-bottom: 10px;
-      /* TODO copy: spec calls for approved text here — design-lookmax-protocol.md §2.3 */
     }
 
     /* ── Do-nots frame line ───────────────────────────────────── */
@@ -79,7 +78,6 @@
       font-size: 14px;
       color: var(--muted);
       margin: 18px 0 10px;
-      /* TODO copy: spec calls for approved frame line — design-lookmax-protocol.md §2.2 */
     }
 
     /* ── Inline item-check error ──────────────────────────────── */
@@ -112,14 +110,16 @@
     <div id="items" aria-label="Protocol checklist" role="list"></div>
 
     <!-- Do-nots frame (shown only when doNots exist) -->
+    <!-- COPY APPROVED 2026-05-28 (#09): see product/copy-pending-approval-2026-05-28.md -->
     <div id="doNotsFrame" aria-hidden="true">
-      <!-- TODO copy: spec calls for do-nots frame line — design-lookmax-protocol.md §2.2 -->
+      What not to do. These are the levers the protocol bets on.
     </div>
     <div id="doNots" style="margin-top:0"></div>
 
     <!-- Supporting line (shown when ≥80% complete and not locked) -->
+    <!-- COPY APPROVED 2026-05-28 (#10): see product/copy-pending-approval-2026-05-28.md -->
     <div id="ctaSupport" aria-live="polite">
-      <!-- TODO copy: spec calls for approved ≥80% line — design-lookmax-protocol.md §2.3 -->
+      Eighty percent or more carries the streak. You are over the line.
     </div>
 
     <button class="btn btn--solid" id="completeBtn" style="margin-top:8px">Complete the day</button>
@@ -157,7 +157,8 @@
         document.getElementById('loadingPlaceholder').style.display = 'none';
       } catch {
         document.getElementById('loadingPlaceholder').style.display = 'none';
-        document.getElementById('msg').textContent = 'No protocol yet. Take a mirror to generate one.';
+        // COPY APPROVED 2026-05-28 (#12): no-protocol empty state — see product/copy-pending-approval-2026-05-28.md
+        document.getElementById('msg').textContent = 'There is no protocol until there is a mirror. The reading writes it.';
         return;
       }
       render();
@@ -210,10 +211,17 @@
         btn.textContent = 'Complete the day';
         btn.classList.remove('btn--complete-ready');
       } else {
-        // Dynamic label: "Complete the day — N more to go" (copy-draft)
-        // TODO copy: spec calls for approved dynamic label — design-lookmax-protocol.md §2.3
+        // COPY APPROVED 2026-05-28 (#11): dynamic CTA labels — see product/copy-pending-approval-2026-05-28.md
         const remaining = state.totalCount - state.completedCount;
-        btn.textContent = remaining > 0 ? 'Complete the day' : 'Complete the day ◆';
+        if (remaining > 0 && !readyGlow) {
+          // 0/N state: "Complete the day — N more to go"
+          btn.textContent = 'Complete the day — ' + remaining + ' more to go';
+        } else if (readyGlow) {
+          // ≥80% state: "Complete the day ◆"
+          btn.textContent = 'Complete the day ◆';
+        } else {
+          btn.textContent = 'Complete the day ◆';
+        }
         if (readyGlow) btn.classList.add('btn--complete-ready');
         else btn.classList.remove('btn--complete-ready');
       }

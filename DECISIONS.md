@@ -452,3 +452,89 @@ Tiles read the whole JSONL file on every `/api/admin/funnel` call. Fine for ≤1
 
 ### F3 — "Keep this reading" recovery link (`public/audit.html`)
 Added a ghost-button affordance below the Scene 6 result content. On mobile UAs with `navigator.share` it invokes the native share sheet; on all other contexts it writes `${origin}/audit/result/${sessionToken}` to the clipboard and shows a one-line confirmation that fades after 4s (with `prefers-reduced-motion` guard). The confirmation text and button label are marked `[COPY DRAFT — founder approval]`. The `data-event="recover_link_action"` attribute is present for future KPI wiring. DPDPA check performed: `GET /api/audit/result/:token` returns scores/diagnosis/weakestAxis only — no photo URLs. `GET /audit/result/:token` (server.js:169) serves `audit.html` — no API response at all. Shareable link is safe.
+
+---
+
+## 2026-05-28 — Design-spec structural lift: 6 Lookmaxxing surfaces
+
+Structural-only pass across mirror, protocol, hair, reveal, login, payment-confirmed.
+No new user-visible Consultant-voice strings shipped without approval. Copy-deferred
+slots are HTML comments (`<!-- TODO copy: ... — design-lookmax-{surface}.md §N -->`).
+
+### mirror.html — Chart.js replaced with vanilla canvas
+Chart.js (80KB CDN dep, render-block) removed. Replaced with a ~50-line vanilla
+`drawTrend()` using canvas2d — same visual output (polyline + dots + y-grid).
+Rationale: spec §4 calls this out as a perf requirement for mid-range Android;
+the `drawTrajectory` pattern from reveal.html was the reference.
+
+### mirror.html — 3-beat staged reveal
+Score count-up at t=0; level+consultant fade at t=2s; axis bars stagger 80ms each
++ trend card at t=2.6s. All gated behind `prefers-reduced-motion` (instant when
+reduced). Rationale: spec §2.3 — the daily mirror is the highest-leverage moment
+in the product; rhythm earns it.
+
+### mirror.html — rotline 2200ms, streak badge Day N
+Was 1600ms; slowed to 2200ms per spec §2.2 so the user sees ~3 axis names before
+the reveal. Streak badge changed from `🔥` (CLAUDE.md §2 violation) to `Day N`
+plain count (founder-approved format).
+
+### protocol.html — tier chip promoted to header row
+Moved from inside `.instruction` (collapsed) to always-visible title-row. Rationale:
+spec §2.1 — the evidence tier is the single most credibility-loaded element; showing
+it requires no user action.
+
+### protocol.html — 44px box tap target + CTA glow
+Checkbox tap area extended to 44×44 via ::before pseudo-element without enlarging
+the visual box. completeBtn gains `.btn--complete-ready` box-shadow glow at ≥80%
+completion — single 0.6s transition, then static (spec §5 — not infinite pulse).
+
+### hair.html — Norwood domes re-treated
+Removed gold fill on .nw.on .dome (gold = good in our system; stage 7 gold would
+read as "best", opposite of clinical reality). All 7 domes are neutral --muted
+outlines; active stage gets a ◆ glyph above it via .nw__mark. Rationale:
+design-lookmax-hair.md §2.1.
+
+### hair.html — compact locked view
+renderResult(r, compact=true) now returns only Norwood row + score lines. Previously
+it showed the full result including do/do-not recommendations from last week — those
+are already in the current protocol page.
+
+### reveal.html — trajectory separated from stage
+Canvas was `position:absolute` inside .stage, overlapping user faces. Moved to a
+separate .traj-card below the stage. Rationale: spec §2.1 — the line overlapping
+the face "looks like a chart bug not a feature."
+
+### reveal.html — Day-30 side-by-side shell
+showDay30() renderer added; activated by `?mode=day30`. Fetches
+`/api/lookmax/reaudit/result` (B2 backend, not yet live). Renders a graceful empty
+shell when the endpoint is absent. Photo grid, paired-bar axis list, two-point
+trajectory canvas, Consultant+close line regions all present but awaiting server
+data and copy approval. Down-delta: --ink (never --bad) per spec §11.
+
+### reveal.html — share controls restructured
+Replaced 2×2 button grid with: primary Share button (navigator.share or clipboard)
++ three text mini-links (instagram/tiktok/whatsapp) with 44px tap targets.
+Clipboard toast uses approved F3 copy "Copied. Holds 24 hours." lifted from
+audit.html. data-share="..." attrs retained for existing test contract.
+
+### login.html — consume-error recoloured
+class="err" → class="login-error-note" with gold left-border + --muted text.
+Rationale: spec §2.3 — the red was punitive for a system error; Consultant-voice
+pattern (same as .consultant block) is the right register. fadeIn() now has
+prefers-reduced-motion guard.
+
+### payment-confirmed.html — waiting state breath + CTA hierarchy
+◆ breath animation (mc-breath, 4s opacity, pure CSS) added above "Confirming with
+the bank". Mirror CTA lifted from .steps into standalone .pc-mirror-cta block.
+Receipt collapsed from 3-row to single dot-separated line. Hidden compat elements
+id="rPlan/rAmount/rNext" retained for existing test contracts. All existing API
+contracts, copy, and test seams preserved.
+
+### Copy-deferred count by surface
+- mirror: 7 TODO copy comments
+- protocol: 5 TODO copy comments
+- hair: 5 TODO copy comments
+- reveal: 9 TODO copy comments
+- login: 1 TODO copy comment (#stateLoading body line)
+- payment-confirmed: 1 TODO copy comment (Orator-only disabled-button)
+Total: 28 strings awaiting copy-consultant approval + founder sign-off.

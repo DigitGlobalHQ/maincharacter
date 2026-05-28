@@ -434,5 +434,21 @@ Inserted one `.audit-summary` block between the lede and the form in `paywall-wa
 ### F2 — Shared audit-echo consolidation (`public/shared/audit-echo.js`)
 Extracted `AXIS_LABELS` map and `loadAuditSummary` logic from `paywall.html` into a new file `public/shared/audit-echo.js` (served by the existing `express.static` for `public/`). Both `paywall.html` and `paywall-waitlist.html` load it via `<script src="/shared/audit-echo.js">`. The degradation guard (`if (!res.ok) return`) is preserved inside `loadAuditEcho`. Rationale: single source of truth prevents the axis-label map from drifting between the two pages; zero new infrastructure (plain static file, no bundler).
 
+---
+
+## 2026-05-28 — B5: KPI instrumentation infrastructure
+
+### Event sink design (`services/events.js`)
+File-backed JSONL today (append-only, `data/events.jsonl`); Postgres post-B0 via the same interface. Backend auto-selected by `EVENTS_BACKEND` env var — if unset and `DATABASE_URL` is present, Postgres is chosen; otherwise JSONL. Rationale: JSONL is safe to ship before B0 because the interface is identical; migrating later is one env-var flip plus the Postgres schema from the spec. No third-party SDK — DPDPA biometric data means zero new processors before legal review (spec §0 principle 2).
+
+### /api/events rate limit pattern
+Used a dedicated in-memory `Map<ip, [timestamps]>` capped FIFO at 1000 IPs (mirrors the L-2 fix pattern from the auth surface). Sliding 60-event / 1-minute window per IP. Silent 204 on reject — never 429 — so scrapers do not learn they are throttled. Rationale: a global `express-rate-limit` instance here would share state with auth endpoints; isolating to a local Map gives tighter semantics and easier testing.
+
+### Anonymous ID via localStorage
+Spec §2.6 permits localStorage (survives reload, does not cross subdomains). Cookie alternative was considered but localStorage is simpler for PWA contexts and requires no SameSite/Secure header tuning. The field is `mc_anon_id`, a 32-byte random hex, never rotated, cleared only on localStorage.clear().
+
+### Admin funnel tile performance caveat
+Tiles read the whole JSONL file on every `/api/admin/funnel` call. Fine for ≤100k events (~1MB, under 200ms). Once the file passes 100k lines the read should move to Postgres. Noted in BACKLOG. The tile computation is JSONL-agnostic — same query shape works for Postgres.
+
 ### F3 — "Keep this reading" recovery link (`public/audit.html`)
 Added a ghost-button affordance below the Scene 6 result content. On mobile UAs with `navigator.share` it invokes the native share sheet; on all other contexts it writes `${origin}/audit/result/${sessionToken}` to the clipboard and shows a one-line confirmation that fades after 4s (with `prefers-reduced-motion` guard). The confirmation text and button label are marked `[COPY DRAFT — founder approval]`. The `data-event="recover_link_action"` attribute is present for future KPI wiring. DPDPA check performed: `GET /api/audit/result/:token` returns scores/diagnosis/weakestAxis only — no photo URLs. `GET /audit/result/:token` (server.js:169) serves `audit.html` — no API response at all. Shareable link is safe.

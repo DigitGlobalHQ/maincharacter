@@ -18,13 +18,33 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/lookmax/app.css" />
   <script src="/track.js" defer></script>
+  <style>
+    /* ── Login-error note — recoloured per spec §2.3 ──────────── */
+    .login-error-note {
+      color: var(--muted);
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 16px;
+      padding: 6px 0 6px 14px;
+      border-left: 2px solid var(--gold);
+    }
+    /* ── Loading state note — awaits copy approval ─────────────── */
+    .login-loading-note {
+      text-align: center;
+      padding: 18px 0;
+      color: var(--muted);
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 15px;
+    }
+  </style>
 </head>
 <body>
   <main role="main" aria-labelledby="loginHeadline">
     <div class="page center" style="max-width:440px;padding-top:64px">
 
-      <div class="eyebrow" aria-hidden="true">◆ MainCharacter</div>
-      <h1 id="loginHeadline" style="margin:14px 0 6px" data-copy="login.headline"><em>Enter the room.</em></h1>
+      <div class="eyebrow" aria-hidden="true" style="margin-bottom:6px">◆ MainCharacter</div>
+      <h1 id="loginHeadline" style="margin:10px 0 6px" data-copy="login.headline"><em>Enter the room.</em></h1>
       <p class="muted" style="margin-bottom:26px" data-copy="login.sub">Your email below. A single-use link arrives within a minute, valid for fifteen.</p>
 
       <div class="card">
@@ -69,7 +89,7 @@
 
         <!-- ── State C: Consume-error (when ?token= fails) ── -->
         <div id="stateError" class="hidden" role="region" aria-live="polite" aria-label="Link error">
-          <p class="err" id="expiredErr" role="alert" data-copy="login.error.expired">
+          <p class="login-error-note" id="expiredErr" role="alert" aria-live="polite" data-copy="login.error.expired">
             This link is no longer valid. Request a new one below.
           </p>
           <form id="errorForm" novalidate>
@@ -98,7 +118,8 @@
 
         <!-- ── Loading state (while method is being discovered or token consumed) ── -->
         <div id="stateLoading" role="status" aria-live="polite" class="hidden">
-          <p class="hint" style="text-align:center;padding:12px 0"><!-- TODO copy review login.loading --></p>
+          <!-- TODO copy: spec calls for a single Consultant-voice line here — design-lookmax-login.md §2.2 -->
+          <p class="login-loading-note" data-copy="login.loading" aria-label="Loading"></p>
         </div>
 
       </div><!-- /.card -->
@@ -143,6 +164,12 @@
 
     // ── Transition helpers (opacity crossfade using existing .18s btn timing) ──
     function fadeIn(el) {
+      // Reduced-motion guard: show instantly, no transition
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        el.classList.remove('hidden');
+        el.style.opacity = '1';
+        return;
+      }
       el.style.opacity = '0';
       el.classList.remove('hidden');
       requestAnimationFrame(function() {

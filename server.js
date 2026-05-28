@@ -175,6 +175,25 @@ app.get('/audit/result/:token', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'audit.html'));
 });
 
+// ─── Lookmaxing (Stage-1 Audit Engine, Wave 2A) ───
+// Static assets + pretty-URL routes for the 8-surface audit funnel.
+// Wave 2B (frontend-agent) ships the HTML; these routes serve whatever is present.
+// Cited: briefs/stage-1-audit-spec.md §3.
+app.use('/lookmaxing', express.static(path.join(__dirname, 'public', 'lookmaxing')));
+const lookmaxingPage = (file) => (req, res) => {
+  const p = path.join(__dirname, 'public', 'lookmaxing', file);
+  if (fs.existsSync(p)) return res.sendFile(p);
+  // Fallback to index.html for SPA routing.
+  return res.sendFile(path.join(__dirname, 'public', 'lookmaxing', 'index.html'));
+};
+app.get('/lookmaxing',               lookmaxingPage('index.html'));
+app.get('/lookmaxing/start',         lookmaxingPage('start.html'));
+app.get('/lookmaxing/quiz',          lookmaxingPage('quiz.html'));
+app.get('/lookmaxing/capture',       lookmaxingPage('capture.html'));
+app.get('/lookmaxing/audit/:id',     lookmaxingPage('audit.html'));
+app.get('/lookmaxing/audit/:id/full',lookmaxingPage('audit-full.html'));
+app.get('/lookmaxing/fork',          lookmaxingPage('fork.html'));
+
 // ─── Lookmaxxing PWA (Night-4, P2.6) ───
 // Static assets (manifest, sw.js, app.css/js, icons, *.html) + pretty-URL routes
 // so the PWA can use clean paths without the .html suffix. Static is mounted
@@ -219,6 +238,9 @@ app.use('/api/lookmax', require('./routes/lookmax-auth'));
 app.use('/api/lookmax', require('./routes/lookmax'));
 // Day-30 re-audit engine (NOW-2 / B2). Gated by requireLookmaxAuth (same as lookmax.js).
 app.use('/api/lookmax', require('./routes/reaudit'));
+// Stage-1 Audit Engine (Wave 2A). Guest + user sessions, resolution gate,
+// Razorpay ₹99 one-time order, PDF generation. Cited: briefs/stage-1-audit-spec.md §8.
+app.use('/api/lookmaxing', require('./routes/lookmaxing'));
 
 // Token-gated photo serving (Night-4, P4/P5). A user can only read their own
 // files: the JWT's userId must match the {userId} path segment. Photos live in

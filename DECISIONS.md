@@ -5,6 +5,38 @@ Format: date, decision, 2-sentence rationale.
 
 ---
 
+## 2026-05-28 — Stage-1 Audit Engine (Wave 2A)
+
+### JSON-file store (AUDIT_V2_STORE_PATH) as the audit_sessions_v2 backing store
+
+The route uses the same atomic-write JSON pattern as models/User.js rather than requiring DATABASE_URL at boot. When DATABASE_URL is set, `migrations/0002_audit_engine.sql` creates the `audit_sessions_v2` Postgres table and the migration runner picks it up at next boot — the JSON store is the in-process fallback that keeps tests passing without a live database and lets the Render free-tier boot without Postgres provisioned.
+
+### Resolution gate: PREMIUM_FIELDS stripped server-side, never client-side
+
+The five premium blocks (decomposition, biggestLever, quests, styleAndColour, starterPlan) are deleted from the JSON before the response is sent, not just hidden with CSS. This means the client never receives the data it hasn't paid for — the blur is a UI affordance layered on top of a real server-enforced gate, not security through obscurity alone.
+
+### Guest merge: session ID is the guestId, not a separate UUID
+
+When POST /guest creates a session it uses the guestId as the session ID directly (one session per guest). This keeps the ownership check O(1) — no scan required — and the merge transaction is a single `_updateSession(guestId, { userId, guestId: null })`. The trade-off is that a guest can only have one in-flight audit at a time, which matches the spec (one photo, one reading per session).
+
+### Merge carries geminiReport into users.lookmaxBaseline
+
+On merge the server copies gemini_report directly into `users.lookmaxBaseline` if the user has no existing baseline. This means the Day-30 re-audit engine (`routes/reaudit.js`) and the Daily Mirror engine (`services/vision.js`) immediately see the guest's full report as the baseline without any additional plumbing — both already read `user.lookmaxBaseline`. The reaudit/status endpoint returns `baselineAvailable: true` as soon as the merge completes.
+
+### PDF generation uses pdfkit built-in fonts
+
+The PDF renderer uses pdfkit's built-in Helvetica (body), Times-Roman (headlines), and Courier (numerals/data) instead of fetching Google Fonts. This avoids any network dependency at render time and keeps the PDF generation path fully synchronous. Cormorant Garamond and JetBrains Mono are the brand-correct choices for the HTML surfaces — the PDF is a functional document, not a brand surface, so the delta is acceptable.
+
+### Gemini API key absence: fallback report, not hard failure
+
+When GEMINI_API_KEY is absent (or the RPM limit is hit), the /analyze route returns a structurally valid fallback report instead of 500. This means the funnel works end-to-end in local dev and CI without a live key, and the PDF route (which reads geminiReport) will also function. The fallback report is clearly labelled in its warnings array so the user knows a photo would sharpen the scores.
+
+### pdfkit added to production dependencies
+
+pdfkit (~500KB) was added as a production dependency for the /audit/:id/pdf route. It is lazy-required (`require('pdfkit')`) inside the route handler so the rest of the server bears zero overhead when the PDF route is not called. The size is within the stated acceptable bound from the brief.
+
+---
+
 ## 2026-05-28 — stage-1-audit Wave 2C: Orator routes cordoned off
 
 ### /start 302s to /lookmaxing; public/start.html preserved on disk

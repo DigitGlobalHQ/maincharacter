@@ -75,6 +75,11 @@ Each model export is wrapped by `_adapt(jsonFn, pgFn)`: when pg is active and
 healthy the pg implementation runs, but any pg error transparently falls back to
 the JSON path so a transient Neon outage never breaks the funnel.
 
+### backfill-json-to-pg.js is one-shot and founder-triggered only
+The script is intentionally not run automatically (DECISIONS.md rule: no data
+migration on deploy) so the founder has explicit control over when live user
+data moves to Postgres; ON CONFLICT guards make it idempotent if re-run.
+
 ### storage.put() uses the module-level getS3() pattern for lazy client creation
 The S3Client is constructed on first put/getSignedUrl/delete call rather than
 at module load time, so tests that override R2_* env vars before requiring the

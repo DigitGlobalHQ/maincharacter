@@ -5,6 +5,51 @@ Format: date, decision, 2-sentence rationale.
 
 ---
 
+## 2026-05-28 — 30-string founder copy approval gate shipped
+
+### All 30 Consultant voice strings approved and applied verbatim
+
+The founder walked through every row in `product/copy-pending-approval-2026-05-28.md`
+and approved each string (some as the agent's #1 recommendation, some as alternatives
+or tighter swaps). The approved strings were applied verbatim across 6 surfaces:
+`mirror.html` (#01–#07), `protocol.html` (#08–#12), `hair.html` (#13–#17),
+`reveal.html` (#18–#28), `login.html` (#29), `payment-confirmed.html` (#30).
+Every replaced string carries a `<!-- COPY APPROVED 2026-05-28 (#NN) -->` marker
+linking back to the rationale document.
+
+### Weekly + Day-30 template strings extracted to `data/reveal-copy-constants.js`
+
+Strings #19–#21 (weekly UP/FLAT/DOWN) and #25–#28 (Day-30 UP/FLAT/DOWN + close line)
+are server-side templates with `{{variable}}` interpolation. Rather than embedding
+them inline in `routes/lookmax.js` or `routes/reaudit.js`, a dedicated constants module
+(`data/reveal-copy-constants.js`) exports the raw templates and three helper functions
+(`weeklyConsultantLine`, `reauditConsultantLine`, `reauditCloseLine`). B2's reaudit/result
+endpoint reads these helpers; the frontend renders whatever the API returns.
+
+### #27 Day-30 DOWN variant — held-count branching is server-side only
+
+Per the brief, when `heldCount === 0` the third sentence of the DOWN copy
+("The axes that held tell us the protocol held.") is dropped. This branching is
+implemented in `reauditConsultantLine()` in `reveal-copy-constants.js` and consumed
+by the B2 reaudit/result endpoint. The frontend never branches — it renders the
+pre-selected string from the API response.
+
+### #30 Orator-only CTA rendered conditionally in payment-confirmed.html
+
+The disabled-button CTA block ("Day 1 arrives tomorrow" + caption) is only injected
+into `#pcMirrorBlock` when `d.oratorActive === true && d.lookmaxxingActive !== true`.
+When Lookmaxxing is also active, the mirror CTA block takes priority (unchanged from
+prior spec). This avoids the page showing a disabled button to Aura++ bundle buyers.
+
+### 51 new test assertions in `tests/copy-approved-2026-05-28.test.js`
+
+One test file per-batch was rejected in favour of a single canonical file that asserts
+all 30 approved strings (plus COPY APPROVED comment markers). The file covers: static
+string presence, conditional render branches (#15, #16, #27 held-count), the constants
+module (#19–#28), and the Orator-only fork (#30). Total test count moved from 794 to 845.
+
+---
+
 ## 2026-05-28 — NOW-2 / B2: Day-30 Re-Audit renewal engine
 
 ### lookmaxBaseline shape expanded from bare scores to full struct

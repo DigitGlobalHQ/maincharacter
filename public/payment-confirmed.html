@@ -281,7 +281,25 @@
           '<div class="n">◆</div>' +
           '<div class="t">Your first message arrives tomorrow morning at your preferred time.</div>' +
         '</div>';
-      // TODO copy: Orator-only disabled-button caption — design-lookmax-payment-confirmed.md §4
+
+      // COPY APPROVED 2026-05-28 (#30): Orator-only disabled-button + caption — see product/copy-pending-approval-2026-05-28.md
+      // Only show the disabled CTA block when the user bought Orator without Lookmaxxing
+      if (!d.lookmaxxingActive) {
+        var oratorCtaBlock = document.getElementById('pcMirrorBlock');
+        if (oratorCtaBlock) {
+          oratorCtaBlock.innerHTML =
+            '<div class="pc-mirror-cta">' +
+              '<button class="install" type="button" disabled ' +
+                'aria-label="Day 1 arrives tomorrow" ' +
+                'style="opacity:0.55;cursor:default;">' +
+                'Day 1 arrives tomorrow' +
+              '</button>' +
+              '<p style="margin-top:12px;font-size:13px;color:var(--muted);font-family:\'Sora\',sans-serif;">' +
+                'Your first message lands at the time you chose. Nothing to do tonight.' +
+              '</p>' +
+            '</div>';
+        }
+      }
     }
 
     // ── Fallback if neither ────────────────────────────────────────────────────

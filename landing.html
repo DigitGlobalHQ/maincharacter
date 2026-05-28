@@ -1114,7 +1114,8 @@ button:focus-visible {
     <span class="nav__diamond">◆</span>
     <span>MAINCHARACTER</span>
   </a>
-  <a href="/start" class="nav__cta">Begin Your Arc →</a>
+  <!-- stage-1-audit-spec.md §1 Wave 2C: /start → /lookmaxing (Orator cordon-off) -->
+  <a href="/lookmaxing" class="nav__cta">Begin Your Arc →</a>
 </nav>
 
 <!-- ═══════════════════════════════════════════
@@ -1125,7 +1126,8 @@ button:focus-visible {
   <h1 class="hero__headline">Become the Main Character</h1>
   <p class="hero__sub">Most people know who they want to be. They just can't see the gap clearly enough to close it. MainCharacter makes the gap visible, measurable, and closable — one deliberate ritual at a time.</p>
   <div class="hero__ctas">
-    <a href="/start" class="btn--primary">Begin Your Arc →</a>
+    <!-- stage-1-audit-spec.md §1 Wave 2C: /start → /lookmaxing (Orator cordon-off) -->
+    <a href="/lookmaxing" class="btn--primary">Begin Your Arc →</a>
     <a href="#gap" class="btn--ghost">See How It Works ↓</a>
   </div>
   <div class="hero__scroll" aria-hidden="true">↓</div>
@@ -1157,7 +1159,10 @@ button:focus-visible {
 
     <div class="pillars__grid reveal-stagger" id="pillar-cards">
       <!-- ORATOR -->
-      <div class="pcard pcard--orator" onclick="window.location.href='/start'" style="cursor:pointer;">
+      <!-- stage-1-audit-spec.md §1 Wave 2C: Orator pcard → waitlist modal (Orator cordon-off).
+           Visual appearance unchanged; click now opens the Coming Soon waitlist modal.
+           data-event added for KPI tracking. -->
+      <div class="pcard pcard--orator" onclick="openComingSoon('orator')" style="cursor:pointer;" data-event="orator_waitlist_modal_opened">
         <div class="pcard__bar"></div>
         <div class="pcard__glow"></div>
         <div class="pcard__body">
@@ -1442,7 +1447,8 @@ button:focus-visible {
     <div class="reveal">
       <h2>Your arc begins with one question.</h2>
       <p class="cta-close__question">"In a room full of your peers, do you feel like the protagonist — or a spectator?"</p>
-      <a href="/start" class="btn--primary">Answer It →</a>
+      <!-- stage-1-audit-spec.md §1 Wave 2C: /start → /lookmaxing (Orator cordon-off) -->
+      <a href="/lookmaxing" class="btn--primary">Answer It →</a>
     </div>
   </div>
 </section>
@@ -1526,7 +1532,8 @@ button:focus-visible {
 
   // ——— COMING SOON MODAL ———
   window.openComingSoon = function(pillar) {
-    var names = { aesthetic: 'The Aesthetic', sage: 'The Sage' };
+    // stage-1-audit-spec.md §1 Wave 2C: orator added so modal renders "The Orator · Coming Soon"
+    var names = { aesthetic: 'The Aesthetic', sage: 'The Sage', orator: 'The Orator' };
     document.getElementById('cs-pillar-name').textContent = names[pillar] || pillar;
     document.getElementById('cs-pillar-input').value = '';
     document.getElementById('cs-pillar-data').value = pillar;

@@ -5,6 +5,18 @@ Format: date, decision, 2-sentence rationale.
 
 ---
 
+## 2026-05-28 — stage-1-audit Wave 2C: Orator routes cordoned off
+
+### /start 302s to /lookmaxing; public/start.html preserved on disk
+
+`GET /start` now returns a 302 to `/lookmaxing` rather than serving the Orator enrollment form. The Orator pillar cannot take real users until Meta WhatsApp Cloud API is approved and `WHATSAPP_SEND_MODE` is flipped to `all`, so routing visitors into the enrollment funnel would produce a dead end; redirecting to the active Lookmaxxing entry point is the least-surprising behaviour and keeps the asset for the eventual Orator relaunch.
+
+### Orator pcard onclick routes to Coming Soon modal, not /start
+
+The Orator pillar card on `landing.html` previously sent visitors directly to `/start`. It now calls `openComingSoon('orator')`, opening the existing waitlist modal (the `names` map was extended with `orator: 'The Orator'` to display the correct pillar name). This preserves the visual presence of the Orator pillar — reinforcing the dual-pillar brand promise — while capturing waitlist intent rather than depositing users in a non-functional signup flow. A `data-event="orator_waitlist_modal_opened"` attribute was added for KPI tracking.
+
+---
+
 ## 2026-05-28 — Task 1: Durability verification scripts (B0 wiring confirmed)
 
 ### backfill script is founder-runnable on Render shell; DATABASE_URL not local

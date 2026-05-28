@@ -77,9 +77,9 @@ async function run() {
     check('GET / → 200', home.status === 200);
     check('/ returns HTML', /<html|<!doctype/i.test(homeBody));
 
-    // enrollment page
-    const start = await fetch(`${BASE}/start`);
-    check('GET /start → 200', start.status === 200);
+    // enrollment page — stage-1-audit-spec.md §1 Wave 2C: /start now 302s to /lookmaxing
+    const start = await fetch(`${BASE}/start`, { redirect: 'manual' });
+    check('GET /start → 302 /lookmaxing', start.status === 302 && start.headers.get('location') === '/lookmaxing');
 
     // payment plans
     const plans = await fetch(`${BASE}/api/payment/plans`);

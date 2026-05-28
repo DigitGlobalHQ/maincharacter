@@ -122,9 +122,12 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'landing.html'));
 });
 
-// Free Trial Enrollment
+// Free Trial Enrollment — cordoned off (stage-1-audit-spec.md §1, Wave 2C)
+// Orator is "Coming Soon" pending Meta WhatsApp Cloud API setup.
+// public/start.html is preserved on disk so Orator can be relaunched later.
+// Redirect to the new primary entry point: /lookmaxing (Lookmaxxing pillar).
 app.get('/start', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'start.html'));
+  res.redirect(302, '/lookmaxing');
 });
 
 // Post-Enrollment Welcome

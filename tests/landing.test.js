@@ -107,3 +107,39 @@ describe('landing.html — coming-soon-modal listener (P1 regression)', () => {
     expect(modalDivIdx).toBeGreaterThan(scriptCloseIdx);
   });
 });
+
+describe('landing.html — no </script> literal inside script bodies', () => {
+  it('script body text never contains a literal </script> substring (HTML parser truncation guard)', () => {
+    // The HTML parser treats the first </script> it encounters as the end of
+    // the script block, even inside a comment. A literal </script> inside any
+    // script body will truncate it, producing a SyntaxError in the browser.
+    // This test splits on the opening <script tag boundary and checks each
+    // captured body does not contain a closing tag literal.
+    const scriptOpenRe = /<script(\s[^>]*)?>/ ;
+    const scriptCloseTag = '</script>';
+    const parts = html.split(scriptOpenRe);
+    // parts[0] is content before the first <script>; odd-indexed parts are
+    // capture groups from the opening-tag regex; even indices ≥2 are bodies.
+    // Simpler: just split on the opening tag without a capture group and
+    // slice each piece up to the first </script>.
+    const bodies = [];
+    let cursor = 0;
+    const openRe = /<script(?:\s[^>]*)?>/g;
+    let m;
+    while ((m = openRe.exec(html)) !== null) {
+      const bodyStart = m.index + m[0].length;
+      const bodyEnd   = html.indexOf(scriptCloseTag, bodyStart);
+      if (bodyEnd !== -1) {
+        bodies.push(html.slice(bodyStart, bodyEnd));
+      }
+    }
+
+    expect(bodies.length).toBeGreaterThan(0); // sanity: we found at least one script block
+    for (let i = 0; i < bodies.length; i++) {
+      expect(
+        bodies[i],
+        `Script block #${i + 1} contains a literal ${scriptCloseTag} — the HTML parser will truncate the script there`
+      ).not.toContain(scriptCloseTag);
+    }
+  });
+});

@@ -1512,7 +1512,7 @@ button:focus-visible {
     });
   };
 
-  // Close on backdrop click — deferred so the modal div (below </script>) is in the DOM
+  // Close on backdrop click — deferred so the modal HTML below is in the DOM
   document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('coming-soon-modal').addEventListener('click', function(e) {
       if (e.target === this) closeComingSoon();

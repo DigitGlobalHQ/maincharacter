@@ -3,7 +3,7 @@
  *
  * F1: waitlist audit echo
  * F2: shared audit-echo helper consolidation
- * F3: "Keep this reading" recovery link on Scene 6
+ * F3: "Hold this reading" recovery link on Scene 6
  */
 
 import { describe, it, expect } from 'vitest';
@@ -132,22 +132,22 @@ describe('F2 — shared audit-echo helper consolidation', () => {
   });
 });
 
-// ─── F3: "Keep this reading" recovery link ───────────────────────────────────
+// ─── F3: "Hold this reading" recovery link ───────────────────────────────────
 
-describe('F3 — audit.html "Keep this reading" recovery link', () => {
-  it('Scene 6 (scene-result) contains a "Keep this reading" affordance', () => {
-    expect(auditHtml).toContain('Keep this reading');
+describe('F3 — audit.html "Hold this reading" recovery link', () => {
+  it('Scene 6 (scene-result) contains a "Hold this reading" affordance', () => {
+    expect(auditHtml).toContain('Hold this reading');
   });
 
-  it('"Keep this reading" button has the ghost styling class', () => {
+  it('"Hold this reading" button has the ghost styling class', () => {
     expect(auditHtml).toContain('btn--ghost');
   });
 
-  it('"Keep this reading" button has data-event="recover_link_action"', () => {
+  it('"Hold this reading" button has data-event="recover_link_action"', () => {
     expect(auditHtml).toContain('data-event="recover_link_action"');
   });
 
-  it('"Keep this reading" button is inside scene-result (document order)', () => {
+  it('"Hold this reading" button is inside scene-result (document order)', () => {
     const sceneStart = auditHtml.indexOf('id="scene-result"');
     // Use the button element specifically, not just the text (which also appears in comments)
     const btnIdx = auditHtml.indexOf('onclick="keepReading()"');
@@ -156,7 +156,7 @@ describe('F3 — audit.html "Keep this reading" recovery link', () => {
     expect(btnIdx).toBeGreaterThan(sceneStart);
   });
 
-  it('"Keep this reading" button onclick calls keepReading()', () => {
+  it('"Hold this reading" button onclick calls keepReading()', () => {
     expect(auditHtml).toContain('onclick="keepReading()"');
   });
 
@@ -184,8 +184,8 @@ describe('F3 — audit.html "Keep this reading" recovery link', () => {
   });
 
   it('confirmation text is present and references 24 hours', () => {
-    // [COPY DRAFT — founder approval]: "Copied. The link holds for 24 hours."
-    expect(auditHtml).toContain('24 hours');
+    // Founder-approved 2026-05-28: "Copied. Holds 24 hours."
+    expect(auditHtml).toContain('Holds 24 hours');
   });
 
   it('confirmation uses prefers-reduced-motion guard', () => {
@@ -200,18 +200,16 @@ describe('F3 — audit.html "Keep this reading" recovery link', () => {
     expect(auditHtml).toContain('aria-live="polite"');
   });
 
-  it('copy drafts are marked for founder approval in a comment block', () => {
-    expect(auditHtml).toContain('COPY DRAFTS NEEDED');
-    expect(auditHtml).toContain('founder approval');
+  it('copy is marked as founder-approved with an audit-trail comment', () => {
+    expect(auditHtml).toContain('COPY APPROVED');
+    expect(auditHtml).toContain('2026-05-28');
   });
 
-  it('no exclamation marks in the new F3 button label or confirmation copy', () => {
-    // Check the specific new strings added by F3 — none should contain exclamation marks.
-    expect('Keep this reading').not.toContain('!');
-    expect('Copied. The link holds for 24 hours.').not.toContain('!');
+  it('no exclamation marks in the F3 button label or confirmation copy', () => {
+    expect('Hold this reading').not.toContain('!');
+    expect('Copied. Holds 24 hours.').not.toContain('!');
     expect('My Aesthetic Reading').not.toContain('!');
-    // Verify the actual HTML contains the expected strings without exclamation marks
-    expect(auditHtml).toContain('Keep this reading');
-    expect(auditHtml).toContain('24 hours');
+    expect(auditHtml).toContain('Hold this reading');
+    expect(auditHtml).toContain('Holds 24 hours');
   });
 });

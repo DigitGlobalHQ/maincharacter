@@ -65,16 +65,34 @@ router.post(
       const photos = [];
       for (const kind of kinds) {
         const f = files[kind][0];
-        const saved = await storage.saveImage({
-          buffer: f.buffer,
-          mimeType: f.mimetype,
-          prefix: `audit/${sessionToken}`,
-        });
-        photos.push({ kind, storageKey: saved.storageKey, url: saved.url, mimeType: f.mimetype });
+        // B0: use canonical baseline key convention for R2 persistence.
+        // If R2 is configured, put() stores at audit/{sessionToken}/baseline-{slot}.jpg.
+        // If not, fall back to local storage via saveImage().
+        const canonicalKey = storage.auditBaselineKey(sessionToken, kind);
+        const putResult = await storage.put(canonicalKey, f.buffer, f.mimetype);
+        let storageKey, url, backend;
+        if (putResult.key) {
+          // R2 success — build the r2: prefix for readImage compatibility
+          storageKey = `r2:${putResult.key}`;
+          url = `r2://${process.env.R2_BUCKET}/${putResult.key}`;
+          backend = 'r2';
+        } else {
+          // DRY-RUN or R2 failure — local fallback
+          const saved = await storage.saveImage({
+            buffer: f.buffer,
+            mimeType: f.mimetype,
+            prefix: `audit/${sessionToken}`,
+          });
+          storageKey = saved.storageKey;
+          url = saved.url;
+          backend = saved.backend;
+        }
+        // DPDPA guard: r2Key stored server-side only; never included in API responses.
+        photos.push({ kind, storageKey, mimeType: f.mimetype, backend });
       }
 
       AuditSession.updateSession(sessionToken, { photos });
-      log.info('PHOTOS', `${photos.length} stored for ${sessionToken} (${photos[0]?.url.split('://')[0]})`);
+      log.info('PHOTOS', `${photos.length} stored for ${sessionToken} (backend=${photos[0]?.backend || 'unknown'})`);
       res.json({ ok: true, count: photos.length, kinds });
     } catch (err) {
       log.error('ERROR', `photos: ${err.message}`);

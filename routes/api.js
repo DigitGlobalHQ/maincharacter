@@ -762,6 +762,22 @@ async function processPaymentEvent(event) {
       updates.firstLoginToken = crypto.randomBytes(32).toString('hex');
       updates.firstLoginExpiresAt = Date.now() + 15 * 60 * 1000;
       updates.firstLoginConsumedAt = null;
+      // B0 — lookmaxBaseline scaffold: snapshot the converting audit's axis scores
+      // onto the user record so NOW-2 Day-30 re-audit can do a side-by-side diff.
+      // Only written once (at first activation); never overwritten by subsequent
+      // subscription.charged or reactivation events (guard: !user.lookmaxBaseline).
+      if (!user.lookmaxBaseline && user.auditSessionId) {
+        try {
+          const AuditSession = require('../models/AuditSession');
+          const auditSession = AuditSession.getSession(user.auditSessionId);
+          if (auditSession && auditSession.aestheticScores) {
+            updates.lookmaxBaseline = auditSession.aestheticScores;
+            log('LOOKMAX', `lookmaxBaseline snapshotted for ${phone} from audit ${user.auditSessionId}`);
+          }
+        } catch (err) {
+          log('LOOKMAX', `lookmaxBaseline snapshot failed for ${phone}: ${err.message}`);
+        }
+      }
     }
     // Capture the subscription id from the event if checkout didn't store it
     // (lets the post-payment page find the user by subscription id).

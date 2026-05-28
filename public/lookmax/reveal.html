@@ -1,6 +1,10 @@
 <!doctype html>
-<!-- Weekly Reveal (Night-4, P8.1). Client-rendered slideshow of the week's
-     selfies; real MP4 generation waits on ffmpeg (BACKLOG). // TODO copy review. -->
+<!-- Weekly Reveal (Night-4, P8.1 → design-spec refactor).
+     - Trajectory canvas separated from stage into own card
+     - Crossfade interval: 1600ms (was 1200ms)
+     - Share restructure: primary native Share + platform mini-links
+     - Day-30 side-by-side mode shell (?mode=day30)
+     - Copy: keep existing locked strings; new strings deferred to copy-consultant -->
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -13,108 +17,602 @@
   <link rel="stylesheet" href="/lookmax/app.css" />
   <script src="/track.js" defer></script>
   <style>
-    .stage { position: relative; width: 100%; aspect-ratio: 9/16; max-height: 70vh; margin: 0 auto; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: #000; }
-    .stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .4s; }
+    /* ── Stage — photos only (trajectory moved out) ─────────── */
+    .stage {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 9/16;
+      max-height: 70vh;
+      margin: 0 auto;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: #000;
+    }
+    .stage img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity .4s;
+    }
     .stage img.show { opacity: 1; }
-    .stage canvas { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; }
-    .cap { position: absolute; left: 14px; bottom: 56px; right: 14px; font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 20px; text-shadow: 0 2px 12px #000; }
-    .shares { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 16px; }
+    /* Caption overlay sits at bottom of stage */
+    .cap {
+      position: absolute;
+      left: 14px;
+      bottom: 14px;
+      right: 14px;
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 20px;
+      text-shadow: 0 2px 12px #000;
+      pointer-events: none;
+    }
+
+    /* ── Trajectory card (separate from stage) ────────────── */
+    .traj-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      padding: 16px 18px;
+      margin: 14px 0;
+    }
+    .traj-card canvas { width: 100%; display: block; }
+
+    /* ── Per-week consultant beat ─────────────────────────── */
+    #weeklyConsultant { margin: 4px 0 16px; }
+
+    /* ── Share controls restructure ────────────────────────── */
+    .share-frame {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      /* TODO copy: share-frame line — design-lookmax-reveal.md §2.3 */
+    }
+    .share-primary .btn { min-height: 44px; }
+    .reveal-platforms {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .reveal-platforms a {
+      color: var(--gold);
+      text-decoration: none;
+      font-size: 13px;
+      padding: 12px 14px;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+    }
+    .reveal-platforms .sep {
+      color: var(--muted);
+      font-size: 12px;
+      user-select: none;
+    }
+
+    /* ── Clipboard toast ────────────────────────────────────── */
+    #shareToast {
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 8px;
+      min-height: 18px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    #shareToast.visible { opacity: 1; }
+
+    /* ── Day-30 mode ─────────────────────────────────────────── */
+    #day30View { display: none; }
+    .day30-photos {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    @media (min-width: 640px) {
+      .day30-photos { grid-template-columns: 1fr 1fr; }
+    }
+    .day30-photo {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      aspect-ratio: 1/1;
+    }
+    .day30-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .day30-photo .photo-caption {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(7,7,8,0.7);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      text-align: center;
+      padding: 6px 8px;
+    }
+    .day30-photo .photo-missing {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 24px;
+      text-align: center;
+    }
+    .day30-score-line {
+      text-align: center;
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 500;
+      font-size: 2rem;
+      color: var(--gold);
+      margin-bottom: 20px;
+    }
+    .day30-axis {
+      margin: 10px 0;
+      font-size: 14px;
+    }
+    .day30-axis-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 5px;
+    }
+    .day30-bars { display: flex; gap: 4px; height: 6px; border-radius: 4px; overflow: hidden; background: var(--line); }
+    .day30-bar-baseline { background: var(--muted); border-radius: 4px; height: 100%; }
+    .day30-bar-today { background: var(--gold); border-radius: 4px; height: 100%; }
+    /* down-delta: always --ink, never --bad */
+    .delta--neutral { color: var(--muted); }
+
+    /* ── Day-30 beat staging ─────────────────────────────────── */
+    .day30-beat-2 {
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    .day30-beat-2.show { opacity: 1; }
+    @media (prefers-reduced-motion: reduce) {
+      .day30-beat-2 { transition: none !important; opacity: 1 !important; }
+      .stage img { transition: none; }
+    }
   </style>
 </head>
 <body>
   <div class="page">
-    <div class="topbar"><div class="who">◆ Weekly Reveal</div></div>
+    <div class="topbar" id="topbar">
+      <div class="who" id="topbarTitle">◆ Weekly Reveal</div>
+    </div>
 
-    <!-- Locked -->
+    <!-- ── Locked view ──────────────────────────────────────────── -->
     <div id="lockedView" class="hidden center" style="padding-top:30px">
       <h1 style="margin-bottom:10px">Your reveal is forming.</h1>
       <p class="muted" id="lockedSub">Take more mirrors this week. Your reveal unlocks at 4 of 7.</p>
       <div class="weekstrip" id="lockStrip" style="margin-top:20px"></div>
     </div>
 
-    <!-- Reveal -->
+    <!-- ── Weekly reveal view ───────────────────────────────────── -->
     <div id="revealView" class="hidden">
       <p class="muted center" style="margin-bottom:12px">It airs Friday at 8pm. Here is the preview.</p>
+
+      <!-- Stage: photos + caption only. NO canvas inside. -->
       <div class="stage" id="stage">
-        <canvas id="traj" height="80"></canvas>
         <div class="cap" id="cap"></div>
       </div>
-      <div class="shares">
-        <button class="btn" data-share="instagram">Instagram</button>
-        <button class="btn" data-share="tiktok">TikTok</button>
-        <button class="btn" data-share="whatsapp">WhatsApp Status</button>
-        <button class="btn btn--solid" data-share="generic">Share</button>
+
+      <!-- Trajectory card: separate from stage (spec §2.1) -->
+      <div class="traj-card">
+        <div class="muted" style="font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">This week</div>
+        <canvas id="traj" height="60" aria-label="Score trajectory this week"></canvas>
       </div>
-      <p class="footer-note" id="stubNote">The reveal is a preview. The full video — stitched, scored, with the soundtrack — arrives once the infrastructure lands. Soon. ◆</p>
+
+      <!-- Per-week Consultant beat (server-supplied; gated on presence) -->
+      <div class="consultant hidden" id="weeklyConsultant" aria-live="polite"></div>
+
+      <!-- Share controls -->
+      <!-- TODO copy: share-frame line — design-lookmax-reveal.md §2.3 -->
+      <p class="share-frame" aria-hidden="true"></p>
+
+      <div class="share-primary">
+        <button
+          class="btn btn--solid"
+          id="shareBtn"
+          data-event="reveal_share_attempted"
+          data-method="native"
+          aria-label="Share your weekly reveal"
+        >Share ◆</button>
+      </div>
+
+      <div class="reveal-platforms" aria-label="Platform share options">
+        <a id="shareInstagram" data-share="instagram" data-event="reveal_share_attempted" data-method="instagram" role="button" tabindex="0">instagram</a>
+        <span class="sep" aria-hidden="true"> · </span>
+        <a id="shareTiktok" data-share="tiktok" data-event="reveal_share_attempted" data-method="tiktok" role="button" tabindex="0">tiktok</a>
+        <span class="sep" aria-hidden="true"> · </span>
+        <a id="shareWhatsapp" data-share="whatsapp" data-event="reveal_share_attempted" data-method="whatsapp" role="button" tabindex="0">whatsapp</a>
+      </div>
+
+      <div id="shareToast" aria-live="polite" role="status"></div>
+
+      <p class="footer-note" id="stubNote" style="margin-top:20px">
+        The reveal is a preview. The full video — stitched, scored, with the soundtrack — arrives once the infrastructure lands. Soon. ◆
+      </p>
     </div>
+
+    <!-- ── Day-30 side-by-side view (?mode=day30) ──────────────── -->
+    <div id="day30View" aria-label="Day 30 second reading" role="region">
+      <!-- TODO copy: topbar title "◆ The Second Reading" — design-lookmax-reveal.md §2.4 -->
+      <!-- TODO copy: h1 "Thirty days, beside Day 1." — design-lookmax-reveal.md §2.4 -->
+      <h1 id="day30Headline" style="margin-bottom:18px">Your second reading.</h1>
+
+      <!-- Beat 1: photos -->
+      <div class="day30-photos" id="day30Photos">
+        <!-- Populated by showDay30() -->
+      </div>
+
+      <div class="day30-score-line" id="day30ScoreLine" aria-live="polite">—</div>
+
+      <!-- Beat 2: axes + trajectory + consultant + close line -->
+      <div class="day30-beat-2" id="day30Beat2">
+        <div id="day30Axes" aria-label="Axis comparison" aria-live="polite"></div>
+
+        <div class="traj-card" style="margin-top:18px">
+          <div class="muted" style="font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Day 1 → Day 30</div>
+          <canvas id="day30Traj" height="60" aria-label="Day 1 to Day 30 trajectory"></canvas>
+        </div>
+
+        <!-- Consultant line (server-supplied) -->
+        <div class="consultant hidden" id="day30Consultant" aria-live="polite"></div>
+
+        <!-- Close line (server-supplied) -->
+        <!-- TODO copy: close line per NOW-2 §3.5 — design-lookmax-reveal.md §9 -->
+        <div class="consultant hidden" id="day30CloseLine" aria-live="polite" style="border-left-color:var(--muted);color:var(--muted)"></div>
+      </div>
+    </div>
+
   </div>
 
   <script src="/lookmax/app.js"></script>
   <script>
+    const AXIS_LABELS = {
+      skinClarity: 'Skin clarity', jawDefinition: 'Jaw definition', eyeArea: 'Eye area',
+      hairDensity: 'Hair density', posture: 'Posture', facialHarmony: 'Facial harmony',
+      expression: 'Expression', bodyComposition: 'Body composition',
+    };
+
     let preview = null;
+    const mode = new URLSearchParams(location.search).get('mode') || 'weekly';
+
+    // ── KPI: page view ────────────────────────────────────────────────────────
+    // Track after data loads so we have context
 
     (async function () {
       const user = await LM.requireSession();
       if (!user) return;
       LM.renderNav('reveal');
-      try { preview = await LM.api('/api/lookmax/reveal/preview'); } catch { preview = { unlocked: false, count: 0 }; }
-      if (preview.unlocked && (preview.photoUrls || []).length) showReveal();
-      else showLocked();
+
+      if (mode === 'day30') {
+        await loadDay30();
+      } else {
+        try { preview = await LM.api('/api/lookmax/reveal/preview'); }
+        catch { preview = { unlocked: false, count: 0 }; }
+        if (window.mc) window.mc.track('reveal_viewed', { mode: 'weekly', unlocked: !!preview.unlocked, count: preview.count || 0 });
+        if (preview.unlocked && (preview.photoUrls || []).length) showReveal();
+        else showLocked();
+      }
     })();
 
+    // ── Locked view ────────────────────────────────────────────────────────────
     function showLocked() {
       document.getElementById('lockedView').classList.remove('hidden');
       const count = preview ? (preview.count || 0) : 0;
       document.getElementById('lockStrip').innerHTML = Array.from({ length: 7 }, (_, i) =>
         `<span class="dot ${i < count ? 'on' : ''}"></span>`).join('');
+      if (window.mc) window.mc.track('reveal_locked_shown');
     }
 
+    // ── Weekly reveal ──────────────────────────────────────────────────────────
     function showReveal() {
       document.getElementById('revealView').classList.remove('hidden');
-      const urls = preview.photoUrls; const scores = preview.scores || [];
-      document.getElementById('cap').textContent = `Week ${preview.weekNumber}. The mirror has been honest. ◆ MainCharacter`;
+      const urls = preview.photoUrls;
+      const scores = preview.scores || [];
+
+      // Caption
+      document.getElementById('cap').textContent =
+        `Week ${preview.weekNumber}. The mirror has been honest. ◆ MainCharacter`;
+
+      // Preload images
+      urls.forEach((u) => { const im = new Image(); im.src = u; });
+
+      // Inject images into stage (NOT the canvas — that's separate now)
       const stage = document.getElementById('stage');
-      const imgs = urls.map((u, i) => { const im = document.createElement('img'); im.src = u; if (i === 0) im.classList.add('show'); stage.insertBefore(im, stage.firstChild); return im; });
-      let i = 0;
+      const imgs = urls.map((u, i) => {
+        const im = document.createElement('img');
+        im.src = u;
+        im.alt = `Mirror photo ${i + 1}`;
+        im.loading = 'lazy';
+        if (i === 0) im.classList.add('show');
+        stage.insertBefore(im, stage.querySelector('.cap'));
+        return im;
+      });
+
+      let idx = 0;
       let revealTracked = false;
+      // Crossfade at 1600ms (spec §5 — was 1200ms)
       const interval = setInterval(() => {
-        imgs[i].classList.remove('show'); i = (i + 1) % imgs.length; imgs[i].classList.add('show');
-        // B5: reveal_watched — fires when slideshow reaches the final frame
-        if (!revealTracked && i === imgs.length - 1) {
+        imgs[idx].classList.remove('show');
+        idx = (idx + 1) % imgs.length;
+        imgs[idx].classList.add('show');
+        if (!revealTracked && idx === imgs.length - 1) {
           revealTracked = true;
           if (window.mc) window.mc.track('reveal_watched', { weekNumber: preview.weekNumber, count: imgs.length });
         }
-      }, 1200);
-      drawTrajectory(scores);
+      }, 1600);
+
+      // Per-week Consultant beat (server-supplied field)
+      if (preview.consultantLine) {
+        const wc = document.getElementById('weeklyConsultant');
+        wc.textContent = preview.consultantLine;
+        wc.classList.remove('hidden');
+      }
+
+      // Trajectory in separate card
+      drawTrajectory('traj', scores);
+
+      // Share wiring
       wireShares();
+
+      if (window.mc) window.mc.track('reveal_weekly_shown', { weekNumber: preview.weekNumber });
     }
 
-    function drawTrajectory(scores) {
-      const c = document.getElementById('traj'); if (!scores.length) return;
-      c.width = c.clientWidth; const ctx = c.getContext('2d');
-      const w = c.width, h = c.height, pad = 8;
-      const max = 100, min = 0;
-      ctx.strokeStyle = '#e8b84b'; ctx.lineWidth = 2; ctx.beginPath();
+    // ── Day-30 mode ────────────────────────────────────────────────────────────
+    async function loadDay30() {
+      // Update topbar for Day-30 mode
+      // TODO copy: topbar "◆ The Second Reading" — design-lookmax-reveal.md §2.4
+      document.getElementById('day30View').style.display = '';
+      document.getElementById('topbarTitle').textContent = '◆ The Second Reading';
+
+      let d;
+      try {
+        d = await LM.api('/api/lookmax/reaudit/result');
+      } catch (_) {
+        // Endpoint may not exist yet (B2 territory); render graceful shell
+        d = null;
+      }
+
+      if (window.mc) window.mc.track('reveal_viewed', { mode: 'day30' });
+
+      if (!d) {
+        // Shell without data — show empty state
+        document.getElementById('day30ScoreLine').textContent = '—';
+        if (window.mc) window.mc.track('reveal_day30_shown', { overallDelta: null, deltaSign: null });
+        return;
+      }
+
+      showDay30(d);
+    }
+
+    function showDay30(d) {
+      // Beat 1: photos
+      const photosEl = document.getElementById('day30Photos');
+      photosEl.innerHTML = '';
+
+      // Day 1 photo
+      const day1Div = document.createElement('div');
+      day1Div.className = 'day30-photo';
+      if (d.baselinePhotoUrl) {
+        const im = new Image(); im.src = d.baselinePhotoUrl;
+        im.alt = 'Day 1 baseline photo';
+        day1Div.appendChild(im);
+      } else {
+        // R2 not provisioned yet — graceful fallback
+        // TODO copy: "Day 1 photo not held" — design-lookmax-reveal.md §4
+        const miss = document.createElement('div');
+        miss.className = 'photo-missing muted';
+        miss.textContent = '—';
+        day1Div.appendChild(miss);
+      }
+      const cap1 = document.createElement('div');
+      cap1.className = 'photo-caption';
+      // TODO copy: "Day 1 — DD MMM" — design-lookmax-reveal.md §9
+      cap1.textContent = 'Day 1';
+      day1Div.appendChild(cap1);
+      photosEl.appendChild(day1Div);
+
+      // Day 30 photo
+      const day30Div = document.createElement('div');
+      day30Div.className = 'day30-photo';
+      if (d.day30PhotoUrl) {
+        const im2 = new Image(); im2.src = d.day30PhotoUrl;
+        im2.alt = 'Day 30 photo';
+        day30Div.appendChild(im2);
+      } else {
+        const miss2 = document.createElement('div');
+        miss2.className = 'photo-missing muted';
+        miss2.textContent = '—';
+        day30Div.appendChild(miss2);
+      }
+      const cap2 = document.createElement('div');
+      cap2.className = 'photo-caption';
+      // TODO copy: "Day 30 — today" — design-lookmax-reveal.md §9
+      cap2.textContent = 'Day 30';
+      day30Div.appendChild(cap2);
+      photosEl.appendChild(day30Div);
+
+      // Overall score line
+      if (d.baselineScores != null && d.day30Scores != null) {
+        const delta = d.overallDelta != null ? ` (+${d.overallDelta > 0 ? d.overallDelta : d.overallDelta})` : '';
+        document.getElementById('day30ScoreLine').textContent = `${d.baselineScores} → ${d.day30Scores}${delta}`;
+      }
+
+      // Beat 2: axes + trajectory + consultant (delay 400ms, or instant if reduced-motion)
+      const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const beat2 = document.getElementById('day30Beat2');
+      setTimeout(() => {
+        beat2.classList.add('show');
+        renderDay30Axes(d);
+        drawDay30Trajectory(d);
+        if (d.consultantLine) {
+          const cl = document.getElementById('day30Consultant');
+          cl.textContent = d.consultantLine;
+          cl.classList.remove('hidden');
+        }
+        if (d.closeLine) {
+          // TODO copy: close line — design-lookmax-reveal.md §9
+          const cll = document.getElementById('day30CloseLine');
+          cll.textContent = d.closeLine;
+          cll.classList.remove('hidden');
+        }
+      }, reducedMotion ? 0 : 400);
+
+      if (window.mc) window.mc.track('reveal_day30_shown', { overallDelta: d.overallDelta, deltaSign: d.deltaSign });
+
+      // Scroll observer for reveal_day30_consumed
+      const closeEl = document.getElementById('day30CloseLine');
+      if ('IntersectionObserver' in window && closeEl) {
+        let consumed = false;
+        const obs = new IntersectionObserver((entries) => {
+          if (!consumed && entries[0].isIntersecting) {
+            consumed = true;
+            if (window.mc) window.mc.track('reveal_day30_consumed');
+            obs.disconnect();
+          }
+        }, { threshold: 0.8 });
+        obs.observe(closeEl);
+      }
+    }
+
+    function renderDay30Axes(d) {
+      const axisDeltas = d.axisDeltas || {};
+      const baseline = d.baselineAxisScores || {};
+      const today = d.day30AxisScores || {};
+      const axesEl = document.getElementById('day30Axes');
+      axesEl.innerHTML = Object.keys(AXIS_LABELS).map((k) => {
+        const bVal = baseline[k] || 0;
+        const tVal = today[k] || 0;
+        const delta = axisDeltas[k];
+        const deltaStr = delta != null ? ` (${delta > 0 ? '+' : ''}${delta})` : '';
+        // Down-delta: --ink (neutral), never --bad, per spec §11
+        const deltaClass = delta != null && delta < 0 ? 'delta--neutral' : '';
+        return `<div class="day30-axis">
+          <div class="day30-axis-row">
+            <span>${AXIS_LABELS[k]}</span>
+            <span class="${deltaClass}">${bVal} → ${tVal}${deltaStr}</span>
+          </div>
+          <div class="day30-bars">
+            <div class="day30-bar-baseline" style="width:${bVal}%"></div>
+            <div class="day30-bar-today" style="width:${tVal}%"></div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function drawDay30Trajectory(d) {
+      // Two-point line: baseline → today
+      const scores = [];
+      if (d.baselineScores != null) scores.push(d.baselineScores);
+      if (d.day30Scores != null) scores.push(d.day30Scores);
+      // Use muted gold for down-delta, gold for positive
+      const negative = d.overallDelta != null && d.overallDelta < 0;
+      drawTrajectory('day30Traj', scores, negative ? 'rgba(232,184,75,0.45)' : '#e8b84b');
+    }
+
+    // ── Shared trajectory draw (vanilla canvas) ────────────────────────────────
+    function drawTrajectory(canvasId, scores, color) {
+      const canvas = document.getElementById(canvasId);
+      if (!scores || !scores.length || !canvas) return;
+      canvas.width = canvas.clientWidth || 320;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      const pad = 8;
+      const goldColor = color || '#e8b84b';
+
+      ctx.strokeStyle = goldColor;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
       scores.forEach((s, idx) => {
         const x = pad + (idx / Math.max(1, scores.length - 1)) * (w - 2 * pad);
-        const y = h - pad - ((s - min) / (max - min)) * (h - 2 * pad);
+        const y = h - pad - ((s - 0) / 100) * (h - 2 * pad);
         idx === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       });
       ctx.stroke();
+
+      // Dots
+      scores.forEach((s, idx) => {
+        const x = pad + (idx / Math.max(1, scores.length - 1)) * (w - 2 * pad);
+        const y = h - pad - ((s - 0) / 100) * (h - 2 * pad);
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = goldColor;
+        ctx.fill();
+      });
     }
 
+    // ── Share wiring ────────────────────────────────────────────────────────────
     function wireShares() {
       const base = location.origin + '/audit';
-      const utm = (src) => `${base}?utm_source=${src}&utm_medium=reveal&utm_campaign=week${preview.weekNumber}`;
-      const text = `Week ${preview.weekNumber} of the work. ◆ ${utm('share')}`;
-      document.querySelectorAll('[data-share]').forEach((b) => b.addEventListener('click', async () => {
-        const kind = b.dataset.share;
-        if (kind === 'whatsapp') location.href = 'whatsapp://send?text=' + encodeURIComponent(`Week ${preview.weekNumber} of the work. ◆ ${utm('whatsapp')}`);
-        else if (kind === 'instagram') { try { location.href = 'instagram://library'; } catch { location.href = utm('instagram'); } }
-        else if (kind === 'tiktok') { try { location.href = 'snssdk1233://'; } catch { location.href = utm('tiktok'); } }
-        else if (kind === 'generic' && navigator.share) { try { await navigator.share({ title: 'MainCharacter', text, url: utm('share') }); } catch {} }
-        else location.href = utm('share');
-      }));
+      const weekNum = preview ? preview.weekNumber : '';
+      const utm = (src) => `${base}?utm_source=${src}&utm_medium=reveal&utm_campaign=week${weekNum}`;
+      const shareUrl = utm('share');
+      const shareText = `Week ${weekNum} of the work. ◆ ${shareUrl}`;
+
+      // Primary Share button
+      document.getElementById('shareBtn').addEventListener('click', async () => {
+        if (window.mc) window.mc.track('reveal_share_attempted', { method: navigator.share ? 'native' : 'copy' });
+        if (navigator.share) {
+          try {
+            await navigator.share({ title: 'My Aesthetic Reading', text: shareText, url: shareUrl });
+            if (window.mc) window.mc.track('reveal_share_completed');
+          } catch (_) { /* user dismissed — not an error */ }
+        } else {
+          // Clipboard fallback
+          try { await navigator.clipboard.writeText(shareUrl); }
+          catch (_) { /* silent — clipboard may be blocked */ }
+          // TODO copy: clipboard toast — design-lookmax-reveal.md §4
+          // Using approved F3 pattern from audit.html: "Copied. Holds 24 hours."
+          showToast('Copied. Holds 24 hours.');
+        }
+      });
+
+      // Platform mini-links
+      document.getElementById('shareInstagram').addEventListener('click', () => {
+        if (window.mc) window.mc.track('reveal_share_attempted', { method: 'instagram' });
+        try { location.href = 'instagram://library'; } catch { location.href = utm('instagram'); }
+      });
+      document.getElementById('shareTiktok').addEventListener('click', () => {
+        if (window.mc) window.mc.track('reveal_share_attempted', { method: 'tiktok' });
+        try { location.href = 'snssdk1233://'; } catch { location.href = utm('tiktok'); }
+      });
+      document.getElementById('shareWhatsapp').addEventListener('click', () => {
+        if (window.mc) window.mc.track('reveal_share_attempted', { method: 'whatsapp' });
+        location.href = 'whatsapp://send?text=' + encodeURIComponent(`Week ${weekNum} of the work. ◆ ${utm('whatsapp')}`);
+      });
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('shareToast');
+      toast.textContent = msg;
+      toast.classList.add('visible');
+      const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      setTimeout(() => {
+        if (reducedMotion) { toast.textContent = ''; toast.classList.remove('visible'); }
+        else toast.classList.remove('visible');
+      }, 4000);
     }
   </script>
 </body>

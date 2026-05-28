@@ -27,6 +27,11 @@ The Postgres init and migration run are fire-and-async from inside `app.listen`,
 so a cold boot does not delay the first HTTP response even if Neon takes a few
 seconds to wake up; failures are logged but never crash the process.
 
+### Model adapters use _adapt() wrapper with automatic JSON fallback
+Each model export is wrapped by `_adapt(jsonFn, pgFn)`: when pg is active and
+healthy the pg implementation runs, but any pg error transparently falls back to
+the JSON path so a transient Neon outage never breaks the funnel.
+
 ---
 
 ## 2026-05-26 — Overnight autopilot run

@@ -317,21 +317,298 @@ function getWaitlist() {
   return loadWaitlist();
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// POSTGRES ADAPTER (B0) — activated when DATABASE_URL is set.
+// Each function below mirrors the JSON API exactly so callers need no changes.
+// The JSON path remains the fallback when pg is unavailable.
+// ═══════════════════════════════════════════════════════════════════
+
+/** True when the Postgres backend should be used. */
+function _usesPg() {
+  const be = process.env.MC_DB_BACKEND;
+  if (be === 'pg' || be === 'postgres') return true;
+  if (be === 'jsonl' || be === 'json') return false;
+  return !!process.env.DATABASE_URL;
+}
+
+/** Lazy-require db so tests that don't set DATABASE_URL never touch pg. */
+function _db() {
+  return require('../lib/db'); // eslint-disable-line global-require
+}
+
+/** Convert a Postgres row (snake_case) back to the JSON-model shape. */
+function _rowToUser(row) {
+  if (!row) return null;
+  return {
+    token:                   row.token,
+    name:                    row.name,
+    phone:                   row.phone,
+    email:                   row.email || null,
+    pillar:                  row.pillar,
+    preferredTime:           row.preferred_time,
+    enrolledAt:              row.enrolled_at,
+    day:                     row.day,
+    status:                  row.status,
+    trialComplete:           row.trial_complete,
+    awaitingResponse:        row.awaiting_response,
+    lastMorningSent:         row.last_morning_sent,
+    lastEveningSent:         row.last_evening_sent,
+    scores:                  row.scores || [],
+    wordsLearned:            row.words_learned || [],
+    chronicle:               row.chronicle || [],
+    rank:                    row.rank,
+    streak:                  row.streak,
+    lastActive:              row.last_active,
+    subscriptionStatus:      row.subscription_status,
+    razorpayCustomerId:      row.razorpay_customer_id || null,
+    razorpaySubscriptionId:  row.razorpay_subscription_id || null,
+    notes:                   row.notes || '',
+    oratorActive:            row.orator_active,
+    lookmaxxingActive:       row.lookmaxxing_active,
+    mirrorLevel:             row.mirror_level,
+    auditSessionId:          row.audit_session_id || null,
+    lookmaxxingStartedAt:    row.lookmaxxing_started_at || null,
+    oratorStartedAt:         row.orator_started_at || null,
+    pushSubscription:        row.push_subscription || null,
+    lookmaxBaseline:         row.lookmax_baseline || null,
+    lookmaxStreak:           row.lookmax_streak || 0,
+    lookmaxProtocolStreak:   row.lookmax_protocol_streak || 0,
+    lastMirrorAt:            row.last_mirror_at || null,
+    magicLinkToken:          row.magic_link_token || null,
+    magicLinkExpiresAt:      row.magic_link_expires_at || null,
+    magicLinkConsumedAt:     row.magic_link_consumed_at || null,
+    firstLoginToken:         row.first_login_token || null,
+    firstLoginExpiresAt:     row.first_login_expires_at || null,
+    firstLoginConsumedAt:    row.first_login_consumed_at || null,
+  };
+}
+
+/**
+ * Normalise a phone the same way the JSON model does (strip +/space, add 91 prefix).
+ * Duplicated here to avoid cross-file import (keeps model self-contained).
+ */
+function _normalizePhone(phone) {
+  let p = String(phone).replace(/[\s+\-]/g, '');
+  if (p.length === 10) p = '91' + p;
+  return p;
+}
+
+// ── Postgres implementations ─────────────────────────────────────
+
+async function _pg_createUser({ name, phone, pillar = 'orator', preferredTime = '08:00' }) {
+  const normalised = _normalizePhone(phone);
+  const db = _db();
+  // Check existing
+  const { rows: existing } = await db.query('SELECT * FROM users WHERE phone = $1', [normalised]);
+  if (existing.length) return _rowToUser(existing[0]);
+
+  const token = crypto.randomUUID();
+  const { rows } = await db.query(
+    `INSERT INTO users (token, name, phone, pillar, preferred_time)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (phone) DO NOTHING
+     RETURNING *`,
+    [token, name, normalised, pillar, preferredTime]
+  );
+  if (rows.length) return _rowToUser(rows[0]);
+  // Race: another insert won; fetch the winner
+  const { rows: winner } = await db.query('SELECT * FROM users WHERE phone = $1', [normalised]);
+  return _rowToUser(winner[0]);
+}
+
+async function _pg_getUserByPhone(phone) {
+  const normalised = _normalizePhone(phone);
+  const { rows } = await _db().query('SELECT * FROM users WHERE phone = $1', [normalised]);
+  return _rowToUser(rows[0] || null);
+}
+
+async function _pg_getUserByToken(token) {
+  const { rows } = await _db().query('SELECT * FROM users WHERE token = $1', [token]);
+  return _rowToUser(rows[0] || null);
+}
+
+async function _pg_getUserByEmail(email) {
+  if (!email) return null;
+  const target = String(email).trim().toLowerCase();
+  if (!target) return null;
+  const { rows } = await _db().query(
+    'SELECT * FROM users WHERE LOWER(email) = $1',
+    [target]
+  );
+  return _rowToUser(rows[0] || null);
+}
+
+async function _pg_getUserBySubscriptionId(subscriptionId) {
+  if (!subscriptionId) return null;
+  const { rows } = await _db().query(
+    'SELECT * FROM users WHERE razorpay_subscription_id = $1',
+    [subscriptionId]
+  );
+  return _rowToUser(rows[0] || null);
+}
+
+async function _pg_updateUser(phone, updates) {
+  const normalised = _normalizePhone(phone);
+  // Map JS camelCase keys to SQL snake_case columns
+  const colMap = {
+    name: 'name', email: 'email', pillar: 'pillar', preferredTime: 'preferred_time',
+    day: 'day', status: 'status', trialComplete: 'trial_complete',
+    awaitingResponse: 'awaiting_response', lastMorningSent: 'last_morning_sent',
+    lastEveningSent: 'last_evening_sent', scores: 'scores', wordsLearned: 'words_learned',
+    chronicle: 'chronicle', rank: 'rank', streak: 'streak', subscriptionStatus: 'subscription_status',
+    razorpayCustomerId: 'razorpay_customer_id', razorpaySubscriptionId: 'razorpay_subscription_id',
+    notes: 'notes', oratorActive: 'orator_active', lookmaxxingActive: 'lookmaxxing_active',
+    mirrorLevel: 'mirror_level', auditSessionId: 'audit_session_id',
+    lookmaxxingStartedAt: 'lookmaxxing_started_at', oratorStartedAt: 'orator_started_at',
+    pushSubscription: 'push_subscription', lookmaxBaseline: 'lookmax_baseline',
+    lookmaxStreak: 'lookmax_streak', lookmaxProtocolStreak: 'lookmax_protocol_streak',
+    lastMirrorAt: 'last_mirror_at', magicLinkToken: 'magic_link_token',
+    magicLinkExpiresAt: 'magic_link_expires_at', magicLinkConsumedAt: 'magic_link_consumed_at',
+    firstLoginToken: 'first_login_token', firstLoginExpiresAt: 'first_login_expires_at',
+    firstLoginConsumedAt: 'first_login_consumed_at', lastActive: 'last_active',
+  };
+
+  const setClauses = [];
+  const params = [];
+  for (const [key, val] of Object.entries(updates)) {
+    const col = colMap[key];
+    if (!col) continue; // skip unknown keys
+    // JSONB columns
+    if (['scores', 'wordsLearned', 'chronicle', 'pushSubscription', 'lookmaxBaseline'].includes(key)) {
+      setClauses.push(`${col} = $${params.push(JSON.stringify(val))}`);
+    } else {
+      setClauses.push(`${col} = $${params.push(val)}`);
+    }
+  }
+  if (!setClauses.length) return _pg_getUserByPhone(phone);
+
+  // Always bump updated_at + last_active
+  setClauses.push(`updated_at = NOW()`);
+  setClauses.push(`last_active = NOW()`);
+
+  params.push(normalised);
+  const { rows } = await _db().query(
+    `UPDATE users SET ${setClauses.join(', ')} WHERE phone = $${params.length} RETURNING *`,
+    params
+  );
+  return _rowToUser(rows[0] || null);
+}
+
+async function _pg_addScore(phone, scoreEntry) {
+  const normalised = _normalizePhone(phone);
+  const db = _db();
+  const { rows } = await db.query('SELECT scores FROM users WHERE phone = $1', [normalised]);
+  if (!rows.length) return null;
+  const scores = rows[0].scores || [];
+  scores.push({ ...scoreEntry, timestamp: new Date().toISOString() });
+  await db.query('UPDATE users SET scores = $1, updated_at = NOW() WHERE phone = $2', [JSON.stringify(scores), normalised]);
+  return _pg_getUserByPhone(phone);
+}
+
+async function _pg_addChronicle(phone, entry) {
+  const normalised = _normalizePhone(phone);
+  const db = _db();
+  const { rows } = await db.query('SELECT chronicle FROM users WHERE phone = $1', [normalised]);
+  if (!rows.length) return null;
+  const chronicle = rows[0].chronicle || [];
+  chronicle.push({ ...entry, timestamp: new Date().toISOString() });
+  await db.query('UPDATE users SET chronicle = $1, updated_at = NOW() WHERE phone = $2', [JSON.stringify(chronicle), normalised]);
+  return _pg_getUserByPhone(phone);
+}
+
+async function _pg_addWordsLearned(phone, words, day) {
+  const normalised = _normalizePhone(phone);
+  const db = _db();
+  const { rows } = await db.query('SELECT words_learned FROM users WHERE phone = $1', [normalised]);
+  if (!rows.length) return null;
+  const existing = rows[0].words_learned || [];
+  for (const w of words) {
+    if (!existing.find((wl) => wl.word === w.word)) {
+      existing.push({ word: w.word, definition: w.definition, day, status: 'forged' });
+    }
+  }
+  await db.query('UPDATE users SET words_learned = $1, updated_at = NOW() WHERE phone = $2', [JSON.stringify(existing), normalised]);
+  return _pg_getUserByPhone(phone);
+}
+
+async function _pg_masterWord(phone, word) {
+  const normalised = _normalizePhone(phone);
+  const db = _db();
+  const { rows } = await db.query('SELECT words_learned FROM users WHERE phone = $1', [normalised]);
+  if (!rows.length) return null;
+  const list = rows[0].words_learned || [];
+  const w = list.find((wl) => wl.word.toUpperCase() === word.toUpperCase());
+  if (w) w.status = 'mastered';
+  await db.query('UPDATE users SET words_learned = $1, updated_at = NOW() WHERE phone = $2', [JSON.stringify(list), normalised]);
+  return _pg_getUserByPhone(phone);
+}
+
+async function _pg_getAllUsers() {
+  const { rows } = await _db().query('SELECT * FROM users ORDER BY enrolled_at');
+  const map = {};
+  for (const row of rows) {
+    const u = _rowToUser(row);
+    map[u.phone] = u;
+  }
+  return map;
+}
+
+async function _pg_getUsersForTime(timeStr) {
+  const { rows } = await _db().query(
+    `SELECT * FROM users WHERE status = 'active' AND preferred_time = $1
+     AND awaiting_response = FALSE AND day < 7`,
+    [timeStr]
+  );
+  return rows.map(_rowToUser);
+}
+
+async function _pg_getUsersForEveningTime(timeStr) {
+  const { rows } = await _db().query(
+    `SELECT * FROM users WHERE status = 'active' AND day >= 1 AND day <= 7`,
+    []
+  );
+  return rows.map(_rowToUser).filter((u) => {
+    const [h] = u.preferredTime.split(':').map(Number);
+    const eveningH = (h + 12) % 24;
+    const eveningTime = `${String(eveningH).padStart(2, '0')}:${u.preferredTime.split(':')[1]}`;
+    return eveningTime === timeStr;
+  });
+}
+
+/**
+ * Wrap a JSON-backed function with a pg-backed async alternative.
+ * When pg backend is active: calls pgFn. On error: logs and falls back to jsonFn.
+ * When json backend: calls jsonFn directly (sync OK).
+ */
+function _adapt(jsonFn, pgFn) {
+  return function (...args) {
+    if (!_usesPg()) return jsonFn(...args);
+    const dbLib = _db();
+    if (!dbLib.isAvailable()) return jsonFn(...args);
+    return Promise.resolve(pgFn(...args)).catch((err) => {
+      const { createLogger } = require('../lib/log'); // eslint-disable-line global-require
+      createLogger('USER-MODEL').error('PG-FALLBACK', `${pgFn.name}: ${err.message} — falling back to JSON`);
+      return jsonFn(...args);
+    });
+  };
+}
+
 module.exports = {
-  createUser,
-  getUserByPhone,
-  getUserByToken,
-  getUserByEmail,
-  getUserBySubscriptionId,
-  updateUser,
-  addScore,
-  addChronicle,
-  addWordsLearned,
-  masterWord,
-  computeAuraStatus,
-  getAllUsers,
-  getUsersForTime,
-  getUsersForEveningTime,
+  createUser:              _adapt(createUser,              _pg_createUser),
+  getUserByPhone:          _adapt(getUserByPhone,          _pg_getUserByPhone),
+  getUserByToken:          _adapt(getUserByToken,          _pg_getUserByToken),
+  getUserByEmail:          _adapt(getUserByEmail,          _pg_getUserByEmail),
+  getUserBySubscriptionId: _adapt(getUserBySubscriptionId, _pg_getUserBySubscriptionId),
+  updateUser:              _adapt(updateUser,              _pg_updateUser),
+  addScore:                _adapt(addScore,                _pg_addScore),
+  addChronicle:            _adapt(addChronicle,            _pg_addChronicle),
+  addWordsLearned:         _adapt(addWordsLearned,         _pg_addWordsLearned),
+  masterWord:              _adapt(masterWord,              _pg_masterWord),
+  computeAuraStatus,        // pure function, no storage — same for both
+  getAllUsers:              _adapt(getAllUsers,              _pg_getAllUsers),
+  getUsersForTime:         _adapt(getUsersForTime,         _pg_getUsersForTime),
+  getUsersForEveningTime:  _adapt(getUsersForEveningTime,  _pg_getUsersForEveningTime),
+  // Waitlist remains JSON-backed (low volume, not user-critical)
   addToWaitlist,
   getWaitlist,
 };

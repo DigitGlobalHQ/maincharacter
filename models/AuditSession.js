@@ -109,11 +109,119 @@ function purgeExpired() {
   return purged;
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// POSTGRES ADAPTER (B0)
+// ═══════════════════════════════════════════════════════════════════
+
+function _usesPg() {
+  const be = process.env.MC_DB_BACKEND;
+  if (be === 'pg' || be === 'postgres') return true;
+  if (be === 'jsonl' || be === 'json') return false;
+  return !!process.env.DATABASE_URL;
+}
+
+function _db() {
+  return require('../lib/db'); // eslint-disable-line global-require
+}
+
+function _rowToSession(row) {
+  if (!row) return null;
+  return {
+    sessionToken:    row.session_token,
+    intent:          row.intent || null,
+    reAudit:         row.re_audit,
+    userToken:       row.user_token || null,
+    quizAnswers:     row.quiz_answers || null,
+    photos:          row.photos || [],
+    aestheticScores: row.aesthetic_scores || null,
+    weakestAxis:     row.weakest_axis || null,
+    hairReceding:    row.hair_receding || null,
+    diagnosis:       row.diagnosis || null,
+    createdAt:       row.created_at,
+    completedAt:     row.completed_at || null,
+  };
+}
+
+async function _pg_createSession(opts = {}) {
+  const sessionToken = crypto.randomUUID();
+  const { rows } = await _db().query(
+    `INSERT INTO audit_sessions
+       (session_token, intent, re_audit, user_token, photos,
+        expires_at)
+     VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '24 hours')
+     RETURNING *`,
+    [sessionToken, opts.intent || null, !!opts.reAudit, opts.userToken || null, '[]']
+  );
+  return _rowToSession(rows[0]);
+}
+
+async function _pg_getSession(sessionToken) {
+  if (!sessionToken) return null;
+  const { rows } = await _db().query(
+    `SELECT * FROM audit_sessions WHERE session_token = $1 AND expires_at > NOW()`,
+    [sessionToken]
+  );
+  const s = rows[0] ? _rowToSession(rows[0]) : null;
+  return s;
+}
+
+async function _pg_updateSession(sessionToken, updates) {
+  const colMap = {
+    quizAnswers: 'quiz_answers', photos: 'photos',
+    aestheticScores: 'aesthetic_scores', weakestAxis: 'weakest_axis',
+    hairReceding: 'hair_receding', diagnosis: 'diagnosis',
+    completedAt: 'completed_at', createdAt: 'created_at', userToken: 'user_token',
+  };
+  const jsonbCols = new Set(['quizAnswers', 'photos', 'aestheticScores', 'hairReceding']);
+
+  const setClauses = [];
+  const params = [];
+  for (const [key, val] of Object.entries(updates)) {
+    const col = colMap[key];
+    if (!col) continue;
+    if (jsonbCols.has(key)) {
+      setClauses.push(`${col} = $${params.push(JSON.stringify(val))}`);
+    } else {
+      setClauses.push(`${col} = $${params.push(val)}`);
+    }
+  }
+  if (!setClauses.length) return _pg_getSession(sessionToken);
+
+  params.push(sessionToken);
+  const { rows } = await _db().query(
+    `UPDATE audit_sessions SET ${setClauses.join(', ')}
+     WHERE session_token = $${params.length} AND expires_at > NOW()
+     RETURNING *`,
+    params
+  );
+  return _rowToSession(rows[0] || null);
+}
+
+async function _pg_purgeExpired() {
+  const { rowCount } = await _db().query(
+    `DELETE FROM audit_sessions WHERE expires_at <= NOW()`
+  );
+  return rowCount || 0;
+}
+
+function _adapt(jsonFn, pgFn) {
+  return function (...args) {
+    if (!_usesPg()) return jsonFn(...args);
+    const dbLib = _db();
+    if (!dbLib.isAvailable()) return jsonFn(...args);
+    return Promise.resolve(pgFn(...args)).catch((err) => {
+      const { createLogger } = require('../lib/log'); // eslint-disable-line global-require
+      createLogger('AUDIT-SESSION').error('PG-FALLBACK', `${pgFn.name}: ${err.message}`);
+      return jsonFn(...args);
+    });
+  };
+}
+
 module.exports = {
-  createSession,
-  getSession,
-  updateSession,
-  purgeExpired,
+  createSession: _adapt(createSession, _pg_createSession),
+  getSession:    _adapt(getSession,    _pg_getSession),
+  updateSession: _adapt(updateSession, _pg_updateSession),
+  purgeExpired:  _adapt(purgeExpired,  _pg_purgeExpired),
   isExpired,
   TTL_MS,
 };

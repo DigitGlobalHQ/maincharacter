@@ -70,4 +70,75 @@ function count() {
   return load().length;
 }
 
-module.exports = { add, getAll, count };
+// ═══════════════════════════════════════════════════════════════════
+// POSTGRES ADAPTER (B0)
+// ═══════════════════════════════════════════════════════════════════
+
+function _usesPg() {
+  const be = process.env.MC_DB_BACKEND;
+  if (be === 'pg' || be === 'postgres') return true;
+  if (be === 'jsonl' || be === 'json') return false;
+  return !!process.env.DATABASE_URL;
+}
+
+function _db() {
+  return require('../lib/db'); // eslint-disable-line global-require
+}
+
+function _rowToEntry(row) {
+  if (!row) return null;
+  return {
+    id:                       row.id,
+    phone:                    row.phone,
+    name:                     row.name || '',
+    sourceAuditSessionToken:  row.source_audit_session_token || null,
+    createdAt:                row.created_at,
+  };
+}
+
+async function _pg_add({ phone, name = '', sourceAuditSessionToken = null } = {}) {
+  const normalised = normalizePhone(phone);
+  // Try to insert; ON CONFLICT means it was already there
+  const { rows } = await _db().query(
+    `INSERT INTO early_access (phone, name, source_audit_session_token)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (phone) DO NOTHING
+     RETURNING *`,
+    [normalised, String(name || '').trim(), sourceAuditSessionToken || null]
+  );
+  if (rows.length) return { added: true, entry: _rowToEntry(rows[0]) };
+  // Conflict: fetch existing
+  const { rows: existing } = await _db().query(
+    'SELECT * FROM early_access WHERE phone = $1', [normalised]
+  );
+  return { added: false, entry: _rowToEntry(existing[0]) };
+}
+
+async function _pg_getAll() {
+  const { rows } = await _db().query('SELECT * FROM early_access ORDER BY created_at');
+  return rows.map(_rowToEntry);
+}
+
+async function _pg_count() {
+  const { rows } = await _db().query('SELECT COUNT(*)::int AS n FROM early_access');
+  return rows[0].n;
+}
+
+function _adapt(jsonFn, pgFn) {
+  return function (...args) {
+    if (!_usesPg()) return jsonFn(...args);
+    const dbLib = _db();
+    if (!dbLib.isAvailable()) return jsonFn(...args);
+    return Promise.resolve(pgFn(...args)).catch((err) => {
+      const { createLogger } = require('../lib/log'); // eslint-disable-line global-require
+      createLogger('EARLY-ACCESS').error('PG-FALLBACK', `${pgFn.name}: ${err.message}`);
+      return jsonFn(...args);
+    });
+  };
+}
+
+module.exports = {
+  add:    _adapt(add,    _pg_add),
+  getAll: _adapt(getAll, _pg_getAll),
+  count:  _adapt(count,  _pg_count),
+};

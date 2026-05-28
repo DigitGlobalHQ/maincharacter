@@ -166,8 +166,8 @@
         <div class="hint">Your protocol arrives here. Indian mobile, 10 digits.</div>
       </div>
       <div class="field">
-        <label for="email">Email <span style="opacity:.6">(optional — for receipts)</span></label>
-        <input id="email" type="email" autocomplete="email" placeholder="you@example.com" />
+        <label for="email" id="emailLabel">Email <span id="emailOptional" style="opacity:.6">(optional — for receipts)</span></label>
+        <input id="email" type="email" autocomplete="email" placeholder="you@example.com" data-required="lookmax" />
       </div>
       <div class="err" id="err"></div>
       <div class="selected-note" id="selectedNote">Choose a path above to begin.</div>
@@ -215,7 +215,22 @@
     return p; // expect 10 digits now
   }
 
+  // Update the email field's aria-required + optional label hint when pillar selection changes.
+  function updateEmailRequirement(pillars) {
+    const emailInput = document.getElementById('email');
+    const emailOptional = document.getElementById('emailOptional');
+    const required = pillars.includes('lookmaxxing');
+    if (required) {
+      emailInput.setAttribute('aria-required', 'true');
+      if (emailOptional) emailOptional.style.display = 'none';
+    } else {
+      emailInput.removeAttribute('aria-required');
+      if (emailOptional) emailOptional.style.display = '';
+    }
+  }
+
   async function begin(pillars) {
+    updateEmailRequirement(pillars);
     if (submitting) return;
     const err = document.getElementById('err');
     err.textContent = '';
@@ -224,8 +239,15 @@
     const phone10 = normalizePhone(document.getElementById('phone').value);
     const email = document.getElementById('email').value.trim();
 
+    const requireEmail = pillars.includes('lookmaxxing');
     if (!name) { err.textContent = 'Your name, first.'; return; }
     if (!/^[6-9]\d{9}$/.test(phone10)) { err.textContent = 'Enter a valid 10-digit Indian mobile number.'; return; }
+    // Email is required when Lookmaxxing is selected (login arrives via email magic link)
+    if (requireEmail && !email) {
+      err.textContent = 'Email is required for Lookmaxxing — you enter the work through it.';
+      document.getElementById('email').focus();
+      return;
+    }
     if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = 'That email does not look right.'; return; }
 
     const phone = '91' + phone10;

@@ -32,6 +32,12 @@ Each model export is wrapped by `_adapt(jsonFn, pgFn)`: when pg is active and
 healthy the pg implementation runs, but any pg error transparently falls back to
 the JSON path so a transient Neon outage never breaks the funnel.
 
+### events.js uses its own pg.Pool (separate from lib/db.js)
+The events sink already had its own pool before B0; we kept it separate to
+avoid coupling the high-frequency fire-and-forget write path to the same pool
+that handles transactional user mutations — pool exhaustion in one path cannot
+stall the other.
+
 ---
 
 ## 2026-05-26 — Overnight autopilot run

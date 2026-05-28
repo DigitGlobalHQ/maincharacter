@@ -163,7 +163,11 @@ function getPgPool() {
   try {
     // pg may not be installed yet — graceful skip
     const { Pool } = require('pg'); // eslint-disable-line global-require
-    _pgPool = new Pool({ connectionString: process.env.DATABASE_URL, max: 5 });
+    _pgPool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false }, // Neon requires SSL
+      max: 5,
+    });
     _pgPool.on('error', (err) => {
       log.error('EVENTS-PG', `Pool error: ${err.message}`);
     });
@@ -224,7 +228,7 @@ async function _write(name, rawProps, userToken, anonId) {
     if (pool) {
       try {
         await pool.query(
-          `INSERT INTO events (id, ts, name, user_id, anon_id, props_json)
+          `INSERT INTO events (id, ts, name, user_id, anon_id, props)
            VALUES ($1, $2, $3, $4, $5, $6)`,
           [row.id, row.ts, row.name, row.userToken, row.anonId, JSON.stringify(row.props)]
         );
@@ -331,7 +335,7 @@ async function _queryPg(opts, pool) {
     name: r.name,
     userToken: r.user_id,
     anonId: r.anon_id,
-    props: typeof r.props_json === 'string' ? JSON.parse(r.props_json) : r.props_json,
+    props: typeof r.props === 'string' ? JSON.parse(r.props) : (r.props || {}),
   }));
 }
 

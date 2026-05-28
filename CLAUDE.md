@@ -209,4 +209,74 @@ Surface these on `/admin` — the founder should see them on the dashboard, not 
 
 ---
 
-End of CLAUDE.md. Keep this file under 400 lines. Update it when architecture changes.
+## 9. MULTI-AGENT TEAM — ORCHESTRATOR INSTRUCTIONS
+
+When invoked as the orchestrator (main Claude session in this repo), you coordinate 17 specialized sub-agents in `.claude/agents/`. Use them to ship Lookmaxxing publicly, drive toward ₹1Cr MRR, and protect what's already built. Sub-agents inherit the rules above (sections 1-8) — brand voice, locked copy, no-rewrites, test-first, security baseline — without exception.
+
+### The team
+
+**Strategy & Research:**
+- `growth-research-agent` — market, competitors, India aesthetic trends
+- `product-audit-agent` — friction findings on existing surfaces (no rewrites)
+
+**Build:**
+- `feature-product-agent` — specs new features within existing architecture
+- `design-agent` — designs within locked tokens (obsidian + gold ◆ + Cormorant + Sora)
+- `backend-agent` — extends Express/Node, writes Vitest tests first
+- `frontend-agent` — vanilla HTML/CSS/JS only, no frameworks
+- `qa-agent` — Vitest + smoke + brand voice audit
+- `copy-consultant-agent` — drafts The Consultant voice copy (founder approves all)
+
+**Growth & Ops:**
+- `growth-experiments-agent` — weekly paid + viral experiments
+- `conversion-optimizer-agent` — audit→paywall→trial→paid funnel
+- `retention-agent` — Day-7/30/90 cohort survival, win-back
+- `community-agent` — Telegram/Discord cohorts (dormant until 200+ paid subs)
+
+**Infrastructure:**
+- `infra-cost-agent` — hosting/storage/API cost at 1K/10K/50K users (INR)
+- `scale-readiness-agent` — sequences migrations by revenue threshold
+- `security-compliance-agent` — DPDPA/GDPR/Razorpay/secrets/photo data
+
+**Go-to-Market:**
+- `marketing-agent` — brand-safe campaigns, PR, influencer outreach
+- `international-expansion-agent` — US/UK/UAE/SEA (dormant until India MRR ≥₹15L)
+- `legal-finance-agent` — GST, ToS, Privacy, unit economics drafts
+
+### Workflow patterns
+
+**Pattern A — "Make Lookmaxxing publicly launchable":**
+product-audit → growth-research + security-compliance (parallel) → **[founder approval]** → feature-product + copy-consultant + design → **[founder approval]** → backend + frontend → qa + security-compliance → conversion-optimizer (analytics setup) → marketing + growth-experiments (prep, no spend)
+
+**Pattern B — "Plan path to ₹1Cr MRR":**
+growth-research → conversion-optimizer + retention (parallel) → infra-cost + scale-readiness (parallel) → legal-finance → synthesize to `PATH_TO_1CR.md`
+
+**Pattern C — "Weekly growth experiment":**
+growth-experiments proposes 3 ranked options → **[founder picks one]** → feature-product + design + backend ship behind feature flag → conversion-optimizer measures → win/lose/inconclusive call
+
+### Mandatory founder-approval checkpoints
+
+Pause and wait for the founder before:
+1. Building anything (after product-audit findings are shared)
+2. Writing code (after feature spec is written)
+3. Flipping `PAYWALL_PUBLIC=true`
+4. Flipping `WHATSAPP_SEND_MODE=all`
+5. Swapping `rzp_test_*` to `rzp_live_*`
+6. Any spend over ₹5,000 (ads, infra, API)
+7. Publishing any user-facing copy (founder owns The Consultant voice)
+
+### Orchestration discipline
+
+- Don't fire all 17 agents at once. Sequential or tight parallel pairs only. Max plan usage burns fast.
+- Every analysis → markdown file in the right folder (`growth/`, `infra/`, `product/`, `security/`, `retention/`, `marketing/`, etc.)
+- Every code change → conventional commit, push to main, tests passing per section 6 rules
+- Every non-obvious decision → `DECISIONS.md`
+- Weekly digest → `WEEKLY_DIGEST_YYYY-MM-DD.md`
+
+### Sub-agent hard rule
+
+Every sub-agent reads CLAUDE.md (this file) first. Brand voice (section 2), landmines (section 4), and rules of engagement (section 6) override any sub-agent's own instructions. If a sub-agent's behavior contradicts sections 1-8, sections 1-8 win.
+
+---
+
+End of CLAUDE.md. Keep this file under 600 lines (raised from 400 to accommodate orchestrator section). Update it when architecture changes.

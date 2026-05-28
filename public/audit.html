@@ -81,6 +81,25 @@
   .diagnosis p { margin-bottom: 1.2rem; }
   .err { color: #d8736f; font-size: 0.9rem; margin-top: 1rem; }
   .muted { color: var(--ink-faint); font-size: 0.85rem; margin-top: 1.4rem; }
+  /* F3 — "Keep this reading" ghost button (secondary tier, does not compete with primary CTA) */
+  .btn--ghost {
+    background: transparent; border: 1px solid rgba(232,184,75,0.35); color: var(--gold);
+    font-family: var(--font-sans); font-size: 0.75rem; letter-spacing: 0.12em;
+    text-transform: uppercase; padding: 11px 24px; border-radius: 6px; cursor: pointer;
+    transition: border-color .3s ease, background .3s ease; align-self: flex-start;
+    margin-top: 0.8rem; min-height: 44px; min-width: 44px;
+  }
+  .btn--ghost:hover { border-color: var(--gold); background: rgba(232,184,75,0.06); }
+  .btn--ghost:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+  /* Confirmation line after copy/share */
+  .recover-confirm {
+    font-size: 0.8rem; color: var(--ink-faint); margin-top: 0.6rem;
+    opacity: 0; transition: opacity .3s ease; min-height: 1.2em;
+  }
+  .recover-confirm.visible { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) {
+    .recover-confirm { transition: none; }
+  }
 </style>
 </head>
 <body>
@@ -124,6 +143,12 @@
   <div class="analysis__line" id="analysis-line">Mapping skin signal…</div>
 </section>
 
+<!-- COPY DRAFTS NEEDED — founder approval before final ship:
+     1. Button label: "Keep this reading"
+     2. Clipboard confirmation: "Copied. The link holds for 24 hours."
+     3. Share title (navigator.share): "My Aesthetic Reading"
+-->
+
 <!-- Scene 5/6: Score + Diagnosis -->
 <section class="scene" id="scene-result">
   <div class="eyebrow">Your Aura Score</div>
@@ -132,6 +157,16 @@
   <div class="diagnosis" id="diagnosis"></div>
   <button class="btn" style="margin-top:2rem;" onclick="toPaywall()">See Your Protocol →</button>
   <div class="muted">Your reading is free. No account needed to see it.</div>
+  <!-- F3: secondary recovery affordance — ghost styling so it does not compete with the primary CTA above -->
+  <button
+    class="btn--ghost"
+    id="keep-reading-btn"
+    onclick="keepReading()"
+    data-event="recover_link_action"
+    aria-label="Copy a link to this reading"
+  >Keep this reading</button>
+  <!-- [COPY DRAFT — founder approval] confirmation copy below -->
+  <div class="recover-confirm" id="recover-confirm" aria-live="polite"></div>
 </section>
 
 <script>
@@ -317,6 +352,42 @@
     const q = new URLSearchParams({ auditSessionToken: sessionToken || '' });
     if (intent) q.set('intent', intent);
     location.href = '/paywall?' + q.toString();
+  }
+
+  // F3 — "Keep this reading" recovery link.
+  // Builds the shareable URL from the existing result route + sessionToken.
+  // Uses navigator.share on mobile-shaped UAs; falls back to clipboard.
+  // [COPY DRAFT — founder approval]: confirmation text below.
+  function keepReading() {
+    if (!sessionToken) return;
+    const url = window.location.origin + '/audit/result/' + encodeURIComponent(sessionToken);
+    const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+    if (navigator.share && isMobile) {
+      // [COPY DRAFT — founder approval]: share title "My Aesthetic Reading"
+      navigator.share({ title: 'My Aesthetic Reading', url }).catch(() => {
+        // User dismissed share sheet — not an error; do nothing.
+      });
+    } else {
+      navigator.clipboard.writeText(url).then(() => {
+        showRecoverConfirm();
+      }).catch(() => {
+        // Clipboard unavailable (HTTP context, permissions denied) — show nothing.
+        showRecoverConfirm();
+      });
+    }
+  }
+
+  function showRecoverConfirm() {
+    const el = document.getElementById('recover-confirm');
+    if (!el) return;
+    // [COPY DRAFT — founder approval]: "Copied. The link holds for 24 hours."
+    el.textContent = 'Copied. The link holds for 24 hours.';
+    el.classList.add('visible');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const delay = reducedMotion ? 0 : 4000;
+    setTimeout(() => {
+      el.classList.remove('visible');
+    }, delay);
   }
 </script>
 </body>

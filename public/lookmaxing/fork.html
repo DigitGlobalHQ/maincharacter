@@ -1,0 +1,453 @@
+<!-- COPY APPROVED 2026-05-29 (autopilot per spec §1): see product/copy-lookmaxing-audit.md -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>What Follows the Reading — MainCharacter</title>
+  <link rel="stylesheet" href="/lookmaxing/tokens.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=Sora:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    .lm-nav {
+      display: flex;
+      align-items: center;
+      height: 56px;
+      padding: 0 var(--mc-sp-4);
+      border-bottom: 1px solid var(--mc-line);
+    }
+    .lm-nav__brand {
+      font-family: var(--mc-font-sans);
+      font-size: var(--mc-fs-eyebrow);
+      font-weight: 500;
+      letter-spacing: var(--mc-ls-xwide);
+      text-transform: uppercase;
+      color: var(--mc-silver-mid);
+    }
+
+    .lm-fork-body {
+      max-width: var(--mc-content-max);
+      margin: 0 auto;
+      padding: var(--mc-sp-7) var(--mc-sp-4) var(--mc-sp-8);
+    }
+    @media (min-width: 768px) { .lm-fork-body { padding: var(--mc-sp-8) var(--mc-sp-6); } }
+
+    .lm-fork-header {
+      text-align: center;
+      margin-bottom: var(--mc-sp-7);
+    }
+    .lm-fork-eyebrow { margin: 0 0 var(--mc-sp-4); }
+    .lm-fork-heading {
+      font-size: var(--mc-fs-h1);
+      margin: 0 0 var(--mc-sp-3);
+    }
+    .lm-fork-sub {
+      font-size: var(--mc-fs-body);
+      color: var(--mc-silver-mid);
+      max-width: 52ch;
+      margin: 0 auto;
+    }
+
+    /* ── Cards ── */
+    .lm-fork-cards {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--mc-sp-5);
+    }
+    @media (min-width: 768px) { .lm-fork-cards { grid-template-columns: 1fr 1fr; } }
+
+    .lm-fork-card {
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      animation: fadeIn var(--mc-dur-base) var(--mc-ease-out) forwards;
+      transition: border-color var(--mc-dur-base) var(--mc-ease);
+    }
+    .lm-fork-card:nth-child(1) { animation-delay: 0ms; }
+    .lm-fork-card:nth-child(2) { animation-delay: 80ms; }
+    .lm-fork-card:hover { border-color: var(--mc-line-strong); }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .lm-fork-card__title {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-small);
+      letter-spacing: var(--mc-ls-wide);
+      text-transform: uppercase;
+      color: var(--mc-silver-bright);
+      margin: 0 0 var(--mc-sp-2);
+    }
+    .lm-fork-card__divider {
+      height: 1px;
+      background: var(--mc-line-strong);
+      margin: 0 0 var(--mc-sp-4);
+    }
+    .lm-fork-card__body {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-mid);
+      line-height: var(--mc-lh-body);
+      margin: 0 0 var(--mc-sp-4);
+    }
+    .lm-fork-card__what-label {
+      font-family: var(--mc-font-mono);
+      font-size: 0.625rem;
+      letter-spacing: var(--mc-ls-xwide);
+      text-transform: uppercase;
+      color: var(--mc-silver-faint);
+      margin: 0 0 var(--mc-sp-3);
+    }
+    .lm-fork-card__bullets {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 var(--mc-sp-5);
+      flex: 1;
+    }
+    .lm-fork-card__bullets li {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-mono);
+      color: var(--mc-silver-mid);
+      padding: var(--mc-sp-2) 0;
+      border-bottom: 1px solid var(--mc-line);
+      display: flex;
+      gap: var(--mc-sp-2);
+    }
+    .lm-fork-card__bullets li::before { content: '·'; color: var(--mc-silver-faint); }
+    .lm-fork-card__price {
+      font-family: var(--mc-font-sans);
+      font-size: var(--mc-fs-eyebrow);
+      letter-spacing: var(--mc-ls-xwide);
+      text-transform: uppercase;
+      color: var(--mc-silver-faint);
+      margin: 0 0 var(--mc-sp-3);
+    }
+    .lm-fork-card__credit {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-faint);
+      margin: var(--mc-sp-2) 0 0;
+    }
+    .lm-fork-card__btn { width: 100%; }
+    .lm-fork-card__waitlist-btn { width: 100%; margin-top: var(--mc-sp-2); }
+    .lm-fork-card__soon {
+      font-family: var(--mc-font-serif);
+      font-style: italic;
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-dim);
+      margin: var(--mc-sp-3) 0 0;
+      text-align: center;
+    }
+
+    /* ── Bottom eyebrow ── */
+    .lm-fork-pace {
+      text-align: center;
+      margin-top: var(--mc-sp-7);
+    }
+
+    /* ── Waitlist modal (reused from index.html pattern) ── */
+    .lm-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--mc-sp-4);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--mc-dur-base) var(--mc-ease);
+    }
+    .lm-modal-backdrop.is-open { opacity: 1; pointer-events: auto; }
+    .lm-waitlist-modal {
+      width: 100%;
+      max-width: 420px;
+      box-shadow: var(--mc-shadow-elevated);
+      transform: scale(0.96);
+      transition: transform var(--mc-dur-base) var(--mc-ease-out);
+      position: relative;
+    }
+    .lm-modal-backdrop.is-open .lm-waitlist-modal { transform: scale(1); }
+    .lm-wl-eyebrow { margin: 0 0 var(--mc-sp-3); }
+    .lm-wl-heading { font-size: var(--mc-fs-h2); margin: 0 0 var(--mc-sp-3); }
+    .lm-wl-body { font-size: var(--mc-fs-small); color: var(--mc-silver-mid); margin: 0 0 var(--mc-sp-4); line-height: var(--mc-lh-body); }
+    .lm-wl-input {
+      width: 100%;
+      background: var(--mc-elev-2);
+      border: 1px solid var(--mc-line-strong);
+      border-radius: var(--mc-r-2);
+      color: var(--mc-silver-bright);
+      font-family: var(--mc-font-sans);
+      font-size: var(--mc-fs-body);
+      padding: var(--mc-sp-3) var(--mc-sp-4);
+      margin-bottom: var(--mc-sp-4);
+    }
+    .lm-wl-input::placeholder { color: var(--mc-silver-faint); }
+    .lm-wl-input:focus-visible { outline: 2px solid var(--mc-light-point); outline-offset: 2px; }
+    .lm-wl-submit { width: 100%; }
+    .lm-wl-close {
+      position: absolute;
+      top: var(--mc-sp-4);
+      right: var(--mc-sp-4);
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: 0;
+      color: var(--mc-silver-dim);
+      cursor: pointer;
+      font-size: 1.25rem;
+      border-radius: var(--mc-r-2);
+    }
+    .lm-wl-close:hover { color: var(--mc-silver-bright); }
+    .lm-wl-close:focus-visible { outline: 2px solid var(--mc-light-point); }
+    .lm-wl-success {
+      font-family: var(--mc-font-serif);
+      font-style: italic;
+      font-size: var(--mc-fs-h3);
+      color: var(--mc-silver-bright);
+      text-align: center;
+      padding: var(--mc-sp-5) 0;
+    }
+    .lm-wl-error { font-size: var(--mc-fs-small); color: var(--mc-error); margin-bottom: var(--mc-sp-3); }
+
+    .lm-footer {
+      border-top: 1px solid var(--mc-line);
+      padding: var(--mc-sp-5) var(--mc-sp-4);
+      text-align: center;
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-faint);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .lm-fork-card { animation: none; opacity: 1; }
+      .lm-waitlist-modal { transition: none; }
+    }
+  </style>
+</head>
+<body class="lookmaxing">
+
+<nav class="lm-nav" aria-label="Main navigation">
+  <a href="/lookmaxing" class="lm-nav__brand" aria-label="MainCharacter">◆ MAINCHARACTER</a>
+</nav>
+
+<main class="lm-fork-body">
+  <header class="lm-fork-header">
+    <p class="mc-eyebrow lm-fork-eyebrow">WHAT FOLLOWS THE READING</p>
+    <h1 class="mc-serif mc-serif--italic lm-fork-heading">Two ways forward.</h1>
+    <p class="lm-fork-sub">The reading told you what to aim at. Pick how you want to aim.</p>
+  </header>
+
+  <div class="lm-fork-cards" role="list">
+
+    <!-- Card 1: Trial -->
+    <div class="mc-card lm-fork-card" role="listitem">
+      <h2 class="lm-fork-card__title">Seven days, free.</h2>
+      <div class="lm-fork-card__divider"></div>
+      <p class="lm-fork-card__body">The Daily Mirror. A reading every morning, a protocol every evening, for one week.</p>
+      <p class="lm-fork-card__what-label">── what you get ──</p>
+      <ul class="lm-fork-card__bullets" aria-label="Trial features">
+        <li>Daily mirror prompt</li>
+        <li>Sharpness score</li>
+        <li>7-day reveal video</li>
+      </ul>
+      <p class="lm-fork-card__price">FREE</p>
+      <p class="lm-fork-card__credit">₹99 already credited.</p>
+      <button
+        class="mc-btn-primary mc-light-point-glow lm-fork-card__btn"
+        id="trial-btn"
+        data-event="lookmaxing_fork_trial"
+        aria-label="Start the 7-day free trial"
+        disabled
+        aria-disabled="true"
+      >
+        Start the trial →
+      </button>
+      <p class="lm-fork-card__soon" id="trial-soon">The Daily Mirror opens tomorrow. Your seat is held. ◆</p>
+    </div>
+
+    <!-- Card 2: Premium -->
+    <div class="mc-card lm-fork-card" role="listitem">
+      <h2 class="lm-fork-card__title">Go premium.</h2>
+      <div class="lm-fork-card__divider"></div>
+      <p class="lm-fork-card__body">The full Lookmaxxing protocol from day one. Daily Mirror, weekly Reveal, monthly re-audit.</p>
+      <p class="lm-fork-card__what-label">── what you get ──</p>
+      <ul class="lm-fork-card__bullets" aria-label="Premium features">
+        <li>90-day rebuild</li>
+        <li>Weekly reveal video</li>
+        <li>Day-30 re-audit</li>
+        <li>PDF library access</li>
+      </ul>
+      <p class="lm-fork-card__price">₹1,499 / MONTH</p>
+      <p class="lm-fork-card__credit">₹99 credited toward month one.</p>
+      <button
+        class="mc-btn-primary lm-fork-card__btn"
+        id="premium-btn"
+        data-event="lookmaxing_fork_premium"
+        aria-label="Go premium"
+        disabled
+        aria-disabled="true"
+      >
+        Go premium →
+      </button>
+      <button
+        class="mc-btn-ghost lm-fork-card__waitlist-btn"
+        id="premium-waitlist-btn"
+        aria-label="Join the premium waitlist"
+        aria-haspopup="dialog"
+        aria-expanded="false"
+      >
+        Join the waitlist →
+      </button>
+      <p class="lm-fork-card__soon">The premium door opens tomorrow. Your seat is held. ◆</p>
+    </div>
+
+  </div>
+
+  <div class="lm-fork-pace">
+    <p class="mc-eyebrow">AT YOUR OWN PACE</p>
+  </div>
+</main>
+
+<footer class="lm-footer">
+  <p>◆ MainCharacter · The Consultant</p>
+</footer>
+
+<!-- Waitlist modal (premium) -->
+<div
+  class="lm-modal-backdrop"
+  id="premium-modal"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="premium-modal-heading"
+  aria-hidden="true"
+>
+  <div class="mc-card lm-waitlist-modal">
+    <button class="lm-wl-close" id="premium-modal-close" aria-label="Close">&#215;</button>
+    <p class="mc-eyebrow lm-wl-eyebrow">THE PREMIUM DOOR</p>
+    <h2 id="premium-modal-heading" class="mc-serif mc-serif--italic lm-wl-heading">Hold a seat.</h2>
+    <p class="lm-wl-body">A note when it opens. No marketing in between.</p>
+    <div id="premium-wl-form">
+      <div id="premium-wl-error" class="lm-wl-error" hidden role="alert" aria-live="polite"></div>
+      <label for="premium-wl-email" class="mc-eyebrow" style="display:block;margin-bottom:var(--mc-sp-2);">Email</label>
+      <input
+        type="email"
+        id="premium-wl-email"
+        class="lm-wl-input"
+        placeholder="you@somewhere.com"
+        autocomplete="email"
+      >
+      <button
+        class="mc-btn-primary lm-wl-submit"
+        id="premium-wl-submit"
+        data-event="lookmaxing_fork_premium"
+        data-event-props='{"step":"waitlist_submit"}'
+      >
+        Hold my seat ◆
+      </button>
+    </div>
+    <div id="premium-wl-success" class="lm-wl-success" hidden aria-live="polite">
+      Held. We will write once, when it opens. ◆
+    </div>
+  </div>
+</div>
+
+<script src="/track.js" defer></script>
+<script>
+(function () {
+  'use strict';
+
+  // Feature flag: flip to true when Daily Mirror is live
+  var TRIAL_LIVE = typeof window.LOOKMAX_TRIAL_LIVE !== 'undefined' ? window.LOOKMAX_TRIAL_LIVE : false;
+
+  var trialBtn = document.getElementById('trial-btn');
+  var trialSoon = document.getElementById('trial-soon');
+
+  if (TRIAL_LIVE) {
+    trialBtn.disabled = false;
+    trialBtn.removeAttribute('aria-disabled');
+    trialSoon.hidden = true;
+    trialBtn.addEventListener('click', function () {
+      window.location.href = '/lookmax/mirror';
+    });
+  }
+
+  // Premium button — always fires KPI even when disabled
+  var premiumBtn = document.getElementById('premium-btn');
+  premiumBtn.addEventListener('click', function () {
+    if (window.mc) window.mc.track('lookmaxing_fork_premium', {});
+  });
+
+  // Waitlist modal
+  var modal = document.getElementById('premium-modal');
+  var openBtn = document.getElementById('premium-waitlist-btn');
+  var closeBtn = document.getElementById('premium-modal-close');
+  var submitBtn = document.getElementById('premium-wl-submit');
+  var emailInput = document.getElementById('premium-wl-email');
+  var formWrap = document.getElementById('premium-wl-form');
+  var successEl = document.getElementById('premium-wl-success');
+  var errorEl = document.getElementById('premium-wl-error');
+
+  function openModal() {
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    openBtn.setAttribute('aria-expanded', 'true');
+    setTimeout(function () { emailInput.focus(); }, 300);
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    openBtn.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+    openBtn.focus();
+  }
+
+  openBtn.addEventListener('click', openModal);
+  closeBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
+  });
+
+  submitBtn.addEventListener('click', function () {
+    var email = emailInput.value.trim();
+    if (!email || !email.includes('@')) {
+      errorEl.textContent = 'A valid email address is required.';
+      errorEl.hidden = false;
+      emailInput.focus();
+      return;
+    }
+    errorEl.hidden = true;
+    submitBtn.setAttribute('aria-busy', 'true');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '· · ·';
+
+    fetch('/api/waitlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, source: 'premium_waitlist' }),
+    })
+      .then(function () {
+        formWrap.hidden = true;
+        successEl.hidden = false;
+      })
+      .catch(function () {
+        submitBtn.setAttribute('aria-busy', 'false');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Hold my seat ◆';
+        errorEl.textContent = 'Something went wrong. Try again.';
+        errorEl.hidden = false;
+      });
+  });
+}());
+</script>
+</body>
+</html>

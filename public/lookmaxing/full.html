@@ -1,0 +1,639 @@
+<!-- COPY APPROVED 2026-05-29 (autopilot per spec §1): see product/copy-lookmaxing-audit.md -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Reading, Resolved — MainCharacter</title>
+  <link rel="stylesheet" href="/lookmaxing/tokens.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=Sora:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    .lm-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      padding: 0 var(--mc-sp-4);
+      border-bottom: 1px solid var(--mc-line);
+    }
+    .lm-nav__brand {
+      font-family: var(--mc-font-sans);
+      font-size: var(--mc-fs-eyebrow);
+      font-weight: 500;
+      letter-spacing: var(--mc-ls-xwide);
+      text-transform: uppercase;
+      color: var(--mc-silver-mid);
+    }
+    .lm-nav__badge {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-mono);
+      color: var(--mc-silver-dim);
+    }
+
+    .lm-full-body {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: var(--mc-sp-6) var(--mc-sp-4) var(--mc-sp-8);
+    }
+
+    /* ── Score header ── */
+    .lm-full-score-header {
+      display: flex;
+      align-items: baseline;
+      gap: var(--mc-sp-4);
+      margin-bottom: var(--mc-sp-5);
+    }
+    .lm-full-score-num {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-h2);
+      background: var(--mc-silver-gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+    .lm-full-score-sep { color: var(--mc-silver-faint); }
+    .lm-full-rank {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-mono);
+      letter-spacing: var(--mc-ls-xwide);
+      text-transform: uppercase;
+      color: var(--mc-silver-mid);
+    }
+
+    /* ── Section labels ── */
+    .lm-section-label {
+      display: flex;
+      align-items: center;
+      gap: var(--mc-sp-3);
+      margin: var(--mc-sp-6) 0 var(--mc-sp-4);
+    }
+    .lm-section-label__text {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-eyebrow);
+      letter-spacing: var(--mc-ls-xwide);
+      text-transform: uppercase;
+      color: var(--mc-silver-dim);
+      white-space: nowrap;
+    }
+    .lm-section-label__line { flex: 1; height: 1px; background: var(--mc-line); }
+
+    /* ── Block intro ── */
+    .lm-block-intro {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-dim);
+      margin: 0 0 var(--mc-sp-4);
+    }
+
+    /* ── Decomposition ── */
+    .lm-decomp-group { margin-bottom: var(--mc-sp-6); }
+    .lm-decomp-group__header {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-eyebrow);
+      letter-spacing: var(--mc-ls-xwide);
+      text-transform: uppercase;
+      color: var(--mc-silver-faint);
+      margin: 0 0 var(--mc-sp-2);
+    }
+    .lm-metric-row {
+      display: flex;
+      align-items: center;
+      gap: var(--mc-sp-4);
+      padding: var(--mc-sp-2) 0;
+      border-bottom: 1px solid var(--mc-line);
+      flex-wrap: wrap;
+    }
+    @media (min-width: 768px) { .lm-metric-row { flex-wrap: nowrap; } }
+    .lm-metric-label {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-bright);
+      min-width: 120px;
+    }
+    .lm-tick-bar {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 2px;
+      flex: 1;
+      min-width: 100px;
+    }
+    .lm-tick {
+      height: 4px;
+      border-radius: 1px;
+      background: var(--mc-silver-ghost);
+    }
+    .lm-tick.is-filled { background: var(--mc-silver-bright); }
+    .lm-metric-score {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-mono);
+      color: var(--mc-silver-bright);
+      min-width: 2em;
+      text-align: right;
+    }
+    .lm-metric-cause {
+      font-family: var(--mc-font-serif);
+      font-style: italic;
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-mid);
+      margin: var(--mc-sp-2) 0 0;
+      padding-left: var(--mc-sp-4);
+    }
+    .lm-metric-cause::before { content: '─ '; color: var(--mc-silver-faint); }
+    .lm-metric-fix {
+      font-family: var(--mc-font-serif);
+      font-style: italic;
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-mid);
+      margin: var(--mc-sp-1) 0 var(--mc-sp-3);
+      padding-left: var(--mc-sp-4);
+    }
+    .lm-metric-fix::before { content: '─ '; color: var(--mc-silver-faint); }
+
+    /* ── Biggest lever ── */
+    .lm-lever {
+      font-size: var(--mc-fs-h3);
+      margin: 0 0 var(--mc-sp-3);
+    }
+
+    /* ── Quests ── */
+    .lm-quests { list-style: none; padding: 0; margin: 0; }
+    .lm-quests li {
+      padding: var(--mc-sp-3) 0;
+      border-bottom: 1px solid var(--mc-line);
+      font-size: var(--mc-fs-body);
+      color: var(--mc-silver-bright);
+      display: flex;
+      align-items: flex-start;
+      gap: var(--mc-sp-3);
+    }
+    .lm-quests li::before { content: '·'; color: var(--mc-silver-faint); flex-shrink: 0; margin-top: 2px; }
+
+    /* ── Style & colour ── */
+    .lm-style-row {
+      display: flex;
+      gap: var(--mc-sp-4);
+      padding: var(--mc-sp-3) 0;
+      border-bottom: 1px solid var(--mc-line);
+      font-size: var(--mc-fs-small);
+    }
+    .lm-style-row__key {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-mono);
+      letter-spacing: var(--mc-ls-wide);
+      color: var(--mc-silver-faint);
+      text-transform: uppercase;
+      min-width: 80px;
+    }
+    .lm-style-row__val { color: var(--mc-silver-bright); line-height: var(--mc-lh-body); }
+    .lm-palette-swatches { display: flex; gap: var(--mc-sp-2); flex-wrap: wrap; }
+    .lm-swatch {
+      width: 24px;
+      height: 24px;
+      border-radius: var(--mc-r-1);
+      border: 1px solid var(--mc-line-strong);
+      background: var(--mc-silver-mid);
+    }
+
+    /* ── Starter plan ── */
+    .lm-plan-row {
+      padding: var(--mc-sp-4) 0;
+      border-bottom: 1px solid var(--mc-line);
+    }
+    .lm-plan-day {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-eyebrow);
+      letter-spacing: var(--mc-ls-xwide);
+      color: var(--mc-silver-faint);
+      text-transform: uppercase;
+      margin: 0 0 var(--mc-sp-2);
+    }
+    .lm-plan-task {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-bright);
+      margin: 0 0 var(--mc-sp-1);
+    }
+    .lm-plan-label {
+      font-family: var(--mc-font-mono);
+      font-size: 0.625rem;
+      letter-spacing: var(--mc-ls-wide);
+      color: var(--mc-silver-faint);
+      text-transform: uppercase;
+    }
+
+    /* ── PDF download ── */
+    .lm-pdf-section {
+      margin: var(--mc-sp-7) 0 var(--mc-sp-5);
+      text-align: center;
+    }
+    .lm-pdf-btn {
+      min-width: 240px;
+    }
+    .lm-pdf-sub {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-faint);
+      margin: var(--mc-sp-2) 0 0;
+    }
+
+    /* ── Continue ── */
+    .lm-continue-section {
+      text-align: center;
+      margin-top: var(--mc-sp-5);
+    }
+
+    /* ── Scroll reveal ── */
+    .lm-reveal {
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity var(--mc-dur-base) var(--mc-ease),
+                  transform var(--mc-dur-base) var(--mc-ease);
+    }
+    .lm-reveal.is-visible { opacity: 1; transform: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .lm-reveal { opacity: 1; transform: none; transition: none; }
+    }
+
+    /* Error state */
+    .lm-state-error {
+      text-align: center;
+      padding: var(--mc-sp-8) var(--mc-sp-4);
+    }
+
+    .lm-footer {
+      border-top: 1px solid var(--mc-line);
+      padding: var(--mc-sp-5) var(--mc-sp-4);
+      text-align: center;
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-faint);
+    }
+  </style>
+</head>
+<body class="lookmaxing">
+
+<nav class="lm-nav" aria-label="Full report navigation">
+  <a href="/lookmaxing" class="lm-nav__brand" aria-label="MainCharacter">◆ MAINCHARACTER</a>
+  <span class="lm-nav__badge mc-mono" id="nav-badge">FULL</span>
+</nav>
+
+<!-- Loading -->
+<div id="full-loading" class="lm-full-body" aria-live="polite">
+  <div style="text-align:center;padding:var(--mc-sp-8) var(--mc-sp-4);">
+    <p class="mc-mono" style="color:var(--mc-silver-faint);">Loading the full reading. Hold.</p>
+  </div>
+</div>
+
+<!-- Error -->
+<div id="full-error" class="lm-full-body lm-state-error" hidden>
+  <p class="mc-serif mc-serif--italic" style="font-size:var(--mc-fs-h3);margin-bottom:var(--mc-sp-4);">Could not load the reading.</p>
+  <a href="/lookmaxing" class="mc-btn-primary" aria-label="Return to start">Return to start →</a>
+</div>
+
+<!-- Full report -->
+<main id="full-report" class="lm-full-body" hidden aria-labelledby="full-report-heading">
+
+  <p class="mc-eyebrow" style="margin-bottom:var(--mc-sp-3);">THE READING, RESOLVED</p>
+  <h1 id="full-report-heading" class="mc-serif mc-serif--italic" style="font-size:var(--mc-fs-h1);margin:0 0 var(--mc-sp-5);">Here is what the room sees.</h1>
+
+  <div class="lm-full-score-header">
+    <span class="lm-full-score-num" id="full-score-num">—</span>
+    <span class="lm-full-score-sep" aria-hidden="true">·</span>
+    <span class="lm-full-rank" id="full-rank">—</span>
+  </div>
+
+  <!-- First impression -->
+  <div class="lm-section-label lm-reveal" aria-hidden="true">
+    <span class="lm-section-label__text">FIRST IMPRESSION</span>
+    <div class="lm-section-label__line"></div>
+  </div>
+  <p class="mc-serif mc-serif--italic lm-reveal" id="full-impression" style="font-size:var(--mc-fs-h3);margin:0 0 var(--mc-sp-6);max-width:var(--mc-reading-max);"></p>
+
+  <!-- Decomposition -->
+  <div class="lm-section-label lm-reveal" aria-hidden="true">
+    <span class="lm-section-label__text">DECOMPOSITION</span>
+    <div class="lm-section-label__line"></div>
+  </div>
+  <p class="lm-block-intro lm-reveal">Every region the room reads, scored against the same axes.</p>
+  <div id="decomp-container" class="lm-reveal"></div>
+
+  <!-- Biggest lever -->
+  <div class="lm-section-label lm-reveal" aria-hidden="true">
+    <span class="lm-section-label__text">YOUR BIGGEST LEVER</span>
+    <div class="lm-section-label__line"></div>
+  </div>
+  <p class="lm-block-intro lm-reveal">One axis moves the rest. This is yours.</p>
+  <p class="mc-serif mc-serif--italic lm-lever lm-reveal" id="full-lever"></p>
+
+  <!-- Quests -->
+  <div class="lm-section-label lm-reveal" aria-hidden="true">
+    <span class="lm-section-label__text">THE QUESTS</span>
+    <div class="lm-section-label__line"></div>
+  </div>
+  <p class="lm-block-intro lm-reveal">Specific tasks. Drawn from the safe library. Tied to what your reading actually says.</p>
+  <ul class="lm-quests lm-reveal" id="full-quests" aria-label="Your quests"></ul>
+
+  <!-- Style & colour -->
+  <div class="lm-section-label lm-reveal" aria-hidden="true">
+    <span class="lm-section-label__text">STYLE &amp; COLOUR</span>
+    <div class="lm-section-label__line"></div>
+  </div>
+  <p class="lm-block-intro lm-reveal">Geometry first. Then the palette that does the work with it.</p>
+  <div id="full-style" class="lm-reveal"></div>
+
+  <!-- 7-day plan -->
+  <div class="lm-section-label lm-reveal" aria-hidden="true">
+    <span class="lm-section-label__text">THE 7-DAY STARTER PLAN</span>
+    <div class="lm-section-label__line"></div>
+  </div>
+  <p class="lm-block-intro lm-reveal">Morning and evening, for the first week. The protocol begins here.</p>
+  <div id="full-plan" class="lm-reveal"></div>
+
+  <hr class="mc-hairline" style="margin:var(--mc-sp-7) 0;">
+
+  <!-- PDF download -->
+  <div class="lm-pdf-section lm-reveal">
+    <button
+      class="mc-btn-primary mc-light-point-glow lm-pdf-btn"
+      id="pdf-btn"
+      data-event="lookmaxing_pdf_downloaded"
+      aria-label="Download the PDF of your reading"
+    >
+      Download the PDF
+    </button>
+    <p class="lm-pdf-sub">Yours to keep. The link holds 24 hours.</p>
+  </div>
+
+  <!-- Continue -->
+  <div class="lm-continue-section lm-reveal">
+    <p class="mc-eyebrow" style="margin-bottom:var(--mc-sp-4);">WHAT'S NEXT</p>
+    <a href="/lookmaxing/fork" class="mc-btn-ghost" aria-label="Continue to next steps">Continue →</a>
+  </div>
+
+</main>
+
+<footer class="lm-footer">
+  <p>◆ MainCharacter · The Consultant</p>
+</footer>
+
+<script src="/track.js" defer></script>
+<script>
+(function () {
+  'use strict';
+
+  var pathParts = window.location.pathname.split('/').filter(Boolean);
+  // URL: /lookmaxing/audit/:id/full
+  var auditId = pathParts[pathParts.length - 2] || '';
+
+  var loadingEl = document.getElementById('full-loading');
+  var errorEl = document.getElementById('full-error');
+  var reportEl = document.getElementById('full-report');
+  var navBadge = document.getElementById('nav-badge');
+
+  if (auditId) {
+    navBadge.textContent = 'AUDIT · ' + auditId.slice(0, 9).toUpperCase() + ' · FULL';
+  }
+
+  function loadFull() {
+    fetch('/api/lookmaxing/audit/' + auditId)
+      .then(function (res) {
+        if (!res.ok) throw new Error('failed ' + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        loadingEl.hidden = true;
+        if (!data.paid) {
+          // Not paid — redirect to free view
+          window.location.href = '/lookmaxing/audit/' + auditId;
+          return;
+        }
+        renderFull(data.report || {});
+      })
+      .catch(function () {
+        loadingEl.hidden = true;
+        errorEl.hidden = false;
+      });
+  }
+
+  function renderFull(report) {
+    reportEl.hidden = false;
+
+    document.getElementById('full-score-num').textContent = report.auraScore || '—';
+    document.getElementById('full-rank').textContent = capitalise(report.rank || '');
+    document.getElementById('full-impression').textContent = report.firstImpression || '';
+
+    // Decomposition
+    var decomp = report.decomposition || {};
+    var decompEl = document.getElementById('decomp-container');
+    var DECOMP_LABELS = {
+      skin: 'SKIN',
+      hair: 'HAIR',
+      jawAndFace: 'JAW &amp; FACE',
+      bodyAndPosture: 'BODY &amp; POSTURE',
+      lifestyleSignals: 'LIFESTYLE SIGNALS',
+    };
+    Object.keys(DECOMP_LABELS).forEach(function (key) {
+      var metrics = decomp[key];
+      if (!metrics || !metrics.length) return;
+      var group = document.createElement('div');
+      group.className = 'lm-decomp-group lm-reveal';
+      var header = document.createElement('p');
+      header.className = 'lm-decomp-group__header';
+      header.innerHTML = DECOMP_LABELS[key];
+      group.appendChild(header);
+      var hairline = document.createElement('hr');
+      hairline.className = 'mc-hairline mc-hairline--bright';
+      hairline.style.margin = '0 0 var(--mc-sp-2)';
+      group.appendChild(hairline);
+      metrics.forEach(function (m) {
+        var row = document.createElement('div');
+        row.className = 'lm-metric-row';
+        var label = document.createElement('span');
+        label.className = 'lm-metric-label';
+        label.textContent = formatMetricName(m.metric || '');
+        row.appendChild(label);
+        var tickBar = document.createElement('div');
+        tickBar.className = 'lm-tick-bar';
+        tickBar.setAttribute('role', 'meter');
+        tickBar.setAttribute('aria-valuenow', m.score || 0);
+        tickBar.setAttribute('aria-valuemin', 0);
+        tickBar.setAttribute('aria-valuemax', 100);
+        tickBar.setAttribute('aria-label', (m.metric || '') + ' score ' + (m.score || 0));
+        var filledCount = Math.round((m.score || 0) / 10);
+        for (var i = 0; i < 10; i++) {
+          var tick = document.createElement('div');
+          tick.className = 'lm-tick' + (i < filledCount ? ' is-filled' : '');
+          tickBar.appendChild(tick);
+        }
+        row.appendChild(tickBar);
+        var scoreEl = document.createElement('span');
+        scoreEl.className = 'lm-metric-score';
+        scoreEl.textContent = m.score || 0;
+        row.appendChild(scoreEl);
+        group.appendChild(row);
+        if (m.cause) {
+          var cause = document.createElement('p');
+          cause.className = 'lm-metric-cause';
+          cause.textContent = m.cause;
+          group.appendChild(cause);
+        }
+        if (m.fix) {
+          var fix = document.createElement('p');
+          fix.className = 'lm-metric-fix';
+          fix.textContent = m.fix;
+          group.appendChild(fix);
+        }
+      });
+      decompEl.appendChild(group);
+    });
+
+    // Biggest lever
+    var lever = report.biggestLever || {};
+    var leverEl = document.getElementById('full-lever');
+    if (lever.rationale) {
+      leverEl.textContent = lever.rationale;
+    } else if (lever.metric) {
+      leverEl.textContent = formatMetricName(lever.metric) + ' — score ' + (lever.score || 0);
+    }
+
+    // Quests
+    var quests = report.quests || [];
+    var questsEl = document.getElementById('full-quests');
+    quests.forEach(function (q) {
+      var li = document.createElement('li');
+      li.textContent = q.task || '';
+      questsEl.appendChild(li);
+    });
+
+    // Style & colour
+    var style = report.styleAndColour || {};
+    var styleEl = document.getElementById('full-style');
+    if (style.haircut) {
+      var hRow = document.createElement('div');
+      hRow.className = 'lm-style-row';
+      hRow.innerHTML = '<span class="lm-style-row__key">Haircut</span><span class="lm-style-row__val">' + esc(style.haircut) + '</span>';
+      styleEl.appendChild(hRow);
+    }
+    if (style.palette && style.palette.length) {
+      var pRow = document.createElement('div');
+      pRow.className = 'lm-style-row';
+      var pLabel = document.createElement('span');
+      pLabel.className = 'lm-style-row__key';
+      pLabel.textContent = 'Palette';
+      var pVal = document.createElement('div');
+      pVal.className = 'lm-style-row__val';
+      var swatches = document.createElement('div');
+      swatches.className = 'lm-palette-swatches';
+      swatches.setAttribute('aria-label', 'Colour palette suggestions');
+      style.palette.forEach(function (colour) {
+        var sw = document.createElement('div');
+        sw.className = 'lm-swatch';
+        // Clamp to greyscale — safety rule per design spec
+        sw.style.background = 'var(--mc-silver-mid)';
+        sw.setAttribute('aria-label', colour);
+        sw.title = colour;
+        swatches.appendChild(sw);
+      });
+      pVal.appendChild(swatches);
+      pRow.appendChild(pLabel);
+      pRow.appendChild(pVal);
+      styleEl.appendChild(pRow);
+    }
+    if (style.avoid && style.avoid.length) {
+      var aRow = document.createElement('div');
+      aRow.className = 'lm-style-row';
+      aRow.innerHTML = '<span class="lm-style-row__key">Avoid</span><span class="lm-style-row__val">' + esc(style.avoid.join(', ')) + '</span>';
+      styleEl.appendChild(aRow);
+    }
+
+    // Starter plan
+    var plan = report.starterPlan || [];
+    var planEl = document.getElementById('full-plan');
+    plan.forEach(function (day) {
+      var row = document.createElement('div');
+      row.className = 'lm-plan-row';
+      row.innerHTML =
+        '<p class="lm-plan-day">Day ' + esc(String(day.day)) + '</p>' +
+        '<p class="lm-plan-label">Morning</p>' +
+        '<p class="lm-plan-task">' + esc(day.morning || '') + '</p>' +
+        '<p class="lm-plan-label">Evening</p>' +
+        '<p class="lm-plan-task">' + esc(day.evening || '') + '</p>';
+      planEl.appendChild(row);
+    });
+
+    // Reveal animation
+    initReveal();
+
+    if (window.mc) {
+      window.mc.track('lookmaxing_audit_viewed', { resolution: 'full' });
+    }
+  }
+
+  // ── Tick bar reveal on scroll ──
+  function initReveal() {
+    var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion) {
+      document.querySelectorAll('.lm-reveal').forEach(function (el) { el.classList.add('is-visible'); });
+      return;
+    }
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) {
+          e.target.classList.add('is-visible');
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.lm-reveal').forEach(function (el) { observer.observe(el); });
+  }
+
+  // ── PDF download ──
+  document.getElementById('pdf-btn').addEventListener('click', function () {
+    var btn = this;
+    btn.setAttribute('aria-busy', 'true');
+    btn.disabled = true;
+    btn.textContent = 'Building the PDF. Hold.';
+
+    fetch('/api/lookmaxing/audit/' + auditId + '/pdf')
+      .then(function (res) {
+        if (!res.ok) throw new Error('pdf failed');
+        return res.json();
+      })
+      .then(function (data) {
+        btn.setAttribute('aria-busy', 'false');
+        btn.disabled = false;
+        btn.textContent = 'PDF ready. ◆';
+        if (data.url) {
+          window.open(data.url, '_blank', 'noopener,noreferrer');
+        }
+      })
+      .catch(function () {
+        btn.setAttribute('aria-busy', 'false');
+        btn.disabled = false;
+        btn.textContent = 'Download the PDF';
+      });
+  });
+
+  function capitalise(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+  function formatMetricName(s) {
+    return s.replace(/([A-Z])/g, ' $1').replace(/^./, function (c) { return c.toUpperCase(); });
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  if (auditId) {
+    loadFull();
+  } else {
+    loadingEl.hidden = true;
+    errorEl.hidden = false;
+  }
+}());
+</script>
+</body>
+</html>

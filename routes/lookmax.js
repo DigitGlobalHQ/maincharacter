@@ -321,6 +321,30 @@ router.get('/dashboard', (req, res) => {
   // NOW-3: cross-sell eligibility
   const crossSellEligible = computeCrossSellEligible(user, status);
 
+  // NOW-2 / B2: Day-30 re-audit eligibility (pull-based; see routes/reaudit.js).
+  // Dashboard surfaces the "Sit for the second reading." card when eligible.
+  // The full eligibility computation lives in reaudit.js; we inline a lean
+  // version here so the dashboard has no hard import on the reaudit route.
+  const baselineAvailable = !!(user.lookmaxBaseline && user.lookmaxBaseline.scores);
+  const daysSincePayment = user.lookmaxxingStartedAt
+    ? Math.floor((Date.now() - new Date(user.lookmaxxingStartedAt).getTime()) / 86400000)
+    : 0;
+  const reauditEligible = !!(user.lookmaxxingActive) && daysSincePayment >= 30 && baselineAvailable;
+  const reauditCompleted = !!(user.reAuditCompletedThisCycle);
+
+  // CTA routing: pre-completion → /audit?reAudit=true; post-completion → reveal.
+  const reauditCta = reauditCompleted
+    ? `/lookmax/reveal?mode=day30`
+    : `/audit?reAudit=true&token=${user.token}`;
+
+  const reauditStatus = {
+    eligible: reauditEligible,
+    completed: reauditCompleted,
+    daysSincePayment,
+    baselineAvailable,
+    cta: reauditCta,
+  };
+
   res.json({
     user: { name: user.name, oratorActive: status.oratorActive, lookmaxxingActive: status.lookmaxxingActive, auraPlusPlus: status.auraPlusPlus },
     today: {
@@ -332,6 +356,7 @@ router.get('/dashboard', (req, res) => {
     streak: user.lookmaxStreak || 0,
     mirrorLevel: user.mirrorLevel || 'raw',
     crossSellEligible,
+    reauditStatus,
   });
 });
 

@@ -101,6 +101,7 @@ function emailThrottleAllow(normalised) {
 const ipCooldown = new Map(); // ip → {fails, cooldownUntil}
 const COOLDOWN_FAIL_MAX = 3;
 const COOLDOWN_DURATION_MS = 5 * 60 * 1000;
+const IP_COOLDOWN_MAP_CAP = 10_000;
 
 function ipCooled(ip) {
   const s = ipCooldown.get(ip);
@@ -114,6 +115,11 @@ function ipRecordFailure(ip) {
   s.fails += 1;
   if (s.fails >= COOLDOWN_FAIL_MAX) {
     s.cooldownUntil = Date.now() + COOLDOWN_DURATION_MS;
+  }
+  // Prune the map when it gets large (keep newest entries by evicting oldest key)
+  if (ipCooldown.size >= IP_COOLDOWN_MAP_CAP) {
+    const firstKey = ipCooldown.keys().next().value;
+    ipCooldown.delete(firstKey);
   }
   ipCooldown.set(ip, s);
 }

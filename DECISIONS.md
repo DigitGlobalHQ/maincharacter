@@ -361,3 +361,22 @@ The mirror button default label is "Open the mirror" and the supporting line is
 non-approved defaults — a FOUNDER COPY comment in the HTML flags them for replacement.
 Rationale: spec §5 and brief §4 both state confirmed.mirrorCta is [FOUNDER COPY];
 frontend-agent must not improvise in The Consultant's voice for this slot.
+
+---
+
+## 2026-05-28 — Security follow-up: L-1 + L-2 from audit-login-gate.md
+
+### L-1: maskEmail applied to all three DRY-RUN/suppressed/blocked log lines in services/email.js
+`services/email.js` now requires `maskEmail` from `lib/log-mask.js` and wraps every `${to}` in
+the three guard-path log calls (mode=off, allowlist-blocked, credentials-not-configured). All
+other log calls in the file that emit `to` are on the live-send success/error paths and remain
+unmasked (the email must appear in send-confirmed / error logs for operator debugging). Rationale:
+log-mask.js already existed as the canonical helper; the three guard paths fire in DRY-RUN which
+is the high-frequency state before Resend is configured — these are the highest-risk lines.
+
+### L-2: IP_COOLDOWN_MAP_CAP = 10_000 + FIFO eviction added to ipRecordFailure
+`routes/lookmax-auth.js` mirrors the `emailThrottle` FIFO cap pattern exactly: constant defined
+alongside the map, eviction fires inside `ipRecordFailure` before each `ipCooldown.set()` call.
+The eviction runs only when the map is at-or-above cap (10k entries, ~800KB worst-case), which
+is unreachable under normal operation but closes the theoretical unbounded-growth asymmetry
+the audit flagged.

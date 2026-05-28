@@ -1,0 +1,862 @@
+<!-- COPY APPROVED 2026-05-29 (autopilot per spec §1): see product/copy-lookmaxing-audit.md -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Reading — MainCharacter</title>
+  <link rel="stylesheet" href="/lookmaxing/tokens.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=Sora:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    .lm-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      padding: 0 var(--mc-sp-4);
+      border-bottom: 1px solid var(--mc-line);
+    }
+    .lm-nav__brand {
+      font-family: var(--mc-font-sans);
+      font-size: var(--mc-fs-eyebrow);
+      font-weight: 500;
+      letter-spacing: var(--mc-ls-xwide);
+      text-transform: uppercase;
+      color: var(--mc-silver-mid);
+    }
+    .lm-nav__id {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-mono);
+      color: var(--mc-silver-dim);
+    }
+
+    .lm-audit-body {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: var(--mc-sp-6) var(--mc-sp-4) var(--mc-sp-8);
+    }
+
+    /* ── Loading skeleton ── */
+    @keyframes shimmer {
+      0%   { background-position: -400px 0; }
+      100% { background-position: 400px 0; }
+    }
+    .lm-skeleton {
+      background: linear-gradient(90deg, var(--mc-silver-ghost) 25%, var(--mc-silver-faint) 50%, var(--mc-silver-ghost) 75%);
+      background-size: 800px 100%;
+      animation: shimmer 1.2s ease-in-out infinite;
+      border-radius: var(--mc-r-1);
+    }
+    .lm-skeleton--score { width: 200px; height: 120px; margin: 0 auto; }
+    .lm-skeleton--rank { width: 100px; height: 16px; margin: var(--mc-sp-3) auto; }
+    .lm-skeleton--line { height: 14px; margin-bottom: var(--mc-sp-2); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .lm-skeleton { animation: none; background: var(--mc-silver-ghost); }
+    }
+
+    /* ── Score ── */
+    .lm-score-block {
+      text-align: center;
+      margin-bottom: var(--mc-sp-6);
+    }
+    .lm-score-eyebrow { margin: 0 0 var(--mc-sp-4); }
+    .lm-score-numeral {
+      font-family: var(--mc-font-serif);
+      font-size: var(--mc-fs-display);
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      background: var(--mc-silver-gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      display: block;
+      margin: 0 0 var(--mc-sp-3);
+    }
+    @media (min-width: 768px) { .lm-score-numeral { font-size: 8rem; } }
+    .lm-score-sub {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-mono);
+      letter-spacing: var(--mc-ls-wide);
+      color: var(--mc-silver-faint);
+    }
+    .lm-rank-label {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-mono);
+      letter-spacing: var(--mc-ls-xwide);
+      text-transform: uppercase;
+      color: var(--mc-silver-mid);
+      margin: var(--mc-sp-2) 0;
+      display: block;
+    }
+
+    /* ── Section labels ── */
+    .lm-section-label {
+      display: flex;
+      align-items: center;
+      gap: var(--mc-sp-3);
+      margin: var(--mc-sp-6) 0 var(--mc-sp-4);
+    }
+    .lm-section-label__text {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-eyebrow);
+      letter-spacing: var(--mc-ls-xwide);
+      text-transform: uppercase;
+      color: var(--mc-silver-dim);
+      white-space: nowrap;
+    }
+    .lm-section-label__line { flex: 1; height: 1px; background: var(--mc-line); }
+
+    /* ── First impression ── */
+    .lm-impression {
+      text-align: center;
+      margin-bottom: var(--mc-sp-6);
+    }
+    .lm-impression__framing {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-dim);
+      margin: 0 0 var(--mc-sp-3);
+    }
+    .lm-impression__line {
+      font-size: var(--mc-fs-h3);
+      max-width: var(--mc-reading-max);
+      margin: 0 auto;
+    }
+
+    /* ── Signals ── */
+    .lm-signals {
+      margin-bottom: var(--mc-sp-6);
+    }
+    .lm-signals__framing {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-dim);
+      margin: 0 0 var(--mc-sp-4);
+    }
+    .lm-signals__row {
+      display: flex;
+      align-items: center;
+      gap: var(--mc-sp-4);
+      flex-wrap: wrap;
+    }
+    .lm-signal-item {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-mono);
+      letter-spacing: var(--mc-ls-wide);
+      text-transform: uppercase;
+      color: var(--mc-silver-bright);
+    }
+    .lm-signal-sep { color: var(--mc-silver-faint); }
+
+    /* ── Blur wrappers ── */
+    .lm-blur-block { margin-bottom: var(--mc-sp-5); }
+    .lm-blur-block__header {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-eyebrow);
+      letter-spacing: var(--mc-ls-xwide);
+      text-transform: uppercase;
+      color: var(--mc-silver-dim);
+      margin: 0 0 var(--mc-sp-3);
+    }
+
+    /* ── Paywall gate CTA (centred over first blurred block) ── */
+    .lm-gate-teaser {
+      text-align: center;
+      margin: var(--mc-sp-6) 0 var(--mc-sp-4);
+    }
+    .lm-gate-teaser__line {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-dim);
+      margin: 0 0 var(--mc-sp-4);
+    }
+    .lm-gate-teaser__sub {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-faint);
+      margin: var(--mc-sp-2) 0 0;
+    }
+
+    /* ── Sticky mobile unlock CTA ── */
+    .lm-sticky-unlock {
+      position: fixed;
+      bottom: var(--mc-sp-4);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--mc-line-strong);
+      border-radius: var(--mc-r-2);
+      padding: var(--mc-sp-3) var(--mc-sp-5);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--mc-dur-base) var(--mc-ease);
+      white-space: nowrap;
+    }
+    .lm-sticky-unlock.is-visible { opacity: 1; pointer-events: auto; }
+
+    /* ── Error / empty states ── */
+    .lm-state-error {
+      text-align: center;
+      padding: var(--mc-sp-8) var(--mc-sp-4);
+    }
+    .lm-state-error__line {
+      font-size: var(--mc-fs-h3);
+      margin-bottom: var(--mc-sp-5);
+    }
+
+    /* ── Paywall modal (Surface 6) ── */
+    .lm-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--mc-sp-4);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--mc-dur-base) var(--mc-ease);
+    }
+    .lm-modal-backdrop.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .lm-paywall-modal {
+      width: 100%;
+      max-width: 480px;
+      box-shadow: var(--mc-shadow-elevated);
+      transform: scale(0.96);
+      transition: transform var(--mc-dur-base) var(--mc-ease-out);
+      position: relative;
+    }
+    .lm-modal-backdrop.is-open .lm-paywall-modal { transform: scale(1); }
+
+    .lm-paywall__eyebrow { margin: 0 0 var(--mc-sp-3); }
+    .lm-paywall__heading { font-size: var(--mc-fs-h2); margin: 0 0 var(--mc-sp-2); }
+    .lm-paywall__sub {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-mid);
+      margin: 0 0 var(--mc-sp-5);
+    }
+    .lm-paywall__bullets {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 var(--mc-sp-5);
+    }
+    .lm-paywall__bullets li {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-mono);
+      color: var(--mc-silver-mid);
+      padding: var(--mc-sp-2) 0;
+      border-bottom: 1px solid var(--mc-line);
+      display: flex;
+      align-items: flex-start;
+      gap: var(--mc-sp-2);
+    }
+    .lm-paywall__bullets li::before { content: '·'; color: var(--mc-silver-faint); flex-shrink: 0; }
+    .lm-paywall__price-line {
+      text-align: center;
+      margin-bottom: var(--mc-sp-4);
+    }
+    .lm-paywall__price {
+      font-family: var(--mc-font-serif);
+      font-size: var(--mc-fs-h1);
+      background: var(--mc-silver-gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      display: block;
+    }
+    .lm-paywall__price-sub {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-mono);
+      color: var(--mc-silver-faint);
+    }
+    .lm-paywall__trust {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-faint);
+      text-align: center;
+      margin: var(--mc-sp-3) 0 var(--mc-sp-4);
+    }
+    .lm-paywall__pay-btn { width: 100%; }
+    .lm-paywall__later-btn { width: 100%; margin-top: var(--mc-sp-2); min-height: 56px; }
+    .lm-paywall__error {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-error);
+      text-align: center;
+      margin: var(--mc-sp-2) 0;
+    }
+    .lm-paywall__success {
+      text-align: center;
+      padding: var(--mc-sp-5) 0;
+    }
+    .lm-paywall__success p {
+      font-family: var(--mc-font-serif);
+      font-style: italic;
+      font-size: var(--mc-fs-h3);
+    }
+
+    .lm-footer {
+      border-top: 1px solid var(--mc-line);
+      padding: var(--mc-sp-5) var(--mc-sp-4);
+      text-align: center;
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-faint);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .lm-paywall-modal { transition: none; }
+      .lm-score-numeral { transition: none; }
+      .lm-sticky-unlock { transition: none; }
+    }
+  </style>
+</head>
+<body class="lookmaxing">
+
+<nav class="lm-nav" aria-label="Audit navigation">
+  <a href="/lookmaxing" class="lm-nav__brand" aria-label="MainCharacter">◆ MAINCHARACTER</a>
+  <span class="lm-nav__id mc-mono" id="audit-id-display"></span>
+</nav>
+
+<!-- Loading state -->
+<div id="audit-loading" class="lm-audit-body" aria-live="polite" aria-label="Loading your reading">
+  <div class="lm-score-block">
+    <p class="mc-eyebrow lm-score-eyebrow">AURA SCORE</p>
+    <div class="lm-skeleton lm-skeleton--score"></div>
+    <div class="lm-skeleton lm-skeleton--rank"></div>
+  </div>
+  <div class="lm-skeleton lm-skeleton--line" style="width:80%;margin:0 auto 8px;"></div>
+  <div class="lm-skeleton lm-skeleton--line" style="width:60%;margin:0 auto;"></div>
+</div>
+
+<!-- Error state -->
+<div id="audit-error" class="lm-audit-body lm-state-error" hidden>
+  <p class="mc-serif mc-serif--italic lm-state-error__line" id="audit-error-msg">Could not generate your reading.</p>
+  <button class="mc-btn-primary" id="audit-retry-btn" aria-label="Retry loading the reading">Retry →</button>
+</div>
+
+<!-- Resolved report -->
+<main id="audit-report" class="lm-audit-body" hidden>
+
+  <!-- Block 1: Aura Score -->
+  <div class="lm-score-block" aria-labelledby="score-block-label">
+    <p class="mc-eyebrow lm-score-eyebrow" id="score-block-label">YOUR READING</p>
+    <span class="lm-score-numeral" id="score-numeral" aria-label="Aura score">0</span>
+    <span class="lm-score-sub">out of 100</span>
+    <span class="lm-rank-label" id="rank-label"></span>
+  </div>
+
+  <!-- Block 2: First Impression -->
+  <div class="lm-section-label" aria-hidden="true">
+    <span class="lm-section-label__text">FIRST IMPRESSION</span>
+    <div class="lm-section-label__line"></div>
+  </div>
+  <div class="lm-impression" aria-label="First impression read">
+    <p class="lm-impression__framing">One line. The first thing the room registers.</p>
+    <p class="mc-serif mc-serif--italic lm-impression__line" id="first-impression"></p>
+  </div>
+
+  <!-- Block 3: Face shape + signals -->
+  <div class="lm-section-label" aria-hidden="true">
+    <span class="lm-section-label__text">THE FOUR SIGNALS</span>
+    <div class="lm-section-label__line"></div>
+  </div>
+  <div class="lm-signals">
+    <p class="lm-signals__framing">What the camera reads in the first second. One word each.</p>
+    <div class="lm-signals__row" id="signals-row">
+      <span class="mc-pill" id="face-shape-pill"></span>
+      <span class="lm-signal-sep" aria-hidden="true">·</span>
+    </div>
+  </div>
+
+  <!-- Gate teaser -->
+  <div class="lm-gate-teaser" id="gate-teaser">
+    <p class="lm-gate-teaser__line">The headline is free. The reading itself is one tap away.</p>
+    <button
+      class="mc-btn-primary--filled mc-btn-primary"
+      id="unlock-main-btn"
+      data-event="lookmaxing_paywall_viewed"
+      aria-label="Generate Full Report"
+    >
+      <span class="mc-light-point" aria-hidden="true"></span>
+      Generate Full Report ◆
+    </button>
+    <p class="lm-gate-teaser__sub">₹99. One tap. The whole reading.</p>
+  </div>
+
+  <!-- Block 4: Full decomposition (premium, blurred) -->
+  <div class="lm-blur-block" id="block-decomposition">
+    <p class="lm-blur-block__header">FULL DECOMPOSITION</p>
+    <div
+      class="mc-blur-wrap"
+      role="button"
+      tabindex="0"
+      aria-label="Tap to unlock the full decomposition"
+      data-event="lookmaxing_paywall_blurred_metric_tapped"
+      data-event-props='{"block":"decomposition"}'
+    >
+      <div class="mc-blur-gate" aria-hidden="true" id="decomposition-content">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Block 5: Biggest lever (premium, blurred) -->
+  <div class="lm-blur-block" id="block-biggest-lever">
+    <p class="lm-blur-block__header">YOUR BIGGEST LEVER</p>
+    <div
+      class="mc-blur-wrap"
+      role="button"
+      tabindex="0"
+      aria-label="Tap to unlock your biggest lever"
+      data-event="lookmaxing_paywall_blurred_metric_tapped"
+      data-event-props='{"block":"biggestLever"}'
+    >
+      <div class="mc-blur-gate" aria-hidden="true" id="biggest-lever-content">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Block 6: Quests (premium, blurred) -->
+  <div class="lm-blur-block" id="block-quests">
+    <p class="lm-blur-block__header">THE QUESTS</p>
+    <div
+      class="mc-blur-wrap"
+      role="button"
+      tabindex="0"
+      aria-label="Tap to unlock your quests"
+      data-event="lookmaxing_paywall_blurred_metric_tapped"
+      data-event-props='{"block":"quests"}'
+    >
+      <div class="mc-blur-gate" aria-hidden="true" id="quests-content">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Block 7: Style & colour (premium, blurred) -->
+  <div class="lm-blur-block" id="block-style">
+    <p class="lm-blur-block__header">STYLE &amp; COLOUR</p>
+    <div
+      class="mc-blur-wrap"
+      role="button"
+      tabindex="0"
+      aria-label="Tap to unlock style and colour notes"
+      data-event="lookmaxing_paywall_blurred_metric_tapped"
+      data-event-props='{"block":"styleColour"}'
+    >
+      <div class="mc-blur-gate" aria-hidden="true" id="style-content">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Block 8: 7-day starter plan (premium, blurred) -->
+  <div class="lm-blur-block" id="block-plan">
+    <p class="lm-blur-block__header">THE 7-DAY STARTER PLAN</p>
+    <div
+      class="mc-blur-wrap"
+      role="button"
+      tabindex="0"
+      aria-label="Tap to unlock the 7-day starter plan"
+      data-event="lookmaxing_paywall_blurred_metric_tapped"
+      data-event-props='{"block":"starterPlan"}'
+    >
+      <div class="mc-blur-gate" aria-hidden="true" id="plan-content">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Sticky mobile unlock CTA -->
+<button
+  class="mc-btn-primary--filled mc-btn-primary lm-sticky-unlock"
+  id="sticky-unlock-btn"
+  aria-label="Generate Full Report"
+  data-event="lookmaxing_pay_initiated"
+>
+  <span class="mc-light-point" aria-hidden="true"></span>
+  Generate Full Report ◆
+</button>
+
+<footer class="lm-footer">
+  <p>◆ MainCharacter · The Consultant</p>
+</footer>
+
+<!-- Paywall modal (Surface 6) -->
+<div
+  class="lm-modal-backdrop"
+  id="paywall-modal"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="paywall-heading"
+  aria-hidden="true"
+>
+  <div class="mc-card lm-paywall-modal">
+    <!-- Default form state -->
+    <div id="paywall-form">
+      <p class="mc-eyebrow lm-paywall__eyebrow">UNLOCK THE READING</p>
+      <h2 id="paywall-heading" class="mc-serif mc-serif--italic lm-paywall__heading">Resolve the reading.</h2>
+      <p class="lm-paywall__sub">One payment. The whole reading. Yours.</p>
+      <ul class="lm-paywall__bullets" aria-label="What you get">
+        <li>The full decomposition. Skin, hair, jaw, body, lifestyle — read in detail.</li>
+        <li>Your biggest lever. The one axis the work moves first.</li>
+        <li>The quests. Specific tasks from the safe library, tied to your reading.</li>
+        <li>Style and colour notes. What suits the geometry you have.</li>
+        <li>A seven-day starter plan. Morning and evening.</li>
+      </ul>
+      <div class="lm-paywall__price-line">
+        <span class="lm-paywall__price">₹99</span>
+        <span class="lm-paywall__price-sub">₹99 · one-time · UPI / cards / wallets</span>
+      </div>
+      <p class="lm-paywall__trust">The ₹99 credits toward month one if you continue.</p>
+      <div id="paywall-error" class="lm-paywall__error" hidden role="alert" aria-live="polite"></div>
+      <button
+        class="mc-btn-primary mc-btn-primary--filled lm-paywall__pay-btn"
+        id="pay-btn"
+        data-event="lookmaxing_pay_initiated"
+        aria-label="Pay ₹99 and unlock"
+      >
+        <span class="mc-light-point" aria-hidden="true"></span>
+        Pay ₹99 ◆
+      </button>
+      <button
+        class="mc-btn-ghost lm-paywall__later-btn"
+        id="paywall-close-btn"
+        data-event="lookmaxing_pay_failed"
+        data-event-props='{"reason":"dismissed"}'
+        aria-label="Maybe later"
+      >
+        Maybe later
+      </button>
+    </div>
+    <!-- Success state -->
+    <div id="paywall-success" class="lm-paywall__success" hidden aria-live="polite">
+      <p>Resolved. Opening the full reading. ◆</p>
+    </div>
+  </div>
+</div>
+
+<script src="/track.js" defer></script>
+<script>
+(function () {
+  'use strict';
+
+  // Extract audit ID from the URL path
+  var pathParts = window.location.pathname.split('/').filter(Boolean);
+  var auditId = pathParts[pathParts.length - 1];
+  // If the last segment is a known page name, something went wrong
+  if (!auditId || auditId === 'audit') {
+    auditId = new URLSearchParams(window.location.search).get('id') || '';
+  }
+
+  var RAZORPAY_POLL_INTERVAL = 1500;
+  var RAZORPAY_POLL_MAX = 10;
+
+  // DOM refs
+  var loadingEl = document.getElementById('audit-loading');
+  var errorEl = document.getElementById('audit-error');
+  var reportEl = document.getElementById('audit-report');
+  var retryBtn = document.getElementById('audit-retry-btn');
+  var auditIdDisplay = document.getElementById('audit-id-display');
+  var scoreNumeral = document.getElementById('score-numeral');
+  var rankLabel = document.getElementById('rank-label');
+  var firstImpression = document.getElementById('first-impression');
+  var signalsRow = document.getElementById('signals-row');
+  var faceShapePill = document.getElementById('face-shape-pill');
+  var gateTeaser = document.getElementById('gate-teaser');
+  var stickyUnlock = document.getElementById('sticky-unlock');
+  var stickyUnlockBtn = document.getElementById('sticky-unlock-btn');
+  var paywallModal = document.getElementById('paywall-modal');
+  var paywallForm = document.getElementById('paywall-form');
+  var paywallSuccess = document.getElementById('paywall-success');
+  var paywallError = document.getElementById('paywall-error');
+  var payBtn = document.getElementById('pay-btn');
+  var paywallCloseBtn = document.getElementById('paywall-close-btn');
+  var unlockMainBtn = document.getElementById('unlock-main-btn');
+
+  if (auditId) {
+    auditIdDisplay.textContent = 'AUDIT · ' + auditId.slice(0, 9).toUpperCase();
+  }
+
+  // ── Load audit ──
+  function loadAudit() {
+    loadingEl.hidden = false;
+    errorEl.hidden = true;
+    reportEl.hidden = true;
+
+    fetch('/api/lookmaxing/audit/' + auditId)
+      .then(function (res) {
+        if (!res.ok) throw new Error('audit load failed ' + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        loadingEl.hidden = true;
+        renderReport(data);
+      })
+      .catch(function () {
+        loadingEl.hidden = true;
+        errorEl.hidden = false;
+      });
+  }
+
+  retryBtn.addEventListener('click', loadAudit);
+
+  // ── Render ──
+  function renderReport(data) {
+    var report = data.report || {};
+    var paid = data.paid || false;
+
+    reportEl.hidden = false;
+
+    // Score count-up
+    var finalScore = report.auraScore || 0;
+    var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion) {
+      scoreNumeral.textContent = finalScore;
+    } else {
+      var start = 0;
+      var duration = 1400;
+      var startTime = null;
+      function countUp(ts) {
+        if (!startTime) startTime = ts;
+        var progress = Math.min((ts - startTime) / duration, 1);
+        var eased = 1 - Math.pow(1 - progress, 3);
+        scoreNumeral.textContent = Math.round(eased * finalScore);
+        if (progress < 1) requestAnimationFrame(countUp);
+      }
+      requestAnimationFrame(countUp);
+    }
+
+    // Rank
+    rankLabel.textContent = capitalise(report.rank || '');
+
+    // First impression
+    firstImpression.textContent = report.firstImpression || '';
+
+    // Face shape pill + signals
+    faceShapePill.textContent = capitalise(report.faceShape || '');
+    var signals = report.freeSignals || [];
+    signals.forEach(function (s, i) {
+      if (i > 0) {
+        var sep = document.createElement('span');
+        sep.className = 'lm-signal-sep';
+        sep.setAttribute('aria-hidden', 'true');
+        sep.textContent = '·';
+        signalsRow.appendChild(sep);
+      }
+      var span = document.createElement('span');
+      span.className = 'lm-signal-item';
+      span.textContent = s.label;
+      signalsRow.appendChild(span);
+    });
+
+    // Premium blocks
+    var premiumBlocks = [
+      { id: 'decomposition-content', key: 'decomposition', wrapId: 'block-decomposition' },
+      { id: 'biggest-lever-content', key: 'biggestLever', wrapId: 'block-biggest-lever' },
+      { id: 'quests-content', key: 'quests', wrapId: 'block-quests' },
+      { id: 'style-content', key: 'styleAndColour', wrapId: 'block-style' },
+      { id: 'plan-content', key: 'starterPlan', wrapId: 'block-plan' },
+    ];
+
+    premiumBlocks.forEach(function (b) {
+      var el = document.getElementById(b.id);
+      var wrapEl = document.getElementById(b.wrapId);
+      var val = report[b.key];
+      if (val) {
+        el.textContent = JSON.stringify(val, null, 2); // raw display — full.html renders properly
+      } else {
+        el.textContent = '· · ·';
+      }
+      if (paid) {
+        // Remove blur if paid
+        el.classList.remove('mc-blur-gate');
+        var blurWrap = wrapEl.querySelector('.mc-blur-wrap');
+        if (blurWrap) {
+          blurWrap.removeAttribute('role');
+          blurWrap.removeAttribute('tabindex');
+        }
+      }
+    });
+
+    if (paid) {
+      gateTeaser.hidden = true;
+      stickyUnlockBtn.hidden = true;
+    } else {
+      setupBlurClicks();
+      setupStickyUnlock();
+    }
+
+    if (window.mc) {
+      window.mc.trackOnce('lookmaxing_audit_viewed', { resolution: paid ? 'full' : 'free' });
+    }
+
+    // If ?pay=true open paywall immediately
+    if (new URLSearchParams(window.location.search).get('pay') === 'true') {
+      openPaywall();
+    }
+  }
+
+  function capitalise(s) {
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  }
+
+  // ── Blur click → paywall ──
+  function setupBlurClicks() {
+    var wraps = document.querySelectorAll('.mc-blur-wrap');
+    wraps.forEach(function (w) {
+      w.addEventListener('click', openPaywall);
+      w.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPaywall(); }
+      });
+    });
+    unlockMainBtn.addEventListener('click', openPaywall);
+    stickyUnlockBtn.addEventListener('click', openPaywall);
+  }
+
+  // ── Sticky CTA visibility ──
+  function setupStickyUnlock() {
+    var firstBlur = document.getElementById('block-decomposition');
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        stickyUnlockBtn.classList.toggle('is-visible', !entry.isIntersecting);
+      });
+    }, { threshold: 0.1 });
+    if (firstBlur) observer.observe(firstBlur);
+  }
+
+  // ── Paywall modal ──
+  function openPaywall() {
+    paywallModal.classList.add('is-open');
+    paywallModal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    if (window.mc) {
+      window.mc.trackOnce('lookmaxing_paywall_viewed', {});
+    }
+    payBtn.focus();
+  }
+
+  function closePaywall() {
+    paywallModal.classList.remove('is-open');
+    paywallModal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  paywallCloseBtn.addEventListener('click', closePaywall);
+  paywallModal.addEventListener('click', function (e) {
+    if (e.target === paywallModal) {
+      if (window.mc) window.mc.track('lookmaxing_pay_failed', { reason: 'dismissed' });
+      closePaywall();
+    }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && paywallModal.classList.contains('is-open')) {
+      if (window.mc) window.mc.track('lookmaxing_pay_failed', { reason: 'dismissed' });
+      closePaywall();
+    }
+  });
+
+  // ── Razorpay checkout ──
+  payBtn.addEventListener('click', function () {
+    payBtn.setAttribute('aria-busy', 'true');
+    payBtn.disabled = true;
+    payBtn.textContent = 'Opening the payment window. Hold.';
+    paywallError.hidden = true;
+
+    fetch('/api/lookmaxing/pay/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ auditId: auditId }),
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('order create failed');
+        return res.json();
+      })
+      .then(function (order) {
+        var options = {
+          key: order.keyId,
+          amount: order.amount,
+          currency: 'INR',
+          order_id: order.orderId,
+          name: 'MainCharacter',
+          description: 'Aura Reading — Full Report',
+          prefill: {},
+          theme: { color: '#000000' },
+          modal: { ondismiss: function () {
+            if (window.mc) window.mc.track('lookmaxing_pay_failed', { reason: 'dismissed' });
+            payBtn.setAttribute('aria-busy', 'false');
+            payBtn.disabled = false;
+            payBtn.innerHTML = '<span class="mc-light-point" aria-hidden="true"></span> Pay ₹99 ◆';
+          }},
+          handler: function (response) {
+            if (window.mc) window.mc.track('lookmaxing_pay_succeeded', {});
+            paywallForm.hidden = true;
+            paywallSuccess.hidden = false;
+            pollForPaid(0);
+          },
+        };
+        var rzp = new Razorpay(options);
+        rzp.on('payment.failed', function () {
+          if (window.mc) window.mc.track('lookmaxing_pay_failed', { reason: 'failed' });
+          payBtn.setAttribute('aria-busy', 'false');
+          payBtn.disabled = false;
+          payBtn.innerHTML = '<span class="mc-light-point" aria-hidden="true"></span> Pay ₹99 ◆';
+          paywallError.textContent = 'The payment did not complete. Try again, or pick another method.';
+          paywallError.hidden = false;
+        });
+        rzp.open();
+      })
+      .catch(function () {
+        payBtn.setAttribute('aria-busy', 'false');
+        payBtn.disabled = false;
+        payBtn.innerHTML = '<span class="mc-light-point" aria-hidden="true"></span> Pay ₹99 ◆';
+        paywallError.textContent = 'Could not open payment. Try again.';
+        paywallError.hidden = false;
+      });
+  });
+
+  // ── Poll until paid=true then navigate to full report ──
+  function pollForPaid(attempts) {
+    if (attempts >= RAZORPAY_POLL_MAX) {
+      window.location.href = '/lookmaxing/audit/' + auditId + '/full';
+      return;
+    }
+    setTimeout(function () {
+      fetch('/api/lookmaxing/audit/' + auditId)
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data.paid) {
+            window.location.href = '/lookmaxing/audit/' + auditId + '/full';
+          } else {
+            pollForPaid(attempts + 1);
+          }
+        })
+        .catch(function () { pollForPaid(attempts + 1); });
+    }, RAZORPAY_POLL_INTERVAL);
+  }
+
+  // ── Init ──
+  if (auditId) {
+    loadAudit();
+  } else {
+    loadingEl.hidden = true;
+    errorEl.hidden = false;
+    document.getElementById('audit-error-msg').textContent = 'No reading found. Return to the start.';
+  }
+}());
+</script>
+</body>
+</html>

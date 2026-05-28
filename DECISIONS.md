@@ -5,6 +5,49 @@ Format: date, decision, 2-sentence rationale.
 
 ---
 
+## 2026-05-28 — B4 overnight build (Web Push + Weekly Reveal MP4)
+
+### services/push.js — DRY-RUN pattern identical to services/whatsapp.js
+When `WEB_PUSH_VAPID_PUBLIC` and `WEB_PUSH_VAPID_PRIVATE` are unset, every
+send returns `{ result: 'dry-run' }` without calling the web-push library —
+safe default that matches the WhatsApp/SMS/email DRY-RUN pattern already in
+production.
+
+### push_subscriptions stored on user record; never returned to client
+`push_subscriptions` is an array on the User model. The field is stripped in
+`publicUser()` in lookmax-auth.js so it never appears in `/api/lookmax/me`
+or any other client-facing response (DPDPA compliance — PII-adjacent data
+must not leak through any unauthenticated API surface).
+
+### VAPID public key served via authenticated GET, not a static meta tag
+The page is served as a static file without server-side templating, so the
+VAPID public key cannot be injected at serve time. A lightweight authenticated
+GET `/api/lookmax/push/vapid-key` returns `{ publicKey: '' }` when unconfigured
+and the client skips the subscribe prompt automatically.
+
+### MIRROR_PUSH_ENABLED and REVEAL_MP4_ENABLED default false
+Both features are gated by env-var flags per the risky-feature-flag rule
+(CLAUDE.md §6). The founder flips them once copy is ratified (push) and ffmpeg
+is confirmed present on Render (MP4).
+
+### video.js uses lazy ffmpeg detection, not require-time detection
+`ffmpegStatus()` caches the result on first call so tests can stub
+`child_process.execSync` before detection runs; a boot without ffmpeg does not
+throw at require-time which would break the server startup sequence.
+
+### In-memory Map for v1 render jobs
+Single-instance Render means in-memory `Map<jobId, job>` is sufficient for
+v1; the enqueueRender / getJob API surface is stable and the backing store
+can be swapped to Postgres (B0) without changing the route contracts.
+
+### MP4 button probes flag state via POST /api/lookmax/reveal/render
+Because the reveal.html is a static file, the client cannot read server env
+vars. The button is hidden in HTML; on reveal load JS makes a POST — a 503
+means flag off/ffmpeg absent (button stays hidden), a 202 means enabled and
+the render has begun.
+
+---
+
 ## 2026-05-28 — B0 overnight build (Postgres + R2 photo storage)
 
 ### lib/db.js — singleton pg.Pool with SSL=require for Neon

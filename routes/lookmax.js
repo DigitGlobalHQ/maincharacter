@@ -331,6 +331,61 @@ function lastSevenDates() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// B4 — Web Push subscription (VAPID)
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/lookmax/push/vapid-key
+ * Returns the VAPID public key for the client to use in pushManager.subscribe.
+ * The public key is intentionally public per the VAPID spec (RFC 8292).
+ * Returns { publicKey: '' } when VAPID is not configured.
+ * Auth required (prevents unauthenticated key probing).
+ */
+router.get('/push/vapid-key', (req, res) => {
+  const publicKey = process.env.WEB_PUSH_VAPID_PUBLIC || '';
+  res.json({ publicKey });
+});
+
+/**
+ * POST /api/lookmax/push/subscribe
+ * Stores a PushSubscription JSON for the authenticated user.
+ * Idempotent on endpoint — duplicates are silently deduplicated.
+ * Requires auth. Never returns push_subscriptions in any response.
+ * DPDPA: push subscriptions are PII-adjacent; stored only behind session token.
+ */
+router.post('/push/subscribe', (req, res) => {
+  const user = req.lookmaxUser;
+  const { subscription } = req.body || {};
+
+  if (!subscription || typeof subscription !== 'object') {
+    return res.status(400).json({ error: 'subscription object required' });
+  }
+  if (!subscription.endpoint || typeof subscription.endpoint !== 'string') {
+    return res.status(400).json({ error: 'subscription.endpoint required' });
+  }
+
+  const existing = user.push_subscriptions || [];
+  const alreadyStored = existing.some((s) => s.endpoint === subscription.endpoint);
+
+  if (!alreadyStored) {
+    const record = {
+      endpoint: subscription.endpoint,
+      keys: subscription.keys || {},
+      ua: req.headers['user-agent'] ? req.headers['user-agent'].slice(0, 120) : '',
+      subscribedAt: new Date().toISOString(),
+    };
+    User.updateUser(user.phone, {
+      push_subscriptions: [...existing, record],
+    });
+    log.info('PUSH-SUB', `new subscription stored for user ${user.token}`);
+  } else {
+    log.info('PUSH-SUB', `idempotent: endpoint already stored for user ${user.token}`);
+  }
+
+  res.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════════════
 // P8 — Weekly Reveal (stub)
 // ═══════════════════════════════════════════════════════════════════
 
@@ -350,6 +405,78 @@ router.get('/reveal/preview', (req, res) => {
     weekNumber,
     photoUrls: recent.map((m) => photos.publicUrl(m.photoPath, req.lookmaxToken || req.query.token || '')),
     scores: recent.map((m) => m.overallScore),
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// B4 — Weekly Reveal MP4 export (REVEAL_MP4_ENABLED flag)
+// ═══════════════════════════════════════════════════════════════════
+
+/** Whether the MP4 export feature is enabled (default false). */
+function revealMp4Enabled() {
+  return process.env.REVEAL_MP4_ENABLED === 'true';
+}
+
+/**
+ * POST /api/lookmax/reveal/render
+ * Enqueue an async MP4 render job. Returns { jobId, status: 'queued' }.
+ * Returns 503 when feature flag is off or ffmpeg is absent.
+ * Auth required.
+ */
+router.post('/reveal/render', (req, res) => {
+  if (!revealMp4Enabled()) {
+    return res.status(503).json({
+      available: false,
+      reason: 'feature_disabled',
+      // TODO copy review: user-facing message
+      message: 'Something has interrupted the work. This feature is not yet available.',
+    });
+  }
+
+  const video = require('../services/video');
+  const ffmpeg = video.ffmpegStatus();
+  if (!ffmpeg.available) {
+    return res.status(503).json({
+      available: false,
+      reason: ffmpeg.reason || 'ffmpeg_missing',
+      message: 'Something has interrupted the work. Video rendering is not available on this server.',
+    });
+  }
+
+  const user = req.lookmaxUser;
+  // Derive the week label: ISO week (YYYY-Www)
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const week = Math.ceil((((now - jan4) / 86400000) + jan4.getUTCDay() + 1) / 7);
+  const weekLabel = `${year}-W${String(week).padStart(2, '0')}`;
+
+  const job = video.enqueueRender({ userToken: user.token, weekLabel });
+  log.info('REVEAL-RENDER', `job ${job.jobId} queued for user ${user.token} week ${weekLabel}`);
+
+  return res.status(202).json({ jobId: job.jobId, status: job.status, weekLabel });
+});
+
+/**
+ * GET /api/lookmax/reveal/job/:jobId
+ * Poll the status of a render job.
+ * Returns 404 for unknown jobs, 401 without auth.
+ */
+router.get('/reveal/job/:jobId', (req, res) => {
+  const video = require('../services/video');
+  const job = video.getJob(req.params.jobId);
+  if (!job) {
+    return res.status(404).json({ error: 'job not found' });
+  }
+  // Only return the fields safe for the client (no internal paths)
+  res.json({
+    jobId: job.jobId,
+    status: job.status,
+    weekLabel: job.weekLabel,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt,
+    resultUrl: job.resultUrl || null,
+    error: job.status === 'error' ? (job.error || 'render_failed') : null,
   });
 });
 

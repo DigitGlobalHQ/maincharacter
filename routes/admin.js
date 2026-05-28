@@ -495,6 +495,29 @@ router.get('/funnel', requireAuth, async (req, res) => {
   }
 });
 
+// ─── B4: Push test (admin-only, feature-flagged) ───
+// POST /api/admin/push/test — sends a test push to a specific userToken.
+// Gated on PUSH_TEST_ENABLED env var (default false) to keep test surface narrow.
+router.post('/push/test', requireAuth, async (req, res) => {
+  if (process.env.PUSH_TEST_ENABLED !== 'true') {
+    return res.status(503).json({ available: false, reason: 'feature_disabled' });
+  }
+  const { userToken } = req.body || {};
+  if (!userToken) return res.status(400).json({ error: 'userToken required' });
+  const user = User.getUserByToken(userToken);
+  if (!user) return res.status(404).json({ error: 'user not found' });
+
+  const push = require('../services/push');
+  const result = await push.sendToUser(userToken, {
+    title: '◆ MainCharacter',
+    // TODO copy review: test push body — deferred
+    body: '<!-- TODO copy -->',
+    url: '/lookmax/mirror',
+  });
+  log('PUSH-TEST', `admin push test to ${userToken}: ${JSON.stringify(result)}`);
+  res.json(result);
+});
+
 // ─── Export CSV ───
 router.get('/export', requireAuth, (req, res) => {
   const users = Object.values(User.getAllUsers());

@@ -287,6 +287,124 @@ async function readImageBase64(storageKey) {
   return (await readImage(storageKey)).toString('base64');
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// TASK 2a — putPhoto: compress → EXIF-strip → put to R2
+// ══════════════════════════════════════════════════════════════════════════════
+
+const COMPRESS_MAX_EDGE = 1600;  // px — longest edge ceiling
+const COMPRESS_QUALITY  = 78;    // JPEG quality (mobile-friendly, ~200-300 KB face shots)
+
+/**
+ * Compress a photo buffer:
+ *   - auto-rotate (EXIF orientation, so iOS portraits don't render sideways)
+ *   - resize longest edge to ≤ COMPRESS_MAX_EDGE px (preserve aspect ratio)
+ *   - re-encode as JPEG quality COMPRESS_QUALITY
+ *   - strip all EXIF except orientation (privacy — removes GPS, camera serial)
+ *
+ * Falls back to returning the original buffer on any sharp failure — never
+ * blocks the user flow on compression error.
+ *
+ * @param {Buffer} buffer   Raw upload buffer (JPEG / PNG / WebP)
+ * @returns {Promise<Buffer>} Compressed JPEG buffer (or original on error)
+ */
+async function _compressPhoto(buffer) {
+  const sharp = getSharp();
+  if (!sharp) return buffer;
+  try {
+    return await sharp(buffer)
+      .rotate()                                              // EXIF auto-orient
+      .resize({ width: COMPRESS_MAX_EDGE, height: COMPRESS_MAX_EDGE, fit: 'inside', withoutEnlargement: true })
+      .withMetadata({ orientation: undefined })              // strip all EXIF; re-apply only orientation
+      .jpeg({ quality: COMPRESS_QUALITY, mozjpeg: false })
+      .toBuffer();
+  } catch (err) {
+    log.warn('COMPRESS-FALLBACK', `sharp compress failed, storing original: ${err.message}`);
+    return buffer;  // safe fallback — never block the upload
+  }
+}
+
+/**
+ * Compress a photo then store it via put().  Drop-in replacement for put()
+ * on any photo handler.  Returns extended metadata so callers can log ratios.
+ *
+ * @param {string} key
+ * @param {Buffer} sourceBuffer
+ * @param {string} [contentType='image/jpeg']
+ * @returns {Promise<{ key: string|null, etag: string|null, dryRun?: boolean,
+ *                     originalBytes: number, compressedBytes: number, ratio: number }>}
+ */
+async function putPhoto(key, sourceBuffer, contentType = 'image/jpeg') {
+  const originalBytes = sourceBuffer.byteLength;
+  const compressed = await _compressPhoto(sourceBuffer);
+  const compressedBytes = compressed.byteLength;
+  const ratio = originalBytes > 0 ? compressedBytes / originalBytes : 1;
+
+  log.info('COMPRESS', `${key}: ${originalBytes}B → ${compressedBytes}B (ratio=${ratio.toFixed(2)})`);
+
+  const result = await put(key, compressed, 'image/jpeg');
+  return { ...result, originalBytes, compressedBytes, ratio };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TASK 2b — Retention pruners: pruneMirrors / pruneHair
+//
+// Key-prefix conventions (mirrors storage naming in B0):
+//   mirror/{userToken}/{YYYY-MM-DD}.jpg   — daily mirror
+//   hair/{userToken}/{YYYY-MM-DD}.jpg     — hair tracker
+//   audit/{userToken}/baseline-*.jpg      — baseline (NEVER pruned)
+//   audit/{userToken}/day30-*.jpg         — Day-30 (NEVER pruned)
+//
+// Pruners receive the EXISTING keys (already uploaded) BEFORE the new upload.
+// They delete any excess over the window limit (7 for mirror, 4 for hair).
+// Idempotent — calling twice in a row is safe.
+// ══════════════════════════════════════════════════════════════════════════════
+
+const MIRROR_KEEP = 7;
+const HAIR_KEEP   = 4;
+
+/**
+ * Enforce the last-7-mirror retention window.
+ *
+ * @param {string}   userId   (informational — for logging)
+ * @param {string[]} keys     All current mirror keys for this user, oldest-first.
+ *                            Caller must NOT include baseline or Day-30 keys here.
+ * @returns {Promise<string[]>} Keys that were deleted.
+ */
+async function pruneMirrors(userId, keys) {
+  return _prune(userId, keys, MIRROR_KEEP, 'PRUNE-MIRROR');
+}
+
+/**
+ * Enforce the last-4-hair retention window.
+ *
+ * @param {string}   userId
+ * @param {string[]} keys     All current hair keys for this user, oldest-first.
+ * @returns {Promise<string[]>} Keys that were deleted.
+ */
+async function pruneHair(userId, keys) {
+  return _prune(userId, keys, HAIR_KEEP, 'PRUNE-HAIR');
+}
+
+/**
+ * Internal pruner.  Called AFTER the new upload with ALL current keys
+ * (oldest-first), including the one just uploaded.
+ * Deletes (keys.length - keep) oldest keys so exactly `keep` remain.
+ * Idempotent — safe to call twice with the same key set.
+ */
+async function _prune(userId, keys, keep, tag) {
+  const excess = keys.length - keep;
+  if (excess <= 0) return [];
+  const toDelete = keys.slice(0, excess);
+  log.info(tag, `${userId}: deleting ${toDelete.length} oldest (keeping ${keep})`);
+  const deleted = [];
+  for (const key of toDelete) {
+    // Use module.exports.delete so vi.spyOn can intercept in tests.
+    const ok = await module.exports.delete(key);
+    if (ok) deleted.push(key);
+  }
+  return deleted;
+}
+
 module.exports = {
   // B0 interface
   put,
@@ -297,6 +415,12 @@ module.exports = {
   hairKey,
   istDate,
   isR2Configured,
+  // Task 2a — photo compression
+  putPhoto,
+  _compressPhoto,          // exported for tests only
+  // Task 2b — retention pruners
+  pruneMirrors,
+  pruneHair,
   // Legacy interface (Night-2/4)
   resizeImage,
   saveImage,

@@ -1,0 +1,460 @@
+/* Mirror of product/design-lookmaxing-tokens.css; do not edit here — edit the source and re-copy.
+   Source: product/design-lookmaxing-tokens.css
+   Stage: stage-1-audit */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MainCharacter · Lookmaxing — Design Tokens
+   Spec source: briefs/stage-1-audit-spec.md §2 (BLACK & SILVER, no gold)
+   Scope: applied ONLY when <body class="lookmaxing"> is present.
+          Existing /lookmax/* gold pages are untouched by this stylesheet.
+
+   Font dependency note for frontend-agent:
+   Add this <link> to the <head> of every /lookmaxing/* page (Cormorant +
+   Sora are already loaded sitewide via landing.html; JetBrains Mono is new):
+
+     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=Sora:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+
+   No image assets. No JS dependencies. ~7KB minified.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+body.lookmaxing {
+  /* ─── Palette: pure black field + brushed silver gradient ─── */
+  --mc-black:           #000000;
+  --mc-near-black:      #0a0a0a;
+  --mc-elev-1:          #111113;   /* card/panel bg one step up */
+  --mc-elev-2:          #16161a;   /* nested surface */
+
+  --mc-silver-bright:   #e8e8e8;   /* M-monogram bright edge */
+  --mc-silver-mid:      #c0c0c0;   /* default silver */
+  --mc-silver-dim:      #8a8a8a;   /* silver shadow side */
+  --mc-silver-faint:    #5a5a5a;   /* hairlines, low-emphasis */
+  --mc-silver-ghost:    #2a2a2a;   /* darkest still-visible silver */
+
+  --mc-ink-white:       #ffffff;   /* highlights, primary CTA fill */
+  --mc-ink-dim:         rgba(255, 255, 255, 0.62);
+  --mc-ink-faint:       rgba(255, 255, 255, 0.40);
+  --mc-ink-ghost:       rgba(255, 255, 255, 0.18);
+
+  /* The light-point — echoes the logo's single luminous dot. */
+  --mc-light-point:           #ffffff;
+  --mc-light-point-glow-soft: rgba(255, 255, 255, 0.18);
+  --mc-light-point-glow-mid:  rgba(255, 255, 255, 0.32);
+  --mc-light-point-glow-hot:  rgba(255, 255, 255, 0.55);
+
+  /* Silver gradient (brushed metal — borders, monogram, score numerals) */
+  --mc-silver-gradient: linear-gradient(
+    180deg,
+    #e8e8e8 0%,
+    #c0c0c0 48%,
+    #8a8a8a 100%
+  );
+  --mc-silver-gradient-h: linear-gradient(
+    90deg,
+    #8a8a8a 0%,
+    #e8e8e8 50%,
+    #8a8a8a 100%
+  );
+
+  /* Hairline border colour (translucent for layering) */
+  --mc-line:            rgba(232, 232, 232, 0.10);
+  --mc-line-strong:     rgba(232, 232, 232, 0.18);
+  --mc-line-bright:     rgba(232, 232, 232, 0.32);
+
+  /* Status colours — kept neutral; no warm tones permitted. */
+  --mc-error:           #d94a4a;
+  --mc-error-dim:       rgba(217, 74, 74, 0.16);
+
+  /* ─── Typography ─── */
+  --mc-font-serif: 'Cormorant Garamond', 'Georgia', serif;
+  --mc-font-sans:  'Sora', 'Helvetica Neue', sans-serif;
+  --mc-font-mono:  'JetBrains Mono', 'SF Mono', Menlo, monospace;
+
+  /* Type scale (mobile-first; surfaces step up at 1024px) */
+  --mc-fs-display:   3.5rem;   /* 56px — Aura Score numeral, hero */
+  --mc-fs-h1:        2.25rem;  /* 36px */
+  --mc-fs-h2:        1.625rem; /* 26px */
+  --mc-fs-h3:        1.25rem;  /* 20px */
+  --mc-fs-body:      1rem;     /* 16px */
+  --mc-fs-small:     0.875rem; /* 14px */
+  --mc-fs-eyebrow:   0.6875rem;/* 11px — small-caps labels */
+  --mc-fs-mono:      0.8125rem;/* 13px — data, metric ticks */
+
+  --mc-lh-tight:     1.15;
+  --mc-lh-snug:      1.35;
+  --mc-lh-body:      1.65;
+
+  --mc-ls-tight:    -0.01em;
+  --mc-ls-body:      0.04em;
+  --mc-ls-wide:      0.16em;   /* small-caps */
+  --mc-ls-xwide:     0.28em;   /* eyebrow / monogram */
+
+  /* ─── Spacing scale (4px base, 8 steps) ─── */
+  --mc-sp-1:  0.25rem;  /*  4 */
+  --mc-sp-2:  0.5rem;   /*  8 */
+  --mc-sp-3:  0.75rem;  /* 12 */
+  --mc-sp-4:  1rem;     /* 16 */
+  --mc-sp-5:  1.5rem;   /* 24 */
+  --mc-sp-6:  2rem;     /* 32 */
+  --mc-sp-7:  3rem;     /* 48 */
+  --mc-sp-8:  5rem;     /* 80 */
+
+  /* ─── Radius scale (4 steps; sharp by default) ─── */
+  --mc-r-1:   2px;     /* hairline cards */
+  --mc-r-2:   4px;     /* buttons, pills */
+  --mc-r-3:   8px;     /* panels */
+  --mc-r-full: 999px;  /* avatar, status dot */
+
+  /* ─── Shadows (3 steps incl. light-point glow) ─── */
+  --mc-shadow-ambient:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 12px 32px rgba(0, 0, 0, 0.45);
+
+  --mc-shadow-elevated:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 24px 60px rgba(0, 0, 0, 0.55);
+
+  --mc-shadow-light-point:
+    0 0 0 1px rgba(255, 255, 255, 0.22),
+    0 0 18px 0 rgba(255, 255, 255, 0.28),
+    0 0 36px 0 rgba(255, 255, 255, 0.10);
+
+  /* ─── Motion ─── */
+  --mc-dur-fast:  160ms;
+  --mc-dur-base:  280ms;
+  --mc-dur-slow:  520ms;
+  --mc-ease:      cubic-bezier(0.4, 0, 0.2, 1);
+  --mc-ease-out:  cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ─── Layout maxes ─── */
+  --mc-content-max: 1080px;
+  --mc-reading-max: 64ch;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BASE — scoped to body.lookmaxing only
+   ═══════════════════════════════════════════════════════════════════════════ */
+body.lookmaxing {
+  margin: 0;
+  background: var(--mc-black);
+  color: var(--mc-silver-bright);
+  font-family: var(--mc-font-sans);
+  font-weight: 300;
+  font-size: var(--mc-fs-body);
+  line-height: var(--mc-lh-body);
+  letter-spacing: var(--mc-ls-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body.lookmaxing ::selection {
+  background: var(--mc-silver-bright);
+  color: var(--mc-black);
+}
+
+body.lookmaxing a { color: inherit; text-decoration: none; }
+body.lookmaxing img,
+body.lookmaxing svg,
+body.lookmaxing video { display: block; max-width: 100%; }
+
+body.lookmaxing ::-webkit-scrollbar { width: 4px; height: 4px; }
+body.lookmaxing ::-webkit-scrollbar-track { background: var(--mc-black); }
+body.lookmaxing ::-webkit-scrollbar-thumb {
+  background: var(--mc-silver-ghost);
+  border-radius: 2px;
+}
+
+/* Focus ring — never the silver-on-silver trap */
+body.lookmaxing *:focus { outline: none; }
+body.lookmaxing *:focus-visible {
+  outline: 2px solid var(--mc-light-point);
+  outline-offset: 3px;
+  border-radius: var(--mc-r-2);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UTILITY CLASSES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Eyebrow: wide-tracked uppercase small-cap label ─── */
+body.lookmaxing .mc-eyebrow {
+  font-family: var(--mc-font-sans);
+  font-size: var(--mc-fs-eyebrow);
+  font-weight: 500;
+  letter-spacing: var(--mc-ls-xwide);
+  text-transform: uppercase;
+  color: var(--mc-silver-dim);
+  line-height: 1;
+}
+
+/* ─── Mono data ─── */
+body.lookmaxing .mc-mono {
+  font-family: var(--mc-font-mono);
+  font-size: var(--mc-fs-mono);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--mc-silver-mid);
+}
+
+/* ─── Hairline: 1px silver divider ─── */
+body.lookmaxing .mc-hairline {
+  border: 0;
+  height: 1px;
+  background: var(--mc-line);
+  margin: var(--mc-sp-6) 0;
+}
+body.lookmaxing .mc-hairline--bright { background: var(--mc-line-strong); }
+
+/* ─── Serif headline (Cormorant) ─── */
+body.lookmaxing .mc-serif {
+  font-family: var(--mc-font-serif);
+  font-weight: 400;
+  letter-spacing: var(--mc-ls-tight);
+  line-height: var(--mc-lh-tight);
+  color: var(--mc-silver-bright);
+}
+body.lookmaxing .mc-serif--italic { font-style: italic; font-weight: 300; }
+
+/* ─── Silver-gradient text (use for score numerals, monogram) ─── */
+body.lookmaxing .mc-silver-text {
+  background: var(--mc-silver-gradient);
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+          color: transparent;
+}
+
+/* ─── Primary CTA: silver-bordered, light-point glow on hover/focus ─── */
+body.lookmaxing .mc-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mc-sp-2);
+  min-height: 48px;
+  padding: 0 var(--mc-sp-5);
+  background: transparent;
+  color: var(--mc-ink-white);
+  font-family: var(--mc-font-sans);
+  font-size: var(--mc-fs-body);
+  font-weight: 400;
+  letter-spacing: var(--mc-ls-wide);
+  text-transform: uppercase;
+  border: 1px solid var(--mc-silver-mid);
+  border-radius: var(--mc-r-2);
+  cursor: pointer;
+  position: relative;
+  transition:
+    border-color var(--mc-dur-base) var(--mc-ease),
+    color var(--mc-dur-base) var(--mc-ease),
+    box-shadow var(--mc-dur-base) var(--mc-ease),
+    background-color var(--mc-dur-base) var(--mc-ease);
+}
+body.lookmaxing .mc-btn-primary:hover,
+body.lookmaxing .mc-btn-primary:focus-visible {
+  border-color: var(--mc-silver-bright);
+  color: var(--mc-ink-white);
+  box-shadow: var(--mc-shadow-light-point);
+}
+body.lookmaxing .mc-btn-primary:active {
+  transform: translateY(1px);
+  background: rgba(255, 255, 255, 0.04);
+}
+body.lookmaxing .mc-btn-primary[aria-busy="true"],
+body.lookmaxing .mc-btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+  border-color: var(--mc-silver-faint);
+}
+
+/* Solid filled variant — use for ONE button on the entire screen if the page
+   needs an extra-strong primary (paywall unlock). */
+body.lookmaxing .mc-btn-primary--filled {
+  background: var(--mc-ink-white);
+  color: var(--mc-black);
+  border-color: var(--mc-ink-white);
+}
+body.lookmaxing .mc-btn-primary--filled:hover,
+body.lookmaxing .mc-btn-primary--filled:focus-visible {
+  background: var(--mc-silver-bright);
+  border-color: var(--mc-silver-bright);
+  color: var(--mc-black);
+}
+
+/* ─── Ghost CTA: text-only with hairline underline on hover ─── */
+body.lookmaxing .mc-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mc-sp-2);
+  min-height: 44px;
+  padding: 0 var(--mc-sp-3);
+  background: transparent;
+  color: var(--mc-silver-mid);
+  font-family: var(--mc-font-sans);
+  font-size: var(--mc-fs-small);
+  font-weight: 400;
+  letter-spacing: var(--mc-ls-wide);
+  text-transform: uppercase;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  cursor: pointer;
+  transition: color var(--mc-dur-base) var(--mc-ease),
+              border-color var(--mc-dur-base) var(--mc-ease);
+}
+body.lookmaxing .mc-btn-ghost:hover,
+body.lookmaxing .mc-btn-ghost:focus-visible {
+  color: var(--mc-silver-bright);
+  border-bottom-color: var(--mc-silver-bright);
+}
+body.lookmaxing .mc-btn-ghost:disabled {
+  color: var(--mc-silver-faint);
+  cursor: not-allowed;
+}
+
+/* ─── The light-point: a single luminous dot, used max once per screen ─── */
+body.lookmaxing .mc-light-point {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--mc-r-full);
+  background: var(--mc-ink-white);
+  box-shadow:
+    0 0 6px 0 var(--mc-light-point-glow-hot),
+    0 0 14px 0 var(--mc-light-point-glow-mid),
+    0 0 28px 0 var(--mc-light-point-glow-soft);
+}
+
+/* Breathing glow — apply to the primary CTA's glow only.
+   Use sparingly: one per screen, per spec. */
+@keyframes mcLightPointBreath {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.18),
+      0 0 14px 0 rgba(255, 255, 255, 0.18),
+      0 0 28px 0 rgba(255, 255, 255, 0.06);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.30),
+      0 0 22px 0 rgba(255, 255, 255, 0.32),
+      0 0 44px 0 rgba(255, 255, 255, 0.12);
+  }
+}
+body.lookmaxing .mc-light-point-glow {
+  animation: mcLightPointBreath 3.2s var(--mc-ease) infinite;
+}
+
+/* ─── Premium-blur gate (spec §5) ─── */
+body.lookmaxing .mc-blur-gate {
+  position: relative;
+  filter: blur(6px) saturate(0.8);
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+/* Wrapper that owns the silver overlay + the unlock-click target.
+   Frontend wraps each blurred block in <div class="mc-blur-wrap"> with the
+   blurred content inside a child carrying .mc-blur-gate. */
+body.lookmaxing .mc-blur-wrap {
+  position: relative;
+  cursor: pointer;
+  border: 1px solid var(--mc-line);
+  border-radius: var(--mc-r-3);
+  overflow: hidden;
+  transition: border-color var(--mc-dur-base) var(--mc-ease);
+}
+body.lookmaxing .mc-blur-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(232, 232, 232, 0.04) 0%,
+      rgba(232, 232, 232, 0.10) 50%,
+      rgba(232, 232, 232, 0.04) 100%
+    );
+  pointer-events: none;
+  z-index: 1;
+}
+body.lookmaxing .mc-blur-wrap::after {
+  /* Soft top-down vignette so the eye lands on the unlock affordance. */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      ellipse at center,
+      transparent 0%,
+      rgba(0, 0, 0, 0.35) 100%
+    );
+  pointer-events: none;
+  z-index: 2;
+}
+body.lookmaxing .mc-blur-wrap:hover,
+body.lookmaxing .mc-blur-wrap:focus-within {
+  border-color: var(--mc-line-bright);
+}
+
+/* ─── Card / panel ─── */
+body.lookmaxing .mc-card {
+  background: var(--mc-near-black);
+  border: 1px solid var(--mc-line);
+  border-radius: var(--mc-r-3);
+  padding: var(--mc-sp-5);
+  box-shadow: var(--mc-shadow-ambient);
+}
+
+/* ─── Pill (face-shape label, status) ─── */
+body.lookmaxing .mc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mc-sp-2);
+  height: 28px;
+  padding: 0 var(--mc-sp-3);
+  border: 1px solid var(--mc-line-strong);
+  border-radius: var(--mc-r-full);
+  font-family: var(--mc-font-mono);
+  font-size: var(--mc-fs-mono);
+  letter-spacing: var(--mc-ls-wide);
+  text-transform: uppercase;
+  color: var(--mc-silver-bright);
+  background: transparent;
+}
+
+/* ─── Progress bar (quiz) ─── */
+body.lookmaxing .mc-progress {
+  position: relative;
+  width: 100%;
+  height: 1px;
+  background: var(--mc-line);
+  overflow: hidden;
+}
+body.lookmaxing .mc-progress__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--mc-silver-gradient-h);
+  transition: width var(--mc-dur-slow) var(--mc-ease-out);
+}
+
+/* ─── Focus visible nudge for keyboard tabbing through blur wrappers ─── */
+body.lookmaxing .mc-blur-wrap:focus-visible {
+  outline: 2px solid var(--mc-light-point);
+  outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PREFERS-REDUCED-MOTION — disable transitions and the breathing glow
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  body.lookmaxing *,
+  body.lookmaxing *::before,
+  body.lookmaxing *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  body.lookmaxing .mc-light-point-glow { animation: none; }
+}

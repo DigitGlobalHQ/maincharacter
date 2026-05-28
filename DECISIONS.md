@@ -37,6 +37,30 @@ pdfkit (~500KB) was added as a production dependency for the /audit/:id/pdf rout
 
 ---
 
+## 2026-05-29 — Stage-1 Audit Engine (Wave 2B): BLACK & SILVER frontend surfaces
+
+### New /lookmaxing/* surfaces use BLACK & SILVER tokens, not the existing gold palette
+
+The 8 lookmaxing audit funnel surfaces (`index.html`, `start.html`, `quiz.html`, `capture.html`, `audit.html`, `full.html`, `audit-full.html`, `fork.html`) live under `public/lookmaxing/` with their own `tokens.css` copied from `product/design-lookmaxing-tokens.css`. The existing `/lookmax/*` gold-tokened PWA pages are untouched. The body `class="lookmaxing"` scope-gate in the CSS ensures the black+silver variables only apply to the new funnel — zero regression risk on existing surfaces.
+
+### tokens.css is a mirror copy, not a symlink
+
+The file is copied (not symlinked) to `public/lookmaxing/tokens.css` so it is served directly as a static asset without any special build step. A "do not edit here" comment at the top points back to the source. If the source is updated, the copy must be re-applied manually — logged here so the maintainer knows.
+
+### audit.html serves both Surface 5 (free view) and Surface 6 (paywall modal)
+
+Both the free-resolution report and the `?pay=true` paywall modal live in `audit.html` rather than separate files. The paywall is an inline modal overlay, not a separate page load. This matches the spec (`/lookmaxing/audit/:auditId?pay=true` opens the modal) and avoids a round-trip HTML request that would cause visible flicker when tapping any blurred block.
+
+### audit-full.html mirrors full.html to satisfy the server.js route name
+
+The Wave 2A backend (server.js) references `lookmaxingPage('audit-full.html')` for the `/lookmaxing/audit/:id/full` route. The main source file is `full.html`; `audit-full.html` is a copy so both names resolve without modifying server.js. If the route name is ever updated, delete `audit-full.html` and let `full.html` serve directly.
+
+### Surface 8 trial CTA ships disabled; feature-flag controlled by window.LOOKMAX_TRIAL_LIVE
+
+The Daily Mirror trial is built tomorrow (spec §1). The fork.html CTA ships tonight as `disabled` with `aria-disabled="true"`. Flipping `window.LOOKMAX_TRIAL_LIVE = true` (injectable via a `<script>` tag or server-rendered inline JS) enables the CTA without any HTML change. This is the agreed pattern from the design spec open structural call #2.
+
+---
+
 ## 2026-05-28 — stage-1-audit Wave 2C: Orator routes cordoned off
 
 ### /start 302s to /lookmaxing; public/start.html preserved on disk

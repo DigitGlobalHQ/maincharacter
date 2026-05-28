@@ -1,5 +1,9 @@
 <!doctype html>
-<!-- Post-payment confirmation (P6). Consultant voice; ◆ only, no exclamation marks. -->
+<!-- Post-payment confirmation (P6 + Login Gate P0-1).
+     Consultant voice; ◆ only, no exclamation marks.
+     Auto-polls /api/payment/status for 30s (F1 mitigation).
+     When firstLoginToken is present, exchanges it silently via
+     /api/lookmax/auth/exchange-first-login and stores the JWT. -->
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -35,15 +39,37 @@
     .error { display: none; border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 20px; color: #cfccc4; font-size: 14px; }
     a.link { color: var(--gold); text-decoration: none; }
     #loading { color: var(--muted); font-size: 14px; }
+
+    /* Animated dot ellipsis on #loading — the ONLY new CSS in this spec.
+       ~12 lines, scoped to #loading::after, respects prefers-reduced-motion.
+       Replaces what would otherwise be a JS setInterval. */
+    #loading::after {
+      content: '';
+      display: inline-block;
+      width: 1.2em;
+      text-align: left;
+      animation: dots 1.6s steps(4, end) infinite;
+    }
+    @keyframes dots {
+      0%   { content: ''; }
+      25%  { content: '.'; }
+      50%  { content: '..'; }
+      75%  { content: '...'; }
+      100% { content: ''; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #loading::after { animation: none; content: '...'; }
+    }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="eyebrow">◆ MainCharacter</div>
 
-    <div id="loading">Confirming your subscription…</div>
+    <!-- In-flight (polling): quiet patient copy with CSS dot animation -->
+    <div id="loading" aria-live="polite" role="status">Confirming with the bank</div>
 
-    <div id="confirmed" style="display:none;">
+    <div id="confirmed" style="display:none;" aria-live="polite">
       <h1 id="headline">The Chamber is open. ◆</h1>
       <p class="lede" id="lede">Your place is held. Here is what happens next.</p>
 
@@ -58,17 +84,34 @@
       <div class="footer">◆ MainCharacter</div>
     </div>
 
-    <div id="error" class="error">
+    <div id="error" class="error" aria-live="polite">
       Your payment is being verified. Please refresh in a moment, or contact
       <a class="link" href="mailto:support@maincharacter.digitglobalservices.com">support@maincharacter.digitglobalservices.com</a>.
+      <br /><br />
+      <!-- F1 fallback: shown after 30s of failed polls.
+           confirmed.fallbackEmailLink — approved copy -->
+      <a class="link" href="/lookmax/login" id="emailLinkFallback"
+         style="display:inline-block;margin-top:12px;"
+         aria-label="Send me an entry link instead">
+        Send me an entry link instead
+      </a>
     </div>
   </div>
 
 <script>
-  const q = new URLSearchParams(location.search);
-  const subscriptionId = q.get('razorpay_subscription_id') || q.get('subscriptionId') || '';
-  const paymentId = q.get('razorpay_payment_id') || '';
-  const signature = q.get('razorpay_signature') || '';
+  // ── Poll config (overridable for tests) ──
+  var POLL_INTERVAL = window.__PC_POLL_INTERVAL_MS || 3000;
+  var POLL_TIMEOUT  = window.__PC_POLL_TIMEOUT_MS  || 30000;
+
+  var q = new URLSearchParams(location.search);
+  var subscriptionId = q.get('razorpay_subscription_id') || q.get('subscriptionId') || '';
+  var paymentId  = q.get('razorpay_payment_id') || '';
+  var signature  = q.get('razorpay_signature') || '';
+
+  // One-line localStorage helper (app.js is NOT loaded on this page by design)
+  function setLMToken(jwt) {
+    try { localStorage.setItem('lookmax.token', jwt); } catch (_e) { /* storage blocked */ }
+  }
 
   function fmtINR(paise) {
     if (paise == null) return '—';
@@ -78,63 +121,146 @@
     try { return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
     catch (_e) { return '—'; }
   }
+
   function showError() {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('error').style.display = 'block';
   }
 
+  // Exchange the firstLoginToken for a 24h JWT and store it silently.
+  // On failure: silent degradation — the mirror button still navigates
+  // to /lookmax/ but the user will be bounced to login (F2 recovery path).
+  async function exchangeFirstLogin(firstLoginToken) {
+    try {
+      var res = await fetch('/api/lookmax/auth/exchange-first-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstLoginToken: firstLoginToken }),
+      });
+      if (!res.ok) return null;
+      var data = await res.json().catch(function() { return null; });
+      if (data && data.token) {
+        setLMToken(data.token);
+        return data.token;
+      }
+    } catch (_e) { /* silent — fail gracefully */ }
+    return null;
+  }
+
   function renderSteps(d) {
-    const steps = [];
+    var steps = [];
     if (d.oratorActive) {
-      steps.push('Your first message arrives tomorrow morning at your preferred time.');
+      steps.push({ text: 'Your first message arrives tomorrow morning at your preferred time.', isMirror: false });
     }
     if (d.lookmaxxingActive) {
-      steps.push('Open the mirror at /lookmax/ — your daily ritual begins tomorrow morning.');
+      // confirmed.mirrorCta — FOUNDER COPY: button label + supporting line.
+      // Default "Open the mirror" used until founder replaces with approved copy.
+      steps.push({ text: null, isMirror: true });
     }
     if (!steps.length) {
-      steps.push('Your protocol is being prepared. Watch your WhatsApp.');
+      steps.push({ text: 'Your protocol is being prepared. Watch your WhatsApp.', isMirror: false });
     }
-    const el = document.getElementById('steps');
-    el.innerHTML = steps
-      .map((t, i) => '<div class="step"><div class="n">' + (i + 1) + '</div><div class="t">' + t + '</div></div>')
-      .join('');
-    // Lookmaxxing: offer the (future) PWA install affordance.
+
+    var el = document.getElementById('steps');
+    var html = '';
+    steps.forEach(function(s, i) {
+      if (s.isMirror) {
+        // Mirror CTA step — reuses .install class per design spec §2.2
+        html += '<div class="step">'
+          + '<div class="n">' + (i + 1) + '</div>'
+          + '<div class="t">'
+          // FOUNDER COPY: supporting line below (replace the p text)
+          + '<p style="margin-bottom:10px"><!-- FOUNDER COPY: button label + supporting line for confirmed.mirrorCta -->'
+          + 'The mirror is ready when you are.'
+          + '</p>'
+          + '<button class="install" type="button" id="enterMirror" aria-label="Open the mirror">'
+          // FOUNDER COPY: replace the button label below
+          + 'Open the mirror'
+          + '</button>'
+          + '</div>'
+          + '</div>';
+      } else {
+        html += '<div class="step"><div class="n">' + (i + 1) + '</div><div class="t">' + s.text + '</div></div>';
+      }
+    });
+    el.innerHTML = html;
+
+    // Lookmaxxing: offer the PWA install affordance.
     if (d.lookmaxxingActive) {
-      const note = document.createElement('div');
+      var note = document.createElement('div');
       note.className = 'step';
       note.innerHTML = '<div class="n">+</div><div class="t"><button class="install" id="installBtn" type="button">Install the app</button></div>';
       el.appendChild(note);
     }
+
+    // Wire the mirror button click — navigates to /lookmax/.
+    // The JWT was already set by exchangeFirstLogin(); if that failed,
+    // the app will redirect to /lookmax/login (F2 degradation).
+    document.addEventListener('click', function(e) {
+      if (e.target && e.target.id === 'enterMirror') {
+        location.href = '/lookmax/';
+      }
+    });
+
+    // PWA install prompt wiring (full PWA build is a later night).
+    var deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', function(e) { e.preventDefault(); deferredPrompt = e; });
+    document.addEventListener('click', function(e) {
+      if (e.target && e.target.id === 'installBtn' && deferredPrompt) deferredPrompt.prompt();
+    });
   }
 
-  async function load() {
-    if (!subscriptionId) { showError(); return; }
-    try {
-      const params = new URLSearchParams({ subscriptionId });
-      if (paymentId) params.set('paymentId', paymentId);
-      if (signature) params.set('signature', signature);
-      const res = await fetch('/api/payment/status?' + params.toString());
-      const d = await res.json();
-      if (!res.ok || !d.found) { showError(); return; }
+  // Render the confirmed view from the status response.
+  async function renderConfirmed(d) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('confirmed').style.display = 'block';
+    document.getElementById('headline').textContent = 'The Chamber is open, ' + (d.name || 'Seeker') + '. ◆';
+    renderSteps(d);
+    document.getElementById('rPlan').textContent = d.planLabel || '—';
+    document.getElementById('rAmount').textContent = d.amount != null ? fmtINR(d.amount) + ' / month' : '—';
+    document.getElementById('rNext').textContent = fmtDate(d.nextBillingDate);
 
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('confirmed').style.display = 'block';
-      document.getElementById('headline').textContent = 'The Chamber is open, ' + (d.name || 'Seeker') + '. ◆';
-      renderSteps(d);
-      document.getElementById('rPlan').textContent = d.planLabel || '—';
-      document.getElementById('rAmount').textContent = d.amount != null ? fmtINR(d.amount) + ' / month' : '—';
-      document.getElementById('rNext').textContent = fmtDate(d.nextBillingDate);
-
-      // PWA install prompt wiring (full PWA build is a later night).
-      let deferredPrompt = null;
-      window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
-      document.addEventListener('click', (e) => {
-        if (e.target && e.target.id === 'installBtn' && deferredPrompt) deferredPrompt.prompt();
-      });
-    } catch (_e) {
-      showError();
+    // If a firstLoginToken is present, exchange it silently now.
+    // The mirror button already exists in the DOM at this point.
+    if (d.firstLoginToken) {
+      await exchangeFirstLogin(d.firstLoginToken);
     }
   }
+
+  // Auto-poll loop — 3s intervals, up to POLL_TIMEOUT ms total.
+  // On first found:true response, render and stop.
+  // After timeout, show the error block (with the F1 fallback link).
+  async function load() {
+    if (!subscriptionId) { showError(); return; }
+
+    var started = Date.now();
+
+    async function attempt() {
+      try {
+        var params = new URLSearchParams({ subscriptionId: subscriptionId });
+        if (paymentId) params.set('paymentId', paymentId);
+        if (signature)  params.set('signature', signature);
+        var res = await fetch('/api/payment/status?' + params.toString());
+        var d = await res.json();
+        if (res.ok && d.found) {
+          await renderConfirmed(d);
+          return; // done
+        }
+      } catch (_e) { /* network error — keep polling */ }
+
+      // Not found yet — check timeout.
+      if (Date.now() - started >= POLL_TIMEOUT) {
+        showError();
+        return;
+      }
+
+      // Schedule next attempt.
+      setTimeout(attempt, POLL_INTERVAL);
+    }
+
+    attempt();
+  }
+
   load();
 </script>
 </body>

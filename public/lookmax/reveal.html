@@ -249,6 +249,19 @@
 
       <div id="shareToast" aria-live="polite" role="status"></div>
 
+      <!-- B4: MP4 export (REVEAL_MP4_ENABLED flag — hidden by default) -->
+      <!-- TODO copy review: button label — deferred pending copy-consultant approval -->
+      <div id="mp4ExportSlot" style="display:none;margin-top:16px">
+        <button
+          class="btn"
+          id="mp4ExportBtn"
+          data-event="reveal_mp4_export_requested"
+          aria-label="Export reveal as video file"
+          style="width:100%"
+        >Get the file ◆</button>
+        <div id="mp4Status" style="font-size:13px;color:var(--muted);margin-top:8px;min-height:18px" aria-live="polite" role="status"></div>
+      </div>
+
       <p class="footer-note" id="stubNote" style="margin-top:20px">
         The reveal is a preview. The full video — stitched, scored, with the soundtrack — arrives once the infrastructure lands. Soon. ◆
       </p>
@@ -376,6 +389,9 @@
 
       // Share wiring
       wireShares();
+
+      // B4: Maybe show MP4 export button (REVEAL_MP4_ENABLED flag-gated)
+      maybeShowMp4Button();
 
       if (window.mc) window.mc.track('reveal_weekly_shown', { weekNumber: preview.weekNumber });
     }
@@ -614,6 +630,110 @@
         else toast.classList.remove('visible');
       }, 4000);
     }
+
+    // ── B4: MP4 export button (REVEAL_MP4_ENABLED flag) ───────────────────────
+    // The button is hidden in HTML. We check the server flag by attempting to POST
+    // render with flag-off expected 503; flag-on shows the button.
+    // We probe flag state by trying to render once (which is idempotent on flag state).
+    async function maybeShowMp4Button() {
+      if (!preview || !preview.unlocked) return;
+      const token = localStorage.getItem('lookmax.token');
+      try {
+        const probe = await fetch('/api/lookmax/reveal/render', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({}),
+        });
+        if (probe.status === 503) return; // flag off or ffmpeg absent
+        // Flag is on — show the button and handle its result
+        const slot = document.getElementById('mp4ExportSlot');
+        if (slot) slot.style.display = '';
+        const data = await probe.json();
+        if (data.jobId) handleExportJob(data.jobId, token);
+      } catch {
+        // Network error — keep button hidden
+      }
+    }
+
+    async function handleExportJob(jobId, token) {
+      const statusEl = document.getElementById('mp4Status');
+      const btn = document.getElementById('mp4ExportBtn');
+      if (btn) btn.disabled = true;
+
+      // Poll every 3s for up to 5 minutes
+      let attempts = 0;
+      const maxAttempts = 100;
+      const poll = async () => {
+        if (attempts++ > maxAttempts) {
+          if (statusEl) statusEl.textContent = 'Something has interrupted the work. Try again in a moment.';
+          if (btn) btn.disabled = false;
+          return;
+        }
+        try {
+          const r = await fetch(`/api/lookmax/reveal/job/${jobId}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          const job = await r.json();
+          if (job.status === 'done' && job.resultUrl) {
+            if (statusEl) statusEl.textContent = '';
+            // Offer download
+            const a = document.createElement('a');
+            a.href = job.resultUrl;
+            a.download = `maincharacter-reveal-${job.weekLabel || 'week'}.mp4`;
+            a.click();
+            if (btn) {
+              btn.disabled = false;
+              btn.textContent = 'Get the file again ◆';
+            }
+            if (window.mc) window.mc.track('reveal_mp4_downloaded', { weekLabel: job.weekLabel });
+          } else if (job.status === 'error') {
+            if (statusEl) statusEl.textContent = 'Something has interrupted the work. Try again in a moment.';
+            if (btn) btn.disabled = false;
+          } else {
+            // Still processing
+            if (statusEl) statusEl.textContent = 'Composing the file.';
+            setTimeout(poll, 3000);
+          }
+        } catch {
+          setTimeout(poll, 3000);
+        }
+      };
+      setTimeout(poll, 2000);
+
+      // Wire the button for manual retry / new renders
+      if (btn) {
+        btn.addEventListener('click', async () => {
+          if (window.mc) window.mc.track('reveal_mp4_export_requested', {});
+          btn.disabled = true;
+          if (statusEl) statusEl.textContent = 'Composing the file.';
+          try {
+            const r = await fetch('/api/lookmax/reveal/render', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+              body: JSON.stringify({}),
+            });
+            const d = await r.json();
+            if (d.jobId) handleExportJob(d.jobId, token);
+            else {
+              if (statusEl) statusEl.textContent = 'Something has interrupted the work.';
+              btn.disabled = false;
+            }
+          } catch {
+            if (statusEl) statusEl.textContent = 'Something has interrupted the work.';
+            btn.disabled = false;
+          }
+        });
+      }
+    }
+
+    // Call after reveal view is shown
+    // We inject this call into showReveal()
   </script>
 </body>
 </html>

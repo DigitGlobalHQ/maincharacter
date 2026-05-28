@@ -102,6 +102,10 @@ const tightLimiter = rateLimit({
 app.use('/api/enroll', tightLimiter);
 app.use('/api/waitlist', tightLimiter);
 app.use('/api/admin/login', tightLimiter);
+// Login Gate (P0-1): tightLimiter (10/min) on the entire auth namespace,
+// replacing the previous absence of an auth-scoped limiter (security audit MEDIUM).
+// Covers admin-login + request-link + consume-link + exchange-first-login + method.
+app.use('/api/lookmax/auth', tightLimiter);
 app.use('/api', globalLimiter);
 
 // Static files — /public directory

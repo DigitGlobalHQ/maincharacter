@@ -1,0 +1,632 @@
+<!-- COPY APPROVED 2026-05-29 (autopilot per spec §1): see product/copy-lookmaxing-audit.md -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Photo — MainCharacter</title>
+  <link rel="stylesheet" href="/lookmaxing/tokens.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=Sora:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    .lm-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      padding: 0 var(--mc-sp-4);
+      border-bottom: 1px solid var(--mc-line);
+    }
+    .lm-nav__brand {
+      font-family: var(--mc-font-sans);
+      font-size: var(--mc-fs-eyebrow);
+      font-weight: 500;
+      letter-spacing: var(--mc-ls-xwide);
+      text-transform: uppercase;
+      color: var(--mc-silver-mid);
+    }
+    .lm-nav__step {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-mono);
+      color: var(--mc-silver-dim);
+    }
+    .lm-capture-progress {
+      height: 1px;
+      background: var(--mc-line);
+      position: relative;
+      overflow: hidden;
+    }
+    .lm-capture-progress__fill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 75%;
+      background: var(--mc-silver-gradient-h);
+    }
+
+    .lm-capture-body {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: var(--mc-sp-5) var(--mc-sp-4);
+    }
+    @media (min-width: 768px) { .lm-capture-body { padding: var(--mc-sp-6) var(--mc-sp-5); } }
+
+    .lm-capture-eyebrow { margin: 0 0 var(--mc-sp-3); }
+    .lm-capture-heading {
+      font-size: var(--mc-fs-h2);
+      margin: 0 0 var(--mc-sp-2);
+    }
+    .lm-capture-sub {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-mid);
+      margin: 0 0 var(--mc-sp-5);
+    }
+
+    /* ── Camera frame ── */
+    .lm-camera-frame {
+      position: relative;
+      aspect-ratio: 3 / 4;
+      background: var(--mc-near-black);
+      border: 1px solid var(--mc-line-strong);
+      border-radius: var(--mc-r-3);
+      overflow: hidden;
+      margin-bottom: var(--mc-sp-4);
+    }
+    .lm-camera-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .lm-camera-preview-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Face guide overlay */
+    .lm-face-guide {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -60%);
+      width: 55%;
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    /* Tips overlay */
+    .lm-tips {
+      position: absolute;
+      bottom: var(--mc-sp-4);
+      left: var(--mc-sp-3);
+      background: rgba(0, 0, 0, 0.65);
+      border-radius: var(--mc-r-2);
+      padding: var(--mc-sp-2) var(--mc-sp-3);
+    }
+    .lm-tips p {
+      font-family: var(--mc-font-mono);
+      font-size: 0.625rem;
+      color: var(--mc-silver-mid);
+      letter-spacing: 0.04em;
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    /* Shutter */
+    .lm-shutter-wrap {
+      position: absolute;
+      bottom: var(--mc-sp-5);
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .lm-shutter {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 2px solid var(--mc-silver-mid);
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color var(--mc-dur-fast) var(--mc-ease);
+    }
+    .lm-shutter:hover { border-color: var(--mc-silver-bright); }
+    .lm-shutter:disabled { opacity: 0.4; cursor: not-allowed; }
+    .lm-shutter__inner {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--mc-ink-white);
+      box-shadow:
+        0 0 6px 0 var(--mc-light-point-glow-hot),
+        0 0 14px 0 var(--mc-light-point-glow-mid),
+        0 0 28px 0 var(--mc-light-point-glow-soft);
+      animation: mcLightPointBreath 3.2s var(--mc-ease) infinite;
+    }
+    @keyframes shutterPress {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.4); }
+      100% { transform: scale(1); }
+    }
+    .lm-shutter--pressed .lm-shutter__inner { animation: shutterPress 240ms ease forwards; }
+
+    /* Permission pending state */
+    .lm-camera-pending {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--mc-sp-4);
+      padding: var(--mc-sp-5);
+      text-align: center;
+    }
+    .lm-camera-pending p {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-mono);
+      letter-spacing: var(--mc-ls-wide);
+      color: var(--mc-silver-dim);
+    }
+
+    /* Quality warning */
+    .lm-quality-warning {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: var(--mc-sp-3) var(--mc-sp-4);
+      background: rgba(0, 0, 0, 0.85);
+      border-bottom: 1px solid var(--mc-line-strong);
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-mono);
+      color: var(--mc-silver-mid);
+      z-index: 10;
+      transform: translateY(-8px);
+      opacity: 0;
+      transition: transform var(--mc-dur-fast) var(--mc-ease),
+                  opacity var(--mc-dur-fast) var(--mc-ease);
+    }
+    .lm-quality-warning.is-visible {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Review state controls */
+    .lm-review-controls {
+      display: none;
+      gap: var(--mc-sp-3);
+      margin-bottom: var(--mc-sp-4);
+    }
+    .lm-review-controls.is-active { display: flex; }
+    .lm-review-controls button { flex: 1; }
+
+    /* Consent */
+    .lm-consent {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--mc-sp-3);
+      margin-bottom: var(--mc-sp-4);
+    }
+    .lm-consent__box {
+      width: 18px;
+      height: 18px;
+      min-width: 18px;
+      border: 1px solid var(--mc-silver-mid);
+      border-radius: var(--mc-r-1);
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+      transition: background-color var(--mc-dur-fast) var(--mc-ease),
+                  border-color var(--mc-dur-fast) var(--mc-ease);
+    }
+    .lm-consent__box.is-checked {
+      background: var(--mc-silver-bright);
+      border-color: var(--mc-silver-bright);
+    }
+    .lm-consent__box:focus-visible { outline: 2px solid var(--mc-light-point); outline-offset: 2px; }
+    .lm-consent__checkmark { display: none; }
+    .lm-consent__box.is-checked .lm-consent__checkmark { display: block; }
+    .lm-consent__label {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-mid);
+      line-height: var(--mc-lh-body);
+      cursor: pointer;
+    }
+    .lm-consent__label a { color: var(--mc-silver-bright); text-decoration: underline; }
+
+    /* Upload CTA */
+    .lm-upload-section {
+      margin-bottom: var(--mc-sp-4);
+    }
+    .lm-upload-input { display: none; }
+    .lm-upload-label {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--mc-sp-2);
+      min-height: 44px;
+      cursor: pointer;
+      font-family: var(--mc-font-sans);
+      font-size: var(--mc-fs-small);
+      font-weight: 400;
+      letter-spacing: var(--mc-ls-wide);
+      text-transform: uppercase;
+      color: var(--mc-silver-mid);
+      border-bottom: 1px solid transparent;
+      transition: color var(--mc-dur-base) var(--mc-ease),
+                  border-color var(--mc-dur-base) var(--mc-ease);
+    }
+    .lm-upload-label:hover {
+      color: var(--mc-silver-bright);
+      border-bottom-color: var(--mc-silver-bright);
+    }
+
+    .lm-privacy {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-faint);
+      margin-bottom: var(--mc-sp-4);
+    }
+
+    .lm-analyze-btn { width: 100%; }
+
+    .lm-status {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-mono);
+      color: var(--mc-silver-dim);
+      letter-spacing: var(--mc-ls-wide);
+      text-align: center;
+      margin-top: var(--mc-sp-3);
+    }
+    .lm-error {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-error);
+      margin-top: var(--mc-sp-3);
+    }
+
+    .lm-footer {
+      border-top: 1px solid var(--mc-line);
+      padding: var(--mc-sp-5) var(--mc-sp-4);
+      text-align: center;
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-faint);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .lm-shutter__inner { animation: none; }
+      .lm-shutter--pressed .lm-shutter__inner { animation: none; }
+      .lm-quality-warning { transition: none; }
+    }
+  </style>
+</head>
+<body class="lookmaxing">
+
+<nav class="lm-nav" aria-label="Capture navigation">
+  <a href="/lookmaxing" class="lm-nav__brand" aria-label="MainCharacter">◆ MAINCHARACTER</a>
+  <span class="lm-nav__step">STEP 3 / 4</span>
+</nav>
+<div class="lm-capture-progress" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" aria-label="Step progress">
+  <div class="lm-capture-progress__fill"></div>
+</div>
+
+<main class="lm-capture-body">
+  <p class="mc-eyebrow lm-capture-eyebrow">THE PHOTO</p>
+  <h1 class="mc-serif mc-serif--italic lm-capture-heading">One front-face photo. The honest one.</h1>
+  <p class="lm-capture-sub">Natural light. Camera at eye level. Neutral expression. No filter.</p>
+
+  <!-- Camera frame -->
+  <div class="lm-camera-frame" id="camera-frame" aria-label="Camera preview">
+    <!-- Permission pending state -->
+    <div class="lm-camera-pending" id="camera-pending">
+      <p>Awaiting camera.</p>
+      <button class="mc-btn-ghost" id="grant-camera-btn" aria-label="Grant camera access">
+        Grant access →
+      </button>
+    </div>
+
+    <!-- Live video (shown after permission) -->
+    <video class="lm-camera-video" id="camera-video" autoplay playsinline muted hidden aria-label="Camera preview"></video>
+
+    <!-- Preview image (review state) -->
+    <img class="lm-camera-preview-img" id="preview-img" hidden alt="Captured photo preview" loading="lazy">
+
+    <!-- Face guide SVG overlay (shown while camera is live) -->
+    <svg class="lm-face-guide" id="face-guide" viewBox="0 0 200 260" fill="none" aria-hidden="true" focusable="false">
+      <ellipse cx="100" cy="130" rx="76" ry="110" stroke="#e8e8e8" stroke-width="1"/>
+    </svg>
+
+    <!-- Tips overlay -->
+    <div class="lm-tips" id="camera-tips" hidden aria-hidden="true">
+      <p>· Daylight is best — face a window.</p>
+      <p>· Hold camera at eye level.</p>
+      <p>· Soft mouth. No smile.</p>
+    </div>
+
+    <!-- Quality warning -->
+    <div class="lm-quality-warning" id="quality-warning" role="alert" aria-live="polite" aria-hidden="true"></div>
+
+    <!-- Shutter -->
+    <div class="lm-shutter-wrap" id="shutter-wrap" hidden>
+      <button class="lm-shutter" id="shutter-btn" aria-label="Take the photo">
+        <span class="lm-shutter__inner" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Canvas for frame capture (hidden) -->
+  <canvas id="capture-canvas" hidden></canvas>
+
+  <!-- Review controls -->
+  <div class="lm-review-controls" id="review-controls">
+    <button class="mc-btn-ghost" id="retake-btn" aria-label="Retake photo">Retake</button>
+  </div>
+
+  <!-- 18+ consent — MUST be ticked before upload-and-analyze activates -->
+  <div class="lm-consent">
+    <button
+      class="lm-consent__box"
+      id="consent-box"
+      role="checkbox"
+      aria-checked="false"
+      aria-label="I am 18 or older and I accept the privacy policy"
+    >
+      <svg class="lm-consent__checkmark" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+        <path d="M2 6l3 3 5-5" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <label class="lm-consent__label" for="consent-box" id="consent-label">
+      I am 18 or older and I accept the <a href="/privacy" target="_blank" rel="noopener">privacy policy</a>.
+    </label>
+  </div>
+
+  <!-- Upload fallback -->
+  <div class="lm-upload-section">
+    <input
+      type="file"
+      id="file-input"
+      class="lm-upload-input"
+      accept="image/*"
+      capture="user"
+      aria-label="Pick a photo from your library"
+    >
+    <label for="file-input" class="lm-upload-label" data-event="lookmaxing_photo_uploaded" data-event-props='{"source":"upload"}'>
+      Or pick one from your library →
+    </label>
+  </div>
+
+  <p class="lm-privacy">We score the photo. We do not publish it. ◆</p>
+
+  <!-- Analyze button — gated on consent -->
+  <button class="mc-btn-primary lm-analyze-btn" id="analyze-btn" disabled aria-label="Upload and analyze your photo">
+    Upload and analyze →
+  </button>
+
+  <div id="capture-status" class="lm-status" hidden aria-live="polite">Sending the photo. Hold.</div>
+  <div id="capture-error" class="lm-error" hidden role="alert" aria-live="assertive"></div>
+</main>
+
+<footer class="lm-footer">
+  <p>◆ MainCharacter · The Consultant</p>
+</footer>
+
+<script src="/track.js" defer></script>
+<script>
+(function () {
+  'use strict';
+
+  var videoEl = document.getElementById('camera-video');
+  var previewImg = document.getElementById('preview-img');
+  var captureCanvas = document.getElementById('capture-canvas');
+  var cameraPending = document.getElementById('camera-pending');
+  var grantBtn = document.getElementById('grant-camera-btn');
+  var shutterWrap = document.getElementById('shutter-wrap');
+  var shutterBtn = document.getElementById('shutter-btn');
+  var faceGuide = document.getElementById('face-guide');
+  var cameraTips = document.getElementById('camera-tips');
+  var qualityWarning = document.getElementById('quality-warning');
+  var reviewControls = document.getElementById('review-controls');
+  var retakeBtn = document.getElementById('retake-btn');
+  var fileInput = document.getElementById('file-input');
+  var consentBox = document.getElementById('consent-box');
+  var analyzeBtn = document.getElementById('analyze-btn');
+  var statusEl = document.getElementById('capture-status');
+  var errorEl = document.getElementById('capture-error');
+
+  var consentChecked = false;
+  var capturedBlob = null;
+  var stream = null;
+
+  // ── Consent gate ──
+  function updateAnalyzeBtn() {
+    analyzeBtn.disabled = !(consentChecked && capturedBlob);
+  }
+
+  consentBox.addEventListener('click', function () {
+    consentChecked = !consentChecked;
+    consentBox.setAttribute('aria-checked', consentChecked ? 'true' : 'false');
+    consentBox.classList.toggle('is-checked', consentChecked);
+    updateAnalyzeBtn();
+  });
+
+  // ── Camera init ──
+  function startCamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showUploadFallback();
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+      .then(function (s) {
+        stream = s;
+        videoEl.srcObject = s;
+        videoEl.hidden = false;
+        cameraPending.hidden = true;
+        shutterWrap.hidden = false;
+        faceGuide.hidden = false;
+        cameraTips.hidden = false;
+      })
+      .catch(function () {
+        showUploadFallback();
+      });
+  }
+
+  function showUploadFallback() {
+    cameraPending.innerHTML = '<p>Camera access not available. Pick a photo from your library.</p>';
+    shutterWrap.hidden = true;
+    faceGuide.hidden = true;
+    cameraTips.hidden = true;
+  }
+
+  grantBtn.addEventListener('click', startCamera);
+  startCamera();
+
+  // ── Shutter ──
+  shutterBtn.addEventListener('click', function () {
+    if (!videoEl.videoWidth) return;
+    shutterBtn.classList.add('lm-shutter--pressed');
+    setTimeout(function () { shutterBtn.classList.remove('lm-shutter--pressed'); }, 240);
+
+    captureCanvas.width = videoEl.videoWidth;
+    captureCanvas.height = videoEl.videoHeight;
+    var ctx = captureCanvas.getContext('2d');
+    ctx.drawImage(videoEl, 0, 0);
+
+    // Quality check: brightness
+    var imageData = ctx.getImageData(0, 0, captureCanvas.width, captureCanvas.height);
+    var data = imageData.data;
+    var brightness = 0;
+    for (var i = 0; i < data.length; i += 4) {
+      brightness += (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114);
+    }
+    brightness /= (data.length / 4);
+
+    if (brightness < 40) {
+      showQualityWarning('The light is low. Try again near a window.');
+      return;
+    }
+
+    captureCanvas.toBlob(function (blob) {
+      capturedBlob = blob;
+      var url = URL.createObjectURL(blob);
+      previewImg.src = url;
+      previewImg.hidden = false;
+      videoEl.hidden = true;
+      faceGuide.hidden = true;
+      cameraTips.hidden = true;
+      shutterWrap.hidden = true;
+      reviewControls.classList.add('is-active');
+      if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); }
+      updateAnalyzeBtn();
+    }, 'image/jpeg', 0.9);
+  });
+
+  function showQualityWarning(msg) {
+    qualityWarning.textContent = msg;
+    qualityWarning.setAttribute('aria-hidden', 'false');
+    qualityWarning.classList.add('is-visible');
+    setTimeout(function () {
+      qualityWarning.classList.remove('is-visible');
+      qualityWarning.setAttribute('aria-hidden', 'true');
+    }, 3000);
+  }
+
+  // ── Retake ──
+  retakeBtn.addEventListener('click', function () {
+    capturedBlob = null;
+    previewImg.hidden = true;
+    previewImg.src = '';
+    reviewControls.classList.remove('is-active');
+    faceGuide.hidden = false;
+    cameraTips.hidden = false;
+    shutterWrap.hidden = false;
+    videoEl.hidden = false;
+    updateAnalyzeBtn();
+    startCamera();
+  });
+
+  // ── File upload fallback ──
+  fileInput.addEventListener('change', function () {
+    var file = fileInput.files[0];
+    if (!file) return;
+    // Check minimum size via Image
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function () {
+      if (img.width < 400) {
+        showQualityWarning('The image is too small. Try a clearer photo.');
+        URL.revokeObjectURL(url);
+        return;
+      }
+      capturedBlob = file;
+      previewImg.src = url;
+      previewImg.hidden = false;
+      videoEl.hidden = true;
+      faceGuide.hidden = true;
+      cameraTips.hidden = true;
+      shutterWrap.hidden = true;
+      cameraPending.hidden = true;
+      reviewControls.classList.add('is-active');
+      if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); }
+      updateAnalyzeBtn();
+      if (window.mc) {
+        window.mc.track('lookmaxing_photo_uploaded', { source: 'upload' });
+      }
+    };
+    img.src = url;
+  });
+
+  // ── Analyze ──
+  analyzeBtn.addEventListener('click', function () {
+    if (!capturedBlob || !consentChecked) return;
+
+    analyzeBtn.setAttribute('aria-busy', 'true');
+    analyzeBtn.disabled = true;
+    analyzeBtn.textContent = '· · ·';
+    statusEl.hidden = false;
+    errorEl.hidden = true;
+
+    var formData = new FormData();
+    formData.append('photo', capturedBlob, 'face.jpg');
+    formData.append('consent_18plus', 'true');
+
+    fetch('/api/lookmaxing/photo', {
+      method: 'POST',
+      body: formData,
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('photo upload failed');
+        return res.json();
+      })
+      .then(function (data) {
+        if (window.mc) {
+          window.mc.track('lookmaxing_photo_uploaded', { source: 'camera' });
+        }
+        statusEl.textContent = 'Analysing. Hold.';
+        return fetch('/api/lookmaxing/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ auditId: data.auditId }),
+        });
+      })
+      .then(function (res) {
+        if (!res.ok) throw new Error('analyze failed');
+        return res.json();
+      })
+      .then(function (data) {
+        window.location.href = '/lookmaxing/audit/' + data.auditId;
+      })
+      .catch(function (err) {
+        analyzeBtn.setAttribute('aria-busy', 'false');
+        analyzeBtn.disabled = false;
+        analyzeBtn.textContent = 'Upload and analyze →';
+        statusEl.hidden = true;
+        errorEl.textContent = 'Something went wrong. Try again.';
+        errorEl.hidden = false;
+      });
+  });
+}());
+</script>
+</body>
+</html>

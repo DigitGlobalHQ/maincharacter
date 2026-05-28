@@ -1,0 +1,560 @@
+<!-- COPY APPROVED 2026-05-29 (autopilot per spec §1): see product/copy-lookmaxing-audit.md -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calibration — MainCharacter</title>
+  <link rel="stylesheet" href="/lookmaxing/tokens.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=Sora:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    /* ── Nav with progress ── */
+    .lm-quiz-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      padding: 0 var(--mc-sp-4);
+    }
+    .lm-quiz-nav__brand {
+      font-family: var(--mc-font-sans);
+      font-size: var(--mc-fs-eyebrow);
+      font-weight: 500;
+      letter-spacing: var(--mc-ls-xwide);
+      text-transform: uppercase;
+      color: var(--mc-silver-mid);
+    }
+    .lm-quiz-nav__counter {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-mono);
+      color: var(--mc-silver-mid);
+    }
+    .lm-quiz-progress { /* full-width hairline below nav */
+      position: relative;
+      height: 1px;
+      background: var(--mc-line);
+    }
+    .lm-quiz-progress__fill {
+      position: absolute;
+      top: 0; left: 0; bottom: 0;
+      background: var(--mc-silver-gradient-h);
+      transition: width var(--mc-dur-slow) var(--mc-ease-out);
+    }
+
+    /* ── Question screen ── */
+    .lm-quiz-screen {
+      display: none;
+      flex-direction: column;
+      min-height: calc(100vh - 57px);
+      padding: var(--mc-sp-6) var(--mc-sp-4) var(--mc-sp-4);
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .lm-quiz-screen.is-active { display: flex; }
+
+    .lm-quiz-eyebrow { margin: 0 0 var(--mc-sp-4); }
+    .lm-quiz-question {
+      font-size: var(--mc-fs-h2);
+      margin: 0 0 var(--mc-sp-5);
+      line-height: var(--mc-lh-snug);
+    }
+    @media (min-width: 768px) { .lm-quiz-question { font-size: var(--mc-fs-h1); } }
+
+    /* ── Options ── */
+    .lm-quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border: 1px solid var(--mc-line);
+      border-radius: var(--mc-r-3);
+      overflow: hidden;
+      margin-bottom: var(--mc-sp-5);
+      flex: 1;
+    }
+    /* Hidden native radio — keyboard accessible */
+    .lm-option input[type="radio"] {
+      position: absolute;
+      width: 1px; height: 1px;
+      opacity: 0;
+      margin: 0;
+    }
+    .lm-option {
+      position: relative;
+    }
+    .lm-option-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 60px;
+      padding: 0 var(--mc-sp-4);
+      cursor: pointer;
+      border-bottom: 1px solid var(--mc-line);
+      transition: background-color var(--mc-dur-fast) var(--mc-ease);
+      gap: var(--mc-sp-3);
+    }
+    .lm-option:last-child .lm-option-label { border-bottom: 0; }
+    .lm-option-label:hover { background: rgba(255,255,255,0.03); }
+
+    .lm-option-label__text {
+      display: flex;
+      align-items: center;
+      gap: var(--mc-sp-3);
+      font-size: var(--mc-fs-body);
+      color: var(--mc-silver-bright);
+    }
+    .lm-option-label__prefix {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-mono);
+      color: var(--mc-silver-dim);
+      min-width: 1.2em;
+    }
+    .lm-option-label__dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1px solid var(--mc-silver-faint);
+      flex-shrink: 0;
+      transition: border-color var(--mc-dur-fast) var(--mc-ease),
+                  box-shadow var(--mc-dur-fast) var(--mc-ease),
+                  background var(--mc-dur-fast) var(--mc-ease);
+    }
+    /* Selected state */
+    .lm-option input:checked + .lm-option-label {
+      border-left: 2px solid var(--mc-silver-bright);
+      padding-left: calc(var(--mc-sp-4) - 1px);
+    }
+    .lm-option input:checked + .lm-option-label .lm-option-label__dot {
+      background: var(--mc-ink-white);
+      border-color: var(--mc-ink-white);
+      box-shadow:
+        0 0 6px 0 var(--mc-light-point-glow-hot),
+        0 0 14px 0 var(--mc-light-point-glow-mid),
+        0 0 28px 0 var(--mc-light-point-glow-soft);
+    }
+    /* Focus ring on label */
+    .lm-option input:focus-visible + .lm-option-label {
+      outline: 2px solid var(--mc-light-point);
+      outline-offset: -2px;
+    }
+    /* Disabled while submitting */
+    .lm-quiz-options--disabled .lm-option-label {
+      opacity: 0.45;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* ── Next CTA — sticky bottom on mobile ── */
+    .lm-quiz-footer {
+      position: sticky;
+      bottom: 0;
+      padding: var(--mc-sp-4) 0;
+      background: var(--mc-black);
+    }
+    .lm-quiz-next { width: 100%; }
+
+    .lm-quiz-error {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-error);
+      margin-top: var(--mc-sp-2);
+      text-align: center;
+    }
+
+    /* ── Transition animation ── */
+    @keyframes slideOutLeft {
+      from { opacity: 1; transform: translateX(0); }
+      to   { opacity: 0; transform: translateX(-16px); }
+    }
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(16px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    .lm-quiz-screen--exit { animation: slideOutLeft var(--mc-dur-fast) var(--mc-ease) forwards; }
+    .lm-quiz-screen--enter { animation: slideInRight var(--mc-dur-base) var(--mc-ease-out) forwards; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .lm-quiz-screen--exit,
+      .lm-quiz-screen--enter { animation: none; opacity: 1; }
+      .lm-quiz-progress__fill { transition: none; }
+    }
+
+    /* Footer */
+    .lm-footer {
+      border-top: 1px solid var(--mc-line);
+      padding: var(--mc-sp-5) var(--mc-sp-4);
+      text-align: center;
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-faint);
+    }
+  </style>
+</head>
+<body class="lookmaxing">
+
+<!-- Nav -->
+<nav class="lm-quiz-nav" aria-label="Quiz navigation">
+  <a href="/lookmaxing" class="lm-quiz-nav__brand" aria-label="MainCharacter">◆</a>
+  <span class="lm-quiz-nav__counter mc-mono" id="q-counter" aria-live="polite" aria-atomic="true">Q1 / 5</span>
+</nav>
+<div class="lm-quiz-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="20" id="quiz-progress-bar" aria-label="Quiz progress">
+  <div class="lm-quiz-progress__fill" id="quiz-progress-fill" style="width:20%"></div>
+</div>
+
+<!-- Q1 -->
+<section class="lm-quiz-screen is-active" id="q1-screen" aria-labelledby="q1-text">
+  <p class="mc-eyebrow lm-quiz-eyebrow">CALIBRATION · Q1</p>
+  <h1 id="q1-text" class="mc-serif mc-serif--italic lm-quiz-question">What you would change about how you arrive in a room — pick the one closest.</h1>
+  <fieldset class="lm-quiz-options" id="q1-options" aria-label="Options for question 1">
+    <legend class="mc-eyebrow" style="padding:var(--mc-sp-2) var(--mc-sp-4);font-size:var(--mc-fs-eyebrow);">Pick the one closest to true.</legend>
+    <div class="lm-option">
+      <input type="radio" name="q1" id="q1a" value="A">
+      <label class="lm-option-label" for="q1a">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">A</span> I want to read as powerful. Intent before words.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+    <div class="lm-option">
+      <input type="radio" name="q1" id="q1b" value="B">
+      <label class="lm-option-label" for="q1b">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">B</span> I want to read as attractive and easy to like.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+    <div class="lm-option">
+      <input type="radio" name="q1" id="q1c" value="C">
+      <label class="lm-option-label" for="q1c">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">C</span> I want the clean professional read. The one that gets trusted in the first minute.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+    <div class="lm-option">
+      <input type="radio" name="q1" id="q1d" value="D">
+      <label class="lm-option-label" for="q1d">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">D</span> There are specific things I want fixed. I will name them.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+  </fieldset>
+  <div class="lm-quiz-footer">
+    <button class="mc-btn-primary lm-quiz-next" id="next-1" disabled data-event="lookmaxing_quiz_q1_answered" data-event-props='{"choice":""}' aria-label="Next question">Next →</button>
+    <p class="lm-quiz-error" id="err-1" hidden>Select an option to continue.</p>
+  </div>
+</section>
+
+<!-- Q2 -->
+<section class="lm-quiz-screen" id="q2-screen" aria-labelledby="q2-text">
+  <p class="mc-eyebrow lm-quiz-eyebrow">CALIBRATION · Q2</p>
+  <h1 id="q2-text" class="mc-serif mc-serif--italic lm-quiz-question">Your skin, most days.</h1>
+  <fieldset class="lm-quiz-options" id="q2-options" aria-label="Options for question 2">
+    <legend class="mc-eyebrow" style="padding:var(--mc-sp-2) var(--mc-sp-4);font-size:var(--mc-fs-eyebrow);">Pick the one closest to true.</legend>
+    <div class="lm-option">
+      <input type="radio" name="q2" id="q2a" value="A">
+      <label class="lm-option-label" for="q2a">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">A</span> Tough. Nothing bothers it.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+    <div class="lm-option">
+      <input type="radio" name="q2" id="q2b" value="B">
+      <label class="lm-option-label" for="q2b">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">B</span> Sensitive. Red, itchy, or reactive.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+    <div class="lm-option">
+      <input type="radio" name="q2" id="q2c" value="C">
+      <label class="lm-option-label" for="q2c">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">C</span> Oily. Shines by afternoon, breaks out.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+    <div class="lm-option">
+      <input type="radio" name="q2" id="q2d" value="D">
+      <label class="lm-option-label" for="q2d">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">D</span> Dry. Tight, dull, or flakes.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+  </fieldset>
+  <div class="lm-quiz-footer">
+    <button class="mc-btn-primary lm-quiz-next" id="next-2" disabled data-event="lookmaxing_quiz_q2_answered" data-event-props='{"choice":""}' aria-label="Next question">Next →</button>
+    <p class="lm-quiz-error" id="err-2" hidden>Select an option to continue.</p>
+  </div>
+</section>
+
+<!-- Q3 -->
+<section class="lm-quiz-screen" id="q3-screen" aria-labelledby="q3-text">
+  <p class="mc-eyebrow lm-quiz-eyebrow">CALIBRATION · Q3</p>
+  <h1 id="q3-text" class="mc-serif mc-serif--italic lm-quiz-question">The hair on your head right now.</h1>
+  <fieldset class="lm-quiz-options" id="q3-options" aria-label="Options for question 3">
+    <legend class="mc-eyebrow" style="padding:var(--mc-sp-2) var(--mc-sp-4);font-size:var(--mc-fs-eyebrow);">Pick the one closest to true.</legend>
+    <div class="lm-option">
+      <input type="radio" name="q3" id="q3a" value="A">
+      <label class="lm-option-label" for="q3a">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">A</span> Thick and healthy.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+    <div class="lm-option">
+      <input type="radio" name="q3" id="q3b" value="B">
+      <label class="lm-option-label" for="q3b">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">B</span> Thinning or quietly receding.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+    <div class="lm-option">
+      <input type="radio" name="q3" id="q3c" value="C">
+      <label class="lm-option-label" for="q3c">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">C</span> Already losing it and treating it.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+    <div class="lm-option">
+      <input type="radio" name="q3" id="q3d" value="D">
+      <label class="lm-option-label" for="q3d">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">D</span> Thick, but I have no style direction.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+  </fieldset>
+  <div class="lm-quiz-footer">
+    <button class="mc-btn-primary lm-quiz-next" id="next-3" disabled data-event="lookmaxing_quiz_q3_answered" data-event-props='{"choice":""}' aria-label="Next question">Next →</button>
+    <p class="lm-quiz-error" id="err-3" hidden>Select an option to continue.</p>
+  </div>
+</section>
+
+<!-- Q4 -->
+<section class="lm-quiz-screen" id="q4-screen" aria-labelledby="q4-text">
+  <p class="mc-eyebrow lm-quiz-eyebrow">CALIBRATION · Q4</p>
+  <h1 id="q4-text" class="mc-serif mc-serif--italic lm-quiz-question">Your sleep, this week.</h1>
+  <fieldset class="lm-quiz-options" id="q4-options" aria-label="Options for question 4">
+    <legend class="mc-eyebrow" style="padding:var(--mc-sp-2) var(--mc-sp-4);font-size:var(--mc-fs-eyebrow);">Pick the one closest to true.</legend>
+    <div class="lm-option">
+      <input type="radio" name="q4" id="q4a" value="A">
+      <label class="lm-option-label" for="q4a">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">A</span> Not enough. I am tired most days.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+    <div class="lm-option">
+      <input type="radio" name="q4" id="q4b" value="B">
+      <label class="lm-option-label" for="q4b">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">B</span> Around six or seven hours.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+    <div class="lm-option">
+      <input type="radio" name="q4" id="q4c" value="C">
+      <label class="lm-option-label" for="q4c">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">C</span> Eight or more. Solid.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+    <div class="lm-option">
+      <input type="radio" name="q4" id="q4d" value="D">
+      <label class="lm-option-label" for="q4d">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">D</span> Inconsistent. Some good, some not.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+  </fieldset>
+  <div class="lm-quiz-footer">
+    <button class="mc-btn-primary lm-quiz-next" id="next-4" disabled data-event="lookmaxing_quiz_q4_answered" data-event-props='{"choice":""}' aria-label="Next question">Next →</button>
+    <p class="lm-quiz-error" id="err-4" hidden>Select an option to continue.</p>
+  </div>
+</section>
+
+<!-- Q5 -->
+<section class="lm-quiz-screen" id="q5-screen" aria-labelledby="q5-text">
+  <p class="mc-eyebrow lm-quiz-eyebrow">CALIBRATION · Q5</p>
+  <h1 id="q5-text" class="mc-serif mc-serif--italic lm-quiz-question">Your current ritual around how you look.</h1>
+  <fieldset class="lm-quiz-options" id="q5-options" aria-label="Options for question 5">
+    <legend class="mc-eyebrow" style="padding:var(--mc-sp-2) var(--mc-sp-4);font-size:var(--mc-fs-eyebrow);">Pick the one closest to true.</legend>
+    <div class="lm-option">
+      <input type="radio" name="q5" id="q5a" value="A">
+      <label class="lm-option-label" for="q5a">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">A</span> Soap and water. Nothing else.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+    <div class="lm-option">
+      <input type="radio" name="q5" id="q5b" value="B">
+      <label class="lm-option-label" for="q5b">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">B</span> A basic routine. I want it sharper.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+    <div class="lm-option">
+      <input type="radio" name="q5" id="q5c" value="C">
+      <label class="lm-option-label" for="q5c">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">C</span> I already track grooming and posture.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+    <div class="lm-option">
+      <input type="radio" name="q5" id="q5d" value="D">
+      <label class="lm-option-label" for="q5d">
+        <span class="lm-option-label__text"><span class="lm-option-label__prefix">D</span> It changes week to week.</span>
+        <span class="lm-option-label__dot" aria-hidden="true"></span>
+      </label>
+    </div>
+  </fieldset>
+  <div class="lm-quiz-footer">
+    <button class="mc-btn-primary lm-quiz-next" id="next-5" disabled data-event="lookmaxing_quiz_q5_answered" data-event-props='{"choice":""}' aria-label="To the photo">To the photo →</button>
+    <p class="lm-quiz-error" id="err-5" hidden>Select an option to continue.</p>
+  </div>
+</section>
+
+<footer class="lm-footer">
+  <p>◆ MainCharacter · The Consultant</p>
+</footer>
+
+<script src="/track.js" defer></script>
+<script>
+(function () {
+  'use strict';
+
+  var QUESTIONS = [
+    { id: 'q1', label: 'q1', nextId: 'q2', screen: 'q1-screen', options: 'q1-options', next: 'next-1', err: 'err-1' },
+    { id: 'q2', label: 'q2', nextId: 'q3', screen: 'q2-screen', options: 'q2-options', next: 'next-2', err: 'err-2' },
+    { id: 'q3', label: 'q3', nextId: 'q4', screen: 'q3-screen', options: 'q3-options', next: 'next-3', err: 'err-3' },
+    { id: 'q4', label: 'q4', nextId: 'q5', screen: 'q4-screen', options: 'q4-options', next: 'next-4', err: 'err-4' },
+    { id: 'q5', label: 'q5', nextId: null, screen: 'q5-screen', options: 'q5-options', next: 'next-5', err: 'err-5' },
+  ];
+
+  var answers = [];
+  var currentQ = 0;
+  var autoAdvanceTimer = null;
+  var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function getCounter() { return document.getElementById('q-counter'); }
+  function getProgressFill() { return document.getElementById('quiz-progress-fill'); }
+  function getProgressBar() { return document.getElementById('quiz-progress-bar'); }
+
+  function setProgress(n) {
+    var pct = Math.round((n / 5) * 100);
+    getProgressFill().style.width = pct + '%';
+    getProgressBar().setAttribute('aria-valuenow', pct);
+    getCounter().textContent = 'Q' + n + ' / 5';
+  }
+
+  function showScreen(idx) {
+    QUESTIONS.forEach(function (q, i) {
+      var el = document.getElementById(q.screen);
+      if (i === idx) {
+        el.classList.add('is-active');
+        el.removeAttribute('aria-hidden');
+      } else {
+        el.classList.remove('is-active');
+        el.setAttribute('aria-hidden', 'true');
+      }
+    });
+    setProgress(idx + 1);
+    if (idx === 0 && window.mc) {
+      window.mc.track('lookmaxing_quiz_started', {});
+    }
+  }
+
+  function advanceTo(nextIdx) {
+    var curScreen = document.getElementById(QUESTIONS[currentQ].screen);
+    if (!reducedMotion) {
+      curScreen.classList.add('lm-quiz-screen--exit');
+      setTimeout(function () {
+        curScreen.classList.remove('lm-quiz-screen--exit');
+        currentQ = nextIdx;
+        showScreen(currentQ);
+        var nextScreen = document.getElementById(QUESTIONS[currentQ].screen);
+        if (!reducedMotion) {
+          nextScreen.classList.add('lm-quiz-screen--enter');
+          setTimeout(function () {
+            nextScreen.classList.remove('lm-quiz-screen--enter');
+          }, 300);
+        }
+        nextScreen.focus();
+      }, 160);
+    } else {
+      currentQ = nextIdx;
+      showScreen(currentQ);
+      document.getElementById(QUESTIONS[currentQ].screen).focus();
+    }
+  }
+
+  function submitQuiz() {
+    var nextBtn = document.getElementById(QUESTIONS[4].next);
+    nextBtn.setAttribute('aria-busy', 'true');
+    nextBtn.disabled = true;
+    nextBtn.textContent = '· · ·';
+
+    fetch('/api/lookmaxing/quiz', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers: answers }),
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('quiz submit failed');
+        return res.json();
+      })
+      .then(function () {
+        window.location.href = '/lookmaxing/capture';
+      })
+      .catch(function () {
+        nextBtn.setAttribute('aria-busy', 'false');
+        nextBtn.disabled = false;
+        nextBtn.textContent = 'To the photo →';
+        var errEl = document.getElementById(QUESTIONS[4].err);
+        errEl.textContent = 'Something went wrong. Try again.';
+        errEl.hidden = false;
+      });
+  }
+
+  QUESTIONS.forEach(function (q, idx) {
+    var options = document.querySelectorAll('[name="' + q.id + '"]');
+    var nextBtn = document.getElementById(q.next);
+    var errEl = document.getElementById(q.err);
+
+    options.forEach(function (radio) {
+      radio.addEventListener('change', function () {
+        nextBtn.disabled = false;
+        errEl.hidden = true;
+        // Update data-event-props choice
+        nextBtn.setAttribute('data-event-props', JSON.stringify({ choice: radio.value }));
+
+        // Auto-advance after 300ms
+        if (autoAdvanceTimer) clearTimeout(autoAdvanceTimer);
+        autoAdvanceTimer = setTimeout(function () {
+          if (!reducedMotion) nextBtn.click();
+        }, 300);
+      });
+    });
+
+    nextBtn.addEventListener('click', function () {
+      if (autoAdvanceTimer) clearTimeout(autoAdvanceTimer);
+      var selected = document.querySelector('[name="' + q.id + '"]:checked');
+      if (!selected) {
+        errEl.hidden = false;
+        return;
+      }
+      errEl.hidden = true;
+
+      // Build answer object
+      var label = selected.closest('.lm-option').querySelector('label').querySelector('.lm-option-label__text').textContent.trim();
+      answers.push({ questionId: q.id, choice: selected.value, label: label });
+
+      if (idx === 4) {
+        // Last question — track completed + submit
+        if (window.mc) {
+          window.mc.track('lookmaxing_quiz_completed', {});
+        }
+        submitQuiz();
+      } else {
+        advanceTo(idx + 1);
+      }
+    });
+  });
+
+  // Init
+  showScreen(0);
+}());
+</script>
+</body>
+</html>

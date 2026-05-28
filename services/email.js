@@ -20,6 +20,7 @@ const fs = require('fs');
 const path = require('path');
 const { createLogger } = require('../lib/log');
 const mode = require('../lib/messaging-mode');
+const { maskEmail } = require('../lib/log-mask');
 
 const log = createLogger('EMAIL');
 
@@ -106,16 +107,16 @@ async function sendEmail({ to, subject, html, text, replyTo } = {}) {
 
   const sendMode = mode.getSendMode();
   if (sendMode === 'off') {
-    log.info('DRY-RUN', `[mode=off] suppressed email "${subject}" to ${to}`);
+    log.info('DRY-RUN', `[mode=off] suppressed email "${subject}" to ${maskEmail(to)}`);
     return { result: 'suppressed', mode: sendMode };
   }
   if (sendMode === 'allowlist' && !mode.isEmailAllowed(to)) {
-    log.warn('BLOCKED', `[mode=allowlist] ${to} not on allowlist — "${subject}" not sent`);
+    log.warn('BLOCKED', `[mode=allowlist] ${maskEmail(to)} not on allowlist — "${subject}" not sent`);
     return { result: 'blocked', mode: sendMode };
   }
 
   if (!isConfigured()) {
-    log.info('DRY-RUN', `credentials not configured. Would have sent "${subject}" to ${to}`);
+    log.info('DRY-RUN', `credentials not configured. Would have sent "${subject}" to ${maskEmail(to)}`);
     return { result: 'dry-run' };
   }
 

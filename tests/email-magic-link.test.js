@@ -85,6 +85,40 @@ describe('sendMagicLink', () => {
   });
 });
 
+// ─── L-1 security fix: DRY-RUN log must not emit raw email ───
+
+describe('sendMagicLink — DRY-RUN log masks recipient email (L-1)', () => {
+  it('logs masked email (j***@example.com), NOT the raw address', async () => {
+    // No RESEND_API_KEY → triggers DRY-RUN path in sendEmail
+    process.env.WHATSAPP_SEND_MODE = 'all';
+    delete process.env.RESEND_API_KEY;
+
+    const captured = [];
+    const origWrite = process.stdout.write.bind(process.stdout);
+    process.stdout.write = (chunk, ...args) => {
+      captured.push(typeof chunk === 'string' ? chunk : chunk.toString());
+      return origWrite(chunk, ...args);
+    };
+
+    try {
+      const u = { name: 'Jay', email: 'jay@example.com' };
+      await email.sendMagicLink({ user: u, token: 'a'.repeat(64) });
+    } finally {
+      process.stdout.write = origWrite;
+    }
+
+    const logOutput = captured.join('');
+    // Masked form must be present
+    expect(logOutput).toContain('j***@example.com');
+    // Raw local-part must NOT appear in any DRY-RUN line
+    const dryRunLines = logOutput.split('\n').filter((l) => l.includes('DRY-RUN'));
+    expect(dryRunLines.length).toBeGreaterThan(0);
+    for (const line of dryRunLines) {
+      expect(line).not.toContain('jay@example.com');
+    }
+  });
+});
+
 // ─── sendPaywallReceipt with firstLoginToken ───
 
 describe('sendPaywallReceipt — firstLoginToken integration', () => {

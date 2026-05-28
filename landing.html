@@ -1081,6 +1081,7 @@ button:focus-visible {
 }
 
 </style>
+<script src="/track.js" defer></script>
 </head>
 <body>
 
@@ -1517,6 +1518,16 @@ button:focus-visible {
     document.getElementById('coming-soon-modal').addEventListener('click', function(e) {
       if (e.target === this) closeComingSoon();
     });
+    // B5: page-view event — once per session
+    if (window.mc) {
+      var params = new URLSearchParams(location.search);
+      window.mc.trackOnce('landing_viewed', {
+        utm_source: params.get('utm_source') || undefined,
+        utm_medium: params.get('utm_medium') || undefined,
+        utm_campaign: params.get('utm_campaign') || undefined,
+        referrer: document.referrer || undefined,
+      }, 'landing_viewed_session');
+    }
   });
 
 })();

@@ -45,6 +45,9 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
+  // B5: /api/events is network-only — never cache telemetry calls.
+  if (url.pathname === '/api/events') return;
+
   // Network-first for the Lookmaxxing API (fresh data, cache as fallback).
   if (url.pathname.startsWith('/api/lookmax/')) {
     event.respondWith(

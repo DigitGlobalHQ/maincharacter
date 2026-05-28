@@ -96,6 +96,7 @@
     .selected-note { text-align: center; color: var(--muted); font-size: 13px; margin-top: 14px; min-height: 18px; }
     .footer { text-align: center; color: #5f5d58; font-size: 12px; margin-top: 40px; }
   </style>
+<script src="/track.js" defer></script>
 </head>
 <body>
   <div class="wrap">
@@ -190,7 +191,17 @@
   // Audit → paywall handoff: show the 1-line Aura summary.
   // AXIS_LABELS and fetch logic consolidated in /shared/audit-echo.js (F2).
   // The degradation guard (if (!res.ok) return) is inside loadAuditEcho — intact.
-  loadAuditEcho(auditSessionToken, 'auditSummary');
+  loadAuditEcho(auditSessionToken, 'auditSummary').then(function() {
+    // B5: paywall_viewed — once per tab; check if echo rendered
+    var echoEl = document.getElementById('auditSummary');
+    var echoShown = !!(echoEl && echoEl.style.display !== 'none' && echoEl.innerHTML.trim());
+    if (window.mc) window.mc.trackOnce('paywall_viewed', {
+      mode: 'public',
+      auditEchoShown: echoShown,
+    }, 'paywall_viewed_session');
+  }).catch(function() {
+    if (window.mc) window.mc.trackOnce('paywall_viewed', { mode: 'public', auditEchoShown: false }, 'paywall_viewed_session');
+  });
 
   function normalizePhone(raw) {
     let p = String(raw || '').replace(/\D/g, '');
@@ -214,6 +225,11 @@
 
   async function begin(pillars) {
     updateEmailRequirement(pillars);
+    // B5: paywall_cta_clicked
+    if (window.mc) {
+      var plan = pillars.length >= 2 ? 'auraplus' : pillars[0] === 'lookmaxxing' ? 'lookmaxxing' : 'orator';
+      window.mc.track('paywall_cta_clicked', { plan: plan });
+    }
     if (submitting) return;
     const err = document.getElementById('err');
     err.textContent = '';

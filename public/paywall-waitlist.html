@@ -71,6 +71,7 @@
     }
     .audit-summary b { color: var(--gold); font-weight: 600; }
   </style>
+<script src="/track.js" defer></script>
 </head>
 <body>
   <div class="wrap">
@@ -110,7 +111,14 @@
 
     // F1: echo the audit score above the form using the shared helper.
     // On 404/409/any error, loadAuditEcho hides the element — form still works.
-    loadAuditEcho(auditSessionToken, 'waitlistAuditSummary');
+    loadAuditEcho(auditSessionToken, 'waitlistAuditSummary').then(function() {
+      var echoEl = document.getElementById('waitlistAuditSummary');
+      var echoShown = !!(echoEl && echoEl.style.display !== 'none' && echoEl.innerHTML.trim());
+      // B5: paywall_viewed (mode=waitlist)
+      if (window.mc) window.mc.trackOnce('paywall_viewed', { mode: 'waitlist', auditEchoShown: echoShown }, 'paywall_viewed_session');
+    }).catch(function() {
+      if (window.mc) window.mc.trackOnce('paywall_viewed', { mode: 'waitlist', auditEchoShown: false }, 'paywall_viewed_session');
+    });
     const form = document.getElementById('form');
     const errEl = document.getElementById('err');
     const btn = document.getElementById('submit');
@@ -130,6 +138,8 @@
           body: JSON.stringify({ name, phone, auditSessionToken }),
         });
         if (!res.ok) throw new Error('failed');
+        // B5: early_access_submitted
+        if (window.mc) window.mc.track('early_access_submitted', { hasEmail: false, followupConsent: false });
         form.style.display = 'none';
         document.getElementById('done').style.display = 'block';
       } catch {

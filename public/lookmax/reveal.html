@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/lookmax/app.css" />
+  <script src="/track.js" defer></script>
   <style>
     .stage { position: relative; width: 100%; aspect-ratio: 9/16; max-height: 70vh; margin: 0 auto; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: #000; }
     .stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .4s; }
@@ -75,7 +76,15 @@
       const stage = document.getElementById('stage');
       const imgs = urls.map((u, i) => { const im = document.createElement('img'); im.src = u; if (i === 0) im.classList.add('show'); stage.insertBefore(im, stage.firstChild); return im; });
       let i = 0;
-      setInterval(() => { imgs[i].classList.remove('show'); i = (i + 1) % imgs.length; imgs[i].classList.add('show'); }, 1200);
+      let revealTracked = false;
+      const interval = setInterval(() => {
+        imgs[i].classList.remove('show'); i = (i + 1) % imgs.length; imgs[i].classList.add('show');
+        // B5: reveal_watched — fires when slideshow reaches the final frame
+        if (!revealTracked && i === imgs.length - 1) {
+          revealTracked = true;
+          if (window.mc) window.mc.track('reveal_watched', { weekNumber: preview.weekNumber, count: imgs.length });
+        }
+      }, 1200);
       drawTrajectory(scores);
       wireShares();
     }

@@ -101,6 +101,7 @@
     .recover-confirm { transition: none; }
   }
 </style>
+<script src="/track.js" defer></script>
 </head>
 <body>
 <!-- TODO copy review: quiz questions drafted to the brief's category spec
@@ -218,6 +219,8 @@
       });
       const data = await res.json();
       sessionToken = data.sessionToken;
+      // B5: audit_started
+      if (window.mc) window.mc.track('audit_started', { reAudit: false });
       qIndex = 0; renderQuestion(); show('scene-quiz');
     } catch (e) { alert('Could not start. Try again.'); }
   }
@@ -244,6 +247,7 @@
     answers['goals'] = (document.getElementById('open-answer').value || '').slice(0, 500);
     next();
   }
+  var _quizStartTs = Date.now();
   async function next() {
     qIndex++;
     if (qIndex < QUIZ.length) { renderQuestion(); return; }
@@ -253,6 +257,8 @@
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionToken, answers }),
     });
+    // B5: audit_quiz_completed
+    if (window.mc) window.mc.track('audit_quiz_completed', { durationSec: Math.round((Date.now() - _quizStartTs) / 1000) });
     show('scene-photos');
   }
 
@@ -293,6 +299,8 @@
       ['front', 'side', 'body'].forEach((k) => fd.append(k, photoFiles[k], k + '.jpg'));
       const res = await fetch(API + '/api/audit/photos', { method: 'POST', body: fd });
       if (!res.ok) throw new Error('upload failed');
+      // B5: audit_photos_submitted
+      if (window.mc) window.mc.track('audit_photos_submitted', { count: 3, kinds: ['front', 'side', 'body'] });
       runAnalysis();
     } catch (e) {
       document.getElementById('photos-err').textContent = 'Upload failed. Try again.';
@@ -343,6 +351,8 @@
     requestAnimationFrame(() => {
       document.querySelectorAll('.axis__fill').forEach((f) => { f.style.width = f.dataset.w + '%'; });
     });
+    // B5: audit_result_viewed
+    if (window.mc) window.mc.trackOnce('audit_result_viewed', { overallScore: overall, weakestAxis: data.weakestAxis || '' }, 'audit_result_viewed_session');
   }
 
   function toPaywall() {
@@ -364,11 +374,16 @@
     const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
     if (navigator.share && isMobile) {
       // Founder-approved 2026-05-28: share-sheet title left as drafted ("My Aesthetic Reading")
-      navigator.share({ title: 'My Aesthetic Reading', url }).catch(() => {
+      navigator.share({ title: 'My Aesthetic Reading', url }).then(() => {
+        // B5: recover_link_shared
+        if (window.mc) window.mc.track('recover_link_shared', {});
+      }).catch(() => {
         // User dismissed share sheet — not an error; do nothing.
       });
     } else {
       navigator.clipboard.writeText(url).then(() => {
+        // B5: recover_link_copied
+        if (window.mc) window.mc.track('recover_link_copied', {});
         showRecoverConfirm();
       }).catch(() => {
         // Clipboard unavailable (HTTP context, permissions denied) — show nothing.

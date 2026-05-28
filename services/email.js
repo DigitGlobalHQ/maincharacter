@@ -147,10 +147,29 @@ function formatDate(d) {
 }
 
 /**
- * Send the post-payment receipt. `plan` may be a plan key or a {label, amount}.
- * @param {{user:object, plan:string|object, subscriptionId?:string, nextBillingDate?:string|Date}} args
+ * Send an email magic-link for Lookmaxxing login (Login Gate P0-1).
+ * DRY-RUN when RESEND_API_KEY is unset. Returns {result:'no-recipient'} when
+ * the user has no email. The token is embedded into the URL only — never logged.
+ * @param {{user:object, token:string, label?:string}} args
  */
-async function sendPaywallReceipt({ user, plan, subscriptionId, nextBillingDate } = {}) {
+async function sendMagicLink({ user, token, label } = {}) {
+  if (!user || !user.email) return { result: 'no-recipient' };
+  const subject = label || '◆ Your Lookmaxxing entry link'; // [copy-consultant TBD] email.magic.subject
+  const url = `${baseUrl()}/lookmax/login?token=${encodeURIComponent(token)}`;
+  const html = renderTemplate('magic-link.html', {
+    name: user.name || 'Seeker',
+    magicLinkUrl: url,
+  });
+  return sendEmail({ to: user.email, subject, html });
+}
+
+/**
+ * Send the post-payment receipt. `plan` may be a plan key or a {label, amount}.
+ * Pass `firstLoginToken` to embed the one-shot magic-link URL as a backup entry
+ * path in the receipt (spec §6, Login Gate P0-1).
+ * @param {{user:object, plan:string|object, subscriptionId?:string, nextBillingDate?:string|Date, firstLoginToken?:string}} args
+ */
+async function sendPaywallReceipt({ user, plan, subscriptionId, nextBillingDate, firstLoginToken } = {}) {
   if (!user || !user.email) return { result: 'no-recipient' };
 
   let planLabel = 'Subscription';
@@ -171,6 +190,28 @@ async function sendPaywallReceipt({ user, plan, subscriptionId, nextBillingDate 
     ? new Date(nextBillingDate)
     : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
+  // Build the magic-link backup section if a firstLoginToken was supplied.
+  // This is the belt-and-braces recovery path for the F2 failure mode (tab closed).
+  // The token is URL-encoded and embedded into the button href — never logged.
+  let magicLinkSection_html = '';
+  if (firstLoginToken) {
+    const magicUrl = `${baseUrl()}/lookmax/login?token=${encodeURIComponent(firstLoginToken)}`;
+    // [copy-consultant TBD] receipt.firstLogin.line + receipt.firstLogin.cta
+    magicLinkSection_html = `
+            <tr>
+              <td style="padding:0 40px 16px;text-align:center;color:#b9b6ae;font-size:14px;line-height:1.7;">
+                If the tab from your payment is still open, the button there will walk you in silently. If it closed, the link below does the same — valid for fifteen minutes, single use.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 40px 24px;text-align:center;">
+                <a href="${esc(magicUrl)}" style="display:inline-block;background:transparent;color:#e8b84b;text-decoration:none;font-weight:600;font-size:14px;padding:12px 28px;border-radius:8px;border:1px solid #e8b84b;">
+                  Enter Lookmaxxing
+                </a>
+              </td>
+            </tr>`;
+  }
+
   const html = renderTemplate('paywall-receipt.html', {
     name: user.name || 'Seeker',
     planLabel,
@@ -178,6 +219,7 @@ async function sendPaywallReceipt({ user, plan, subscriptionId, nextBillingDate 
     nextBillingDate: formatDate(next),
     dashboardUrl: `${baseUrl()}/dashboard/${user.token || ''}`,
     subscriptionId: subscriptionId || '—',
+    magicLinkSection_html,
   });
 
   return sendEmail({
@@ -266,6 +308,7 @@ async function sendDay7EvolutionReport({ user, assessment } = {}) {
 
 module.exports = {
   sendEmail,
+  sendMagicLink,
   sendPaywallReceipt,
   sendAuditConfirmation,
   sendDay7EvolutionReport,

@@ -37,6 +37,8 @@ const messagingMode = require('./lib/messaging-mode');
 const User = require('./models/User');
 const EarlyAccess = require('./models/EarlyAccess');
 const adminLib = require('./lib/admin');
+const db = require('./lib/db');
+const migrate = require('./lib/migrate');
 
 // ─── Messaging send-mode compatibility shim (Night-3 rename) ───
 // WHATSAPP_SEND_MODE is canonical; mirror the legacy WATI_SEND_MODE into it for a
@@ -358,6 +360,22 @@ app.listen(PORT, () => {
         'intentional. To gate the paywall, set PAYWALL_PUBLIC=false.'
     );
     console.log('─'.repeat(62));
+  }
+
+  // ── Postgres init + migrations (B0) ──────────────────────────────
+  // Non-blocking: boot continues even when DATABASE_URL is unset.
+  // db.init() is idempotent; migrate.run() is idempotent.
+  if (process.env.DATABASE_URL) {
+    db.init()
+      .then((ready) => {
+        if (ready) return migrate.run();
+      })
+      .then((count) => {
+        if (count !== undefined) slog.info('MIGRATE', `${count} migration(s) applied on boot`);
+      })
+      .catch((err) => {
+        slog.error('MIGRATE', `migration failed on boot: ${err.message}`);
+      });
   }
 
   // Start the scheduler (skip when RUN_SCHEDULER=false, e.g. tests / worker split)

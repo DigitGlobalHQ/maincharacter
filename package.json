@@ -25,6 +25,8 @@
   "license": "ISC",
   "description": "MainCharacter — Personal growth platform with WhatsApp-based coaching",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1055.0",
+    "@aws-sdk/s3-request-presigner": "^3.1055.0",
     "@google/generative-ai": "^0.24.1",
     "@sentry/node": "^8.55.2",
     "axios": "^1.16.1",
@@ -37,8 +39,10 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
     "node-cron": "^3.0.3",
+    "pg": "^8.21.0",
     "razorpay": "^2.9.6",
-    "resend": "^6.12.4"
+    "resend": "^6.12.4",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^2.1.8",

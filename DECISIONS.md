@@ -5,6 +5,30 @@ Format: date, decision, 2-sentence rationale.
 
 ---
 
+## 2026-05-28 — B0 overnight build (Postgres + R2 photo storage)
+
+### lib/db.js — singleton pg.Pool with SSL=require for Neon
+A single pool is created once on `db.init()` and reused across all requests; SSL
+`rejectUnauthorized: false` is used because Neon's cert chain varies by region
+and the connection string itself provides the trust anchor.
+
+### lib/migrate.js — thin ordered runner, not Prisma/Knex
+A 30-line custom runner was chosen over Prisma/Knex to avoid adding a build
+step and to keep the migration files as plain readable SQL that the founder can
+inspect and audit directly.
+
+### Migration bootstraps schema_migrations before reading it
+The runner emits a `CREATE TABLE IF NOT EXISTS schema_migrations` guard before
+querying it, so the very first boot (before 0001_init.sql runs) doesn't fail
+on a missing table.
+
+### db.init() called non-blocking in app.listen callback
+The Postgres init and migration run are fire-and-async from inside `app.listen`,
+so a cold boot does not delay the first HTTP response even if Neon takes a few
+seconds to wake up; failures are logged but never crash the process.
+
+---
+
 ## 2026-05-26 — Overnight autopilot run
 
 ### Outgoing WhatsApp locked to allowlist by default (`WATI_SEND_MODE`)

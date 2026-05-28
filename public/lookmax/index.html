@@ -139,7 +139,7 @@
           false
         );
       } else {
-        mirrorHtml = mirrorTile('Take today's mirror →', true);
+        mirrorHtml = mirrorTile("Take today's mirror →", true);
       }
       document.getElementById('tile-mirror').innerHTML = mirrorHtml;
 
@@ -155,7 +155,7 @@
         'protocol_tile_clicked'
       );
       const hairTile = h.unlocked
-        ? secondaryTile('Hair', 'Take this week's hair audit →', '/lookmax/hair', true, null, 'hair_tile_clicked', 'unlocked')
+        ? secondaryTile('Hair', "Take this week's hair audit →", '/lookmax/hair', true, null, 'hair_tile_clicked', 'unlocked')
         : secondaryTile('Hair', `Next reading in ${h.daysUntil != null ? h.daysUntil : 7} days`, '/lookmax/hair', false, null, 'hair_tile_clicked', 'locked');
       document.getElementById('tile-row').innerHTML = protocolTile + hairTile;
 

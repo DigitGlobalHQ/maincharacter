@@ -230,3 +230,88 @@ native bcrypt can fail the Render build; the whole codebase hashes via bcryptjs.
 recorded: separate sibling brand (shared backend), revisit at ~₹40L MRR sustained 3 months.
 No features proposed, no focus split — men-first stands. Rationale: matches the founder's
 explicit "do not recommend splitting focus now" instruction.
+
+---
+
+## 2026-05-28 — Phase 2 spec: Login Gate (P0-1) interim auth method
+
+### Email magic link (Resend) chosen as the interim Lookmaxxing login, paired with a one-shot session mint at /payment-confirmed
+`product/spec-login-gate.md` selects email + magic link (Resend) as the v1 auth method while WhatsApp
+OTP remains dormant; the `subscription.activated` webhook additionally mints a single-use 15-min
+`firstLoginToken` so /payment-confirmed silently logs the buyer in without an email round-trip.
+Rationale: Resend has no DLT-style external lead time (single founder action — `RESEND_API_KEY`), is
+already built and gated through the messaging-mode kill-switch, and lets us deliver a "no manual
+login" first-touch on the happy path while keeping email as a durable recovery channel. SMS OTP (MSG91)
+was rejected on DLT template-approval lead time (1–4 weeks); phone+password was rejected because its
+reset path collapses to the same email dependency anyway, with strictly more failure modes.
+
+---
+
+## 2026-05-28 — Login-gate spec approved + founder rulings (Phase 2 Step 2)
+
+### Auth method: Email magic link via Resend + one-shot firstLoginToken (silent first login)
+Buyer pays → Razorpay `subscription.activated` webhook mints a 15-min single-use
+`firstLoginToken` on the user record → `/payment-confirmed` exchanges it silently for
+a 24h JWT → user lands in `/lookmax/` with no manual auth step. Email magic link is the
+recovery surface (returning user, second device, cleared storage, F1 webhook-race fallback).
+Phone+password rejected — collapses to same email-recovery dependency. SMS OTP via MSG91
+rejected — 1-4 week DLT template-approval lead time, same class of blocker as the dormant
+WhatsApp OTP. See `product/spec-login-gate.md` and `briefs/{backend,frontend,design}-login-gate.md`.
+
+### GATE — PAYWALL_PUBLIC cohort cap ≤50 paid users until Postgres lands
+Founder ruling 2026-05-28. Spec accepts the F10 risk (data/users.json wipe on Render
+redeploy locks out paying users post-session) for dogfood + first cohort only. The public
+paywall flip MUST NOT open to unbounded traffic until the Postgres migration is complete.
+Rationale: every record wiped between deploy and Postgres is a refund — bounded risk is
+acceptable for dogfood/launch validation; unbounded risk is not. Tracked in STATUS.md as
+an explicit launch gate that survives session boundaries.
+
+### Spam-folder copy line: pragmatic over voice-pure
+Founder ruling 2026-05-28. `login.checkInbox.body` uses "Check your spam folder if it does
+not arrive." rather than the voice-pure "the folder where your inbox sends things it does
+not recognise." Rationale: in a recovery moment, clarity over register — "spam folder" is
+a noun (not hype) and matches the literal label in Gmail/Outlook for Indian users on slow
+connections. Locked into `product/spec-login-gate-copy.md`.
+
+### Resend setup deferred to founder-action item #9; build proceeds in parallel
+Founder will set `RESEND_API_KEY` + `RESEND_FROM_EMAIL` + verify the sending domain
+(~30 min) as item #9 in `FOUNDER_ACTIONS_THIS_WEEK.md`. Build does NOT block on this —
+silent first-login works for the happy path without Resend (the `firstLoginToken`
+exchange happens on `/payment-confirmed` over HTTPS). Only the email magic-link recovery
+surface and the receipt-email fallback degrade until Resend is live; spec already covers
+that with the `sendEmail` DRY-RUN path returning `{result:'dry-run'}` and the login
+flow returning `{status:'sent'}` regardless (no enumeration, no crash). Build merges with
+`LOOKMAX_EMAIL_LOGIN=false` by default so nothing user-visible changes until founder
+flips it after Resend is live.
+
+---
+
+## 2026-05-28 — Login Gate backend shipped (6 commits)
+
+### Per-IP cooldown map is module-level and shared across consume-link + exchange-first-login
+Both endpoints share the same `ipCooldown` Map in `routes/lookmax-auth.js`. A cooldown
+triggered by brute-forcing consume-link also gates exchange-first-login from the same IP.
+Rationale: this is the desired behaviour (the same IP is suspicious regardless of which
+endpoint it is hammering); the shared map was the simpler and safer design vs. two maps
+that could be played off each other.
+
+### Throttle/cooldown maps reset on Render redeploy (accepted v1 risk)
+The per-email throttle and per-IP cooldown maps are in-process memory. A Render redeploy
+resets them. Rationale: Render free-tier redeploys are infrequent and every other in-process
+map (express-rate-limit store) has the same property — this is a documented v1 trade-off
+tracked in the spec §8. The Postgres + Redis migration (roadmap §2) will add a durable
+cooldown store.
+
+### `require('crypto')` is inline inside processPaymentEvent for the firstLoginToken mint
+Node's built-in `crypto` module is required inline (inside the function) rather than at
+file top to keep the diff surgical (one block inside an existing large function). Rationale:
+the spec says "two surgical mods" and adding a top-level require would change two areas of
+the file instead of one; inline require for a built-in is idiomatic Node and has no
+performance cost (Node caches it on first require).
+
+### magic-link.html template is a stub — frontend-agent must replace the body markup
+`data/email-templates/magic-link.html` ships a functional but minimal template (matches
+the paywall-receipt.html structure). All human-readable copy slots are marked
+`[copy-consultant TBD]` per spec §5. The template renders the `{{magicLinkUrl}}` token
+and the `{{name}}` token correctly. Frontend-agent must replace the markup and copy before
+the flag is flipped to `LOOKMAX_EMAIL_LOGIN=true` in production.

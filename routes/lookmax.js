@@ -263,6 +263,22 @@ router.get('/hair/history', (req, res) => {
 // P7 — Dashboard
 // ═══════════════════════════════════════════════════════════════════
 
+/**
+ * Cross-sell eligibility for NOW-3 §2.2 earned-moment Aura++ card.
+ * Returns true when:
+ *   - user holds Lookmaxxing (lookmaxxingActive) but NOT Orator (oratorActive falsy)
+ *   - >= 14 days have passed since lookmaxxingStartedAt (time gate)
+ * The delta-on-leverage-axis gate (NOW-2 dependency) degrades gracefully to the
+ * time-gate alone until NOW-2 ships with a positive mirror-score signal.
+ */
+function computeCrossSellEligible(user, status) {
+  if (!status.lookmaxxingActive) return false;
+  if (status.oratorActive) return false;
+  if (!user.lookmaxxingStartedAt) return false;
+  const msElapsed = Date.now() - new Date(user.lookmaxxingStartedAt).getTime();
+  return msElapsed >= 14 * 86400000;
+}
+
 router.get('/dashboard', (req, res) => {
   const user = req.lookmaxUser;
   const status = User.computeAuraStatus(user);
@@ -287,6 +303,9 @@ router.get('/dashboard', (req, res) => {
   const mirrorDates = new Set(Lookmax.getMirrors(user.token).map((m) => m.date));
   const thisWeek = lastSevenDates().map((d) => mirrorDates.has(d));
 
+  // NOW-3: cross-sell eligibility
+  const crossSellEligible = computeCrossSellEligible(user, status);
+
   res.json({
     user: { name: user.name, oratorActive: status.oratorActive, lookmaxxingActive: status.lookmaxxingActive, auraPlusPlus: status.auraPlusPlus },
     today: {
@@ -297,6 +316,7 @@ router.get('/dashboard', (req, res) => {
     thisWeek,
     streak: user.lookmaxStreak || 0,
     mirrorLevel: user.mirrorLevel || 'raw',
+    crossSellEligible,
   });
 });
 
@@ -337,3 +357,4 @@ module.exports = router;
 module.exports.mirrorLevelFor = mirrorLevelFor;
 module.exports.overallOf = overallOf;
 module.exports.nextStreak = nextStreak;
+module.exports.computeCrossSellEligible = computeCrossSellEligible;

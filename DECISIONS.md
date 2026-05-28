@@ -5,6 +5,55 @@ Format: date, decision, 2-sentence rationale.
 
 ---
 
+## 2026-05-28 — NOW-2 / B2: Day-30 Re-Audit renewal engine
+
+### lookmaxBaseline shape expanded from bare scores to full struct
+`lookmaxBaseline` was previously just `aestheticScores` (the raw 8-axis object).
+NOW-2 requires `{ scores, leverageAxis, overall, capturedAt, photoStorageKeys }` so the
+re-audit can compute the correct per-axis deltas, label the leverage axis, and generate
+signed photo URLs without re-querying the expired AuditSession. The shape is set once at
+`subscription.activated` and never overwritten (guard: `!user.lookmaxBaseline`).
+
+### photoStorageKeys stored server-side only — never in any client response
+DPDPA compliance: `lookmaxBaseline.photoStorageKeys` contains raw R2 keys
+(`r2:audit/{token}/baseline-{slot}.jpg`). `GET /api/lookmax/reaudit/result` strips this
+field entirely from the response and converts keys to 15-min presigned URLs via
+`storage.getSignedUrl()`. The `storageKey` field name never appears in client output.
+
+### DOWN-variant held-count branching (NOW-2 §3.4b clause 4)
+Axes with `delta30 > -2` are counted as "held or rose" (noise tolerance matches the
+audit's ±2-point rounding). When `heldCount >= 1` the sentence
+"The axes that held tell us the protocol held." is included in the DOWN copy.
+When `heldCount === 0` that sentence is dropped — it would be a factual lie.
+Both variants still end with `◆ MainCharacter` and are verified by
+`tests/reaudit-down-template.test.js`.
+
+### Delta sign thresholds: flat band is [−3, +3)
+Overall delta in `[-3, 3)` → `flat`, ≥ 3 → `up`, < -3 → `down`.
+A 2-point swing could be pure measurement noise (lighting, angle, phone model
+calibration); the flat band absorbs this so a trivially positive delta doesn't
+inflate the user's reading.
+
+### Re-audit routes in routes/reaudit.js, not routes/lookmax.js
+`routes/lookmax.js` is already 500 lines. The re-audit engine (status, submit, result)
+is a distinct feature with its own pure functions exported for testing; isolating it
+keeps diffs surgical and the test surface cleanly bounded.
+
+### reaudit_reveal_viewed added to ALLOWED_EVENTS (NOW-2 §KPI)
+The four re-audit KPI events (`reaudit_card_shown`, `reaudit_started`,
+`reaudit_completed`, `reaudit_reveal_viewed`) are added to `services/events.js`
+ALLOWED_EVENTS. The events already had `reaudit_card_shown/started/completed` from
+B5 scaffolding; only `reaudit_reveal_viewed` was missing.
+
+### Pull-based eligibility — no scheduler added
+`GET /api/lookmax/reaudit/status` computes eligibility on every request from user
+fields (`lookmaxxingStartedAt`, `lookmaxBaseline`, `reAuditCompletedThisCycle`).
+No cron or background job — the brief explicitly says "pull-based per spec", and
+adding a scheduler would introduce state across the server restarts that the
+ephemeral Render free-tier disk cannot survive.
+
+---
+
 ## 2026-05-28 — B4 overnight build (Web Push + Weekly Reveal MP4)
 
 ### services/push.js — DRY-RUN pattern identical to services/whatsapp.js

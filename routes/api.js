@@ -604,6 +604,18 @@ router.get('/payment/status', (req, res) => {
   const plan = razorpay.PLANS[planKey] || null;
   const nextBilling = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
+  // Login Gate (P0-1): include firstLoginToken only when all four conditions are met.
+  // Omitting (undefined) rather than null makes it invisible to the client unless earned.
+  const emailLoginEnabled = process.env.LOOKMAX_EMAIL_LOGIN === 'true';
+  const firstLoginToken =
+    emailLoginEnabled &&
+    user.lookmaxxingActive &&
+    !user.firstLoginConsumedAt &&
+    user.firstLoginExpiresAt &&
+    user.firstLoginExpiresAt > Date.now()
+      ? user.firstLoginToken
+      : undefined;
+
   res.json({
     found: true,
     verified,
@@ -616,6 +628,7 @@ router.get('/payment/status', (req, res) => {
     auraPlusPlus: status.auraPlusPlus,
     subscriptionActive: user.subscriptionStatus === 'active',
     nextBillingDate: nextBilling.toISOString(),
+    ...(firstLoginToken !== undefined ? { firstLoginToken } : {}),
   });
 });
 
@@ -683,6 +696,13 @@ async function processPaymentEvent(event) {
     if (pillars.includes('lookmaxxing')) {
       updates.lookmaxxingActive = true;
       if (!user.lookmaxxingStartedAt) updates.lookmaxxingStartedAt = new Date().toISOString();
+      // Login Gate (P0-1): mint a one-shot first-login token so /payment-confirmed
+      // can silently sign the buyer in via /api/lookmax/auth/exchange-first-login.
+      // 15-min TTL, single-use, 32-byte hex — never logged (lib/log-mask).
+      const crypto = require('crypto');
+      updates.firstLoginToken = crypto.randomBytes(32).toString('hex');
+      updates.firstLoginExpiresAt = Date.now() + 15 * 60 * 1000;
+      updates.firstLoginConsumedAt = null;
     }
     // Capture the subscription id from the event if checkout didn't store it
     // (lets the post-payment page find the user by subscription id).
@@ -699,11 +719,18 @@ async function processPaymentEvent(event) {
       `◆ The Chamber is open, ${user.name}.\n\nDay 8 arrives tomorrow at your preferred time.\n\n◆ MainCharacter`
     );
     // P4.5: post-payment receipt email (DRY-RUN/allowlist-gated; no-op if no email).
+    // Login Gate (P0-1): thread firstLoginToken into the receipt so the email
+    // embeds a magic-link backup URL for the F2 failure mode (tab closed after payment).
     if (updatedUser.email) {
       const subscriptionId =
         (event.payload && event.payload.subscription && event.payload.subscription.entity && event.payload.subscription.entity.id) || '';
       email
-        .sendPaywallReceipt({ user: updatedUser, plan: notes.plan, subscriptionId })
+        .sendPaywallReceipt({
+          user: updatedUser,
+          plan: notes.plan,
+          subscriptionId,
+          firstLoginToken: updatedUser.firstLoginToken || null,
+        })
         .catch((err) => log('ERROR', `receipt email failed: ${err.message}`));
     }
     return { handled: true, status: 'active', auraPlusPlus: status.auraPlusPlus, pillars };

@@ -15,6 +15,7 @@ const router = express.Router();
 const User = require('../models/User');
 const Lookmax = require('../models/Lookmax');
 const photos = require('../services/photos');
+const storage = require('../services/storage');
 const vision = require('../services/vision');
 // protocol + hair services are lazy-required inside their handlers (P5/P6).
 const { AESTHETIC_AXES } = require('../data/lookmax-prompts');
@@ -71,7 +72,21 @@ router.post('/mirror', upload.single('photo'), async (req, res) => {
     const user = req.lookmaxUser;
     if (!req.file) return res.status(400).json({ error: 'photo required' });
 
-    const saved = await photos.saveUserPhoto({ userId: user.token, buffer: req.file.buffer, kind: 'mirror', mimeType: req.file.mimetype });
+    // B0: persist daily mirror to R2 using the canonical mirrorKey convention.
+    // Falls back to the existing local photos service when R2 is not configured.
+    // DPDPA: the r2Key is stored server-side on the Lookmax record only — never
+    // returned to the client in this response or any API endpoint.
+    const mirrorDate = storage.istDate();
+    const r2Key = storage.mirrorKey(user.token, mirrorDate);
+    const putResult = await storage.put(r2Key, req.file.buffer, req.file.mimetype || 'image/jpeg');
+    let photoPath;
+    if (putResult.key) {
+      photoPath = `r2:${putResult.key}`;
+    } else {
+      // DRY-RUN or R2 failure — keep existing local-storage fallback
+      const saved = await photos.saveUserPhoto({ userId: user.token, buffer: req.file.buffer, kind: 'mirror', mimeType: req.file.mimetype });
+      photoPath = saved.path;
+    }
 
     // Baseline = the converting audit's scores, if any.
     const baseline = await loadBaseline(user);
@@ -89,7 +104,7 @@ router.post('/mirror', upload.single('photo'), async (req, res) => {
     const yest = prev || null;
     const streak = nextStreak(prev, user.lookmaxStreak || 0);
 
-    Lookmax.addMirror(user.token, { photoPath: saved.path, axes, overallScore: overall, mirrorLevel: level });
+    Lookmax.addMirror(user.token, { photoPath, axes, overallScore: overall, mirrorLevel: level });
     User.updateUser(user.phone, { mirrorLevel: level, lastMirrorAt: new Date().toISOString(), lookmaxStreak: streak });
 
     // Deltas

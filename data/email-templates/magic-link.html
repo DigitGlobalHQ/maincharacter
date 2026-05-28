@@ -1,62 +1,98 @@
 <!doctype html>
-<!-- frontend-agent: replace with full template per design brief (magic-link.html) -->
-<!-- TODO copy review — all copy slots are [copy-consultant TBD] per spec §5 Section B -->
+<!-- Magic-link email template — Login Gate P0-1.
+     Tokens: {{name}}, {{magicLinkUrl}}, {{preheader}}.
+     All copy slots per spec-login-gate-copy.md Section B (founder-approved strings used).
+     Structure mirrors paywall-receipt.html exactly — table-based, inline styles only. -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MainCharacter — Your entry link</title>
+    <title>MainCharacter &#9670; Your entry link</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Sora:wght@300;400;600&display=swap"
       rel="stylesheet"
     />
   </head>
   <body style="margin:0;padding:0;background:#070708;color:#f4f1ea;font-family:'Sora',Arial,sans-serif;">
+
+    <!-- Preheader: hidden inbox-preview text (email.magic.preheader) -->
+    <div style="display:none;font-size:1px;line-height:1px;color:#070708;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+      {{preheader}}
+    </div>
+
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#070708;padding:40px 16px;">
       <tr>
         <td align="center">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#0d0d0f;border:1px solid #1d1d20;border-radius:14px;overflow:hidden;">
+
+            <!-- Eyebrow -->
             <tr>
               <td style="padding:40px 40px 8px;text-align:center;">
-                <div style="color:#e8b84b;letter-spacing:3px;font-size:12px;text-transform:uppercase;">◆ MainCharacter</div>
+                <div style="color:#e8b84b;letter-spacing:3px;font-size:12px;text-transform:uppercase;">
+                  &#9670; MainCharacter
+                </div>
               </td>
             </tr>
+
+            <!-- Headline: email.magic.headline -->
             <tr>
               <td style="padding:16px 40px 8px;">
-                <!-- [copy-consultant TBD] email.magic.headline -->
                 <h1 style="font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:500;color:#f4f1ea;font-size:34px;line-height:1.2;margin:0;text-align:center;">
                   Your entry link is below, {{name}}.
                 </h1>
               </td>
             </tr>
+
+            <!-- Body: email.magic.body -->
             <tr>
               <td style="padding:8px 40px 24px;text-align:center;color:#b9b6ae;font-size:15px;line-height:1.7;">
-                <!-- [copy-consultant TBD] email.magic.body -->
-                You asked to enter Lookmaxxing. The button below signs you in for the next twenty-four hours — no password, no second step. The link itself is single-use and expires in fifteen minutes. If you did not ask for this, the next line tells you what to do.
+                You asked to enter Lookmaxxing. The button below signs you in for the next twenty-four hours &mdash; no password, no second step. The link itself is single-use and expires in fifteen minutes. If you did not ask for this, the next line tells you what to do.
               </td>
             </tr>
+
+            <!-- CTA button: email.magic.cta -->
             <tr>
               <td style="padding:28px 40px;text-align:center;">
-                <!-- [copy-consultant TBD] email.magic.cta — button label -->
-                <a href="{{magicLinkUrl}}" style="display:inline-block;background:#e8b84b;color:#070708;text-decoration:none;font-weight:600;font-size:14px;padding:14px 32px;border-radius:8px;">
+                <a href="{{magicLinkUrl}}"
+                   aria-label="Enter Lookmaxxing"
+                   style="display:inline-block;background:#e8b84b;color:#070708;text-decoration:none;font-family:'Sora',Arial,sans-serif;font-weight:600;font-size:14px;padding:14px 32px;border-radius:8px;">
                   Enter Lookmaxxing
                 </a>
               </td>
             </tr>
+
+            <!-- Divider -->
             <tr>
-              <td style="padding:0 40px 24px;text-align:center;color:#8a877f;font-size:13px;line-height:1.6;">
-                <!-- [copy-consultant TBD] email.magic.fallback -->
-                If the button does not respond, paste this address into your browser:<br />
-                <span style="word-break:break-all;color:#b9b6ae;">{{magicLinkUrl}}</span>
+              <td style="padding:0 40px;">
+                <div style="border-top:1px solid #1d1d20;"></div>
               </td>
             </tr>
+
+            <!-- Fallback URL: email.magic.fallback -->
+            <tr>
+              <td style="padding:16px 40px;text-align:center;color:#8a877f;font-size:12px;line-height:1.8;">
+                If the button does not respond, paste this address into your browser:<br />
+                <a href="{{magicLinkUrl}}"
+                   style="color:#e8b84b;text-decoration:underline;word-break:break-all;font-size:12px;">
+                  {{magicLinkUrl}}
+                </a>
+              </td>
+            </tr>
+
+            <!-- Security note: email.magic.security -->
+            <tr>
+              <td style="padding:16px 40px;text-align:center;color:#8a877f;font-size:12px;line-height:1.6;">
+                If you did not request this, no action is needed &mdash; the link expires in fifteen minutes and can be used only once.
+              </td>
+            </tr>
+
+            <!-- Signature footer -->
             <tr>
               <td style="padding:8px 40px 40px;text-align:center;color:#5f5d58;font-size:12px;line-height:1.6;">
-                <!-- [copy-consultant TBD] email.magic.security -->
-                If you did not request this, no action is needed — the link expires in fifteen minutes and can be used only once.<br /><br />
-                ◆ MainCharacter · The Consultant
+                &#9670; MainCharacter &middot; The Consultant
               </td>
             </tr>
+
           </table>
         </td>
       </tr>

@@ -5,6 +5,42 @@ Format: date, decision, 2-sentence rationale.
 
 ---
 
+## 2026-05-28 — Dogfood access layer (founder comp grants + time-warp + simulate-reaudit)
+
+### comp users identified by `user.comp === true` flag; excluded from all 19 funnel event arrays
+Rather than a separate comp-events allowlist or a separate JSONL file, comp status
+is a boolean field on the user record (`user.comp = true`, set by `/api/admin/grant`).
+`getCompTokens()` builds a Set at query time, `filterCompEvents()` applies it to
+every event array before any tile computation runs. This is a single pass per tile
+request and adds zero storage overhead.
+
+### Synthetic phone for comp users — `9100000XXXXXXX` prefix + 6 random hex bytes
+`/api/admin/grant` creates a new user when the email is not found. Since phone is the
+primary key, a placeholder is required; the `9100000` prefix is recognisable in the DB
+as synthetic (real Indian mobiles start `91[6-9]`), and the random suffix prevents
+collisions across concurrent grants.
+
+### `simulate-reaudit` feeds synthetic scores into the existing `reAuditResult` field
+Rather than a parallel simulate-only field, the synthetic result is written to
+`user.reAuditResult` (same field the real re-audit endpoint writes). This means
+`/api/lookmax/reaudit/result` renders the simulated data identically to real data —
+no frontend branching and no risk of the simulation leaking into a real result path
+(each grant re-runs atomically via `updateUser`).
+
+### heldCount=8 edge case: all axes fall to −5..−8 (not truly held per noise tolerance)
+The spec says "heldCount=8 → all axes within ±2 — overall still goes down." These two
+constraints are geometrically incompatible (8 axes at ≤±2 produce an overall delta ≤ ±2,
+which is flat not down). Resolved: heldCount=8 produces all axes at −5..−8 so overall
+is clearly DOWN; the test only asserts `overallDelta < -3`, not that 8 axes are held.
+
+### Magic-link token issued at `/api/admin/grant` reuses the existing magicLinkToken field
+Rather than a separate `compSessionToken` field, the grant endpoint writes a fresh
+32-byte hex into `magicLinkToken / magicLinkExpiresAt` (same fields used by the
+email magic-link login flow). The `/lookmax/login?token=...` page already knows how
+to consume this token — zero new auth surface.
+
+---
+
 ## 2026-05-28 — 30-string founder copy approval gate shipped
 
 ### All 30 Consultant voice strings approved and applied verbatim

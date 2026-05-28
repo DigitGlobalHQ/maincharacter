@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Lookmaxxing dashboard home (Night-4, P7.1). // TODO copy review on copy. -->
+<!-- Lookmaxxing dashboard home (Night-4, P7.1 + NOW-3). -->
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -12,25 +12,98 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/lookmax/app.css" />
   <script src="/track.js" defer></script>
+  <style>
+    /* ── Mirror primary card ─────────────────────────────── */
+    .card--mirror-primary {
+      border-top: 3px solid var(--gold);
+      min-height: 140px;
+      padding: 28px 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .card--mirror-primary h3 {
+      font-size: 22px;
+    }
+
+    /* ── Secondary tile row (Protocol + Hair) ────────────── */
+    .tile-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .tile-row .card {
+      margin-bottom: 0;
+    }
+
+    /* ── Cross-sell slot card ─────────────────────────────── */
+    .card--cross-sell {
+      border-top: 3px solid var(--gold);
+      animation: fadeIn 0.4s ease both;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .card--cross-sell { animation: none; }
+      .card--mirror-primary.card--pulse { animation: none; }
+    }
+    .cross-sell__body {
+      font-size: 15px;
+      color: var(--ink);
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+    .cross-sell__save {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+    .cross-sell__dismiss {
+      display: inline-block;
+      min-height: 44px;
+      padding: 12px 16px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-family: 'Sora', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      text-align: center;
+      width: 100%;
+      margin-top: 6px;
+    }
+    .cross-sell__dismiss:hover { color: var(--ink); }
+  </style>
 </head>
 <body>
   <div class="page" id="page">
     <div class="topbar">
       <div class="who">◆ MainCharacter · Lookmaxxing<br /><b id="whoName">—</b></div>
       <div class="badges">
-        <span class="badge badge--streak" id="streakBadge">0 🔥</span>
+        <span class="badge badge--streak" id="streakBadge">Day 0</span>
         <span class="badge badge--level" id="levelBadge">Raw</span>
       </div>
     </div>
 
-    <div id="tiles"></div>
+    <!-- Primary Mirror tile (full-width, promoted) -->
+    <div id="tile-mirror"></div>
 
+    <!-- Secondary tiles: Protocol + Hair in 2-col grid -->
+    <div class="tile-row" id="tile-row"></div>
+
+    <!-- Week strip card -->
     <div class="card">
       <div class="muted" style="font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">This week</div>
       <div class="weekstrip" id="weekstrip"></div>
     </div>
 
-    <div id="crosssell"></div>
+    <!-- Cross-sell slot (NOW-3 earned-moment; empty until eligibility check) -->
+    <div id="cross-sell-slot"></div>
 
     <p class="footer-note">The mirror has been honest. ◆ MainCharacter</p>
   </div>
@@ -48,46 +121,138 @@
       if (!d) return;
 
       document.getElementById('whoName').textContent = d.user.name || 'Seeker';
-      document.getElementById('streakBadge').textContent = (d.streak || 0) + ' 🔥';
+      document.getElementById('streakBadge').textContent = 'Day ' + (d.streak || 0);
       document.getElementById('levelBadge').textContent = levelLabel(d.mirrorLevel);
 
-      // Three status tiles
+      // ── Primary Mirror tile (full-width) ────────────────────────────────
       const t = d.today || {};
-      const tiles = [];
-      // Mirror tile
+      let mirrorHtml;
       if (t.mirror && t.mirror.takenToday) {
-        tiles.push(tile('Mirror', `Today's score ${t.mirror.score} · Taken at ${t.mirror.at} ✓`, '/lookmax/mirror', false));
+        mirrorHtml = mirrorTile(
+          `Today's score ${t.mirror.score} · Taken at ${t.mirror.at} ✓`,
+          false
+        );
       } else {
-        tiles.push(tile('Mirror', 'Take today’s mirror →', '/lookmax/mirror', true));
+        mirrorHtml = mirrorTile('Take today's mirror →', true);
       }
-      // Protocol tile
+      document.getElementById('tile-mirror').innerHTML = mirrorHtml;
+
+      // ── Secondary tiles row ─────────────────────────────────────────────
       const p = t.protocol || {};
-      tiles.push(tile('Protocol', `${p.completedCount || 0} of ${p.totalCount || 0} complete`, '/lookmax/protocol', false, p.totalCount ? (p.completedCount / p.totalCount) : 0));
-      // Hair tile
       const h = t.hair || {};
-      if (h.unlocked) tiles.push(tile('Hair', 'Take this week’s hair audit →', '/lookmax/hair', true));
-      else tiles.push(tile('Hair', `Next reading in ${h.daysUntil != null ? h.daysUntil : 7} days`, '/lookmax/hair', false));
-      document.getElementById('tiles').innerHTML = tiles.join('');
+      const protocolTile = secondaryTile(
+        'Protocol',
+        `${p.completedCount || 0} of ${p.totalCount || 0} complete`,
+        '/lookmax/protocol',
+        false,
+        p.totalCount ? (p.completedCount / p.totalCount) : 0,
+        'protocol_tile_clicked'
+      );
+      const hairTile = h.unlocked
+        ? secondaryTile('Hair', 'Take this week's hair audit →', '/lookmax/hair', true, null, 'hair_tile_clicked', 'unlocked')
+        : secondaryTile('Hair', `Next reading in ${h.daysUntil != null ? h.daysUntil : 7} days`, '/lookmax/hair', false, null, 'hair_tile_clicked', 'locked');
+      document.getElementById('tile-row').innerHTML = protocolTile + hairTile;
 
-      // Week strip
+      // ── Week strip ──────────────────────────────────────────────────────
       const week = d.thisWeek || [];
-      document.getElementById('weekstrip').innerHTML = week.map((on) => `<span class="dot ${on ? 'on' : ''}"></span>`).join('');
+      document.getElementById('weekstrip').innerHTML = week.map(
+        (on) => `<span class="dot ${on ? 'on' : ''}"></span>`
+      ).join('');
 
-      // Cross-sell when Orator is not held
-      if (!d.user.oratorActive) {
-        document.getElementById('crosssell').innerHTML =
-          `<a class="card card--gold card--cta" href="/paywall?upgrade=auraplus&from=lookmax" style="display:block;text-decoration:none;color:inherit">
-            <h3>Add The Orator</h3>
-            <p class="muted" style="font-size:14px">₹799/mo. Or upgrade to Aura++ ₹1,999 (saves ₹299). The voice changes when the room turns. ◆</p>
-          </a>`;
+      // ── Cross-sell slot (NOW-3 §2.2 earned-moment) ──────────────────────
+      // Silence guarantee: if dismissed, never show again.
+      const dismissed = localStorage.getItem('cross_sell_orator_dismissed');
+      // 30-day re-show suppression after click
+      const clickedAt = localStorage.getItem('cross_sell_orator_clicked_at');
+      const clickedRecently = clickedAt && (Date.now() - Number(clickedAt)) < 30 * 86400000;
+
+      if (
+        d.crossSellEligible &&
+        !dismissed &&
+        !clickedRecently &&
+        !d.user.oratorActive
+      ) {
+        renderCrossSell();
+      }
+
+      // Track dashboard viewed
+      if (window.mc) {
+        window.mc.track('dashboard_viewed', {
+          mirrorLevel: d.mirrorLevel,
+          daysSincePayment: null,
+          lookmaxxingActive: d.user.lookmaxxingActive,
+        });
       }
     })();
 
-    function levelLabel(l) { return ({ raw: 'Raw', polished: 'Polished', magnetic: 'Magnetic', radiant: 'Radiant', sovereign: 'Sovereign' })[l] || 'Raw'; }
-    function tile(title, sub, href, pulse, progress) {
-      const bar = progress != null ? `<div class="bar" style="margin-top:10px"><span style="width:${Math.round(progress * 100)}%"></span></div>` : '';
-      return `<a href="${href}" class="card card--look card--cta ${pulse ? 'card--pulse' : ''}" style="display:block;text-decoration:none;color:inherit">
-        <h3>${title}</h3><p class="muted" style="font-size:14px">${sub}</p>${bar}</a>`;
+    // ── Mirror primary tile builder ─────────────────────────────────────────
+    function mirrorTile(sub, pulse) {
+      return `<a href="/lookmax/mirror"
+        class="card card--mirror-primary card--cta ${pulse ? 'card--pulse' : ''}"
+        style="display:block;text-decoration:none;color:inherit;margin-bottom:16px"
+        data-event="mirror_tile_clicked"
+        data-state="${pulse ? 'empty' : 'taken'}"
+        aria-label="Daily Mirror">
+        <h3>Mirror</h3>
+        <p class="muted" style="font-size:14px">${sub}</p>
+      </a>`;
+    }
+
+    // ── Secondary tile builder ──────────────────────────────────────────────
+    function secondaryTile(title, sub, href, pulse, progress, eventName, state) {
+      const bar = progress != null
+        ? `<div class="bar" style="margin-top:10px"><span style="width:${Math.round(progress * 100)}%"></span></div>`
+        : '';
+      const stateAttr = state ? `data-state="${state}"` : '';
+      return `<a href="${href}"
+        class="card card--look card--cta ${pulse ? 'card--pulse' : ''}"
+        style="display:block;text-decoration:none;color:inherit"
+        data-event="${eventName}"
+        ${stateAttr}
+        aria-label="${title}">
+        <h3>${title}</h3>
+        <p class="muted" style="font-size:14px">${sub}</p>
+        ${bar}
+      </a>`;
+    }
+
+    // ── Cross-sell card (NOW-3 approved copy) ───────────────────────────────
+    function renderCrossSell() {
+      const slot = document.getElementById('cross-sell-slot');
+      slot.innerHTML = `<div class="card card--cross-sell" role="complementary" aria-label="Add The Orator">
+        <p class="cross-sell__body">The face is moving. The voice is the next mirror.</p>
+        <p class="cross-sell__save">Bundle saves ₹299/mo.</p>
+        <a href="/paywall?intent=bundle"
+          class="btn btn--solid"
+          data-event="cross_sell_orator_clicked"
+          data-event-props='{"placement":"dashboard"}'
+          style="text-decoration:none;display:block"
+          aria-label="Add The Orator — upgrade to bundle">Add The Orator</a>
+        <button
+          class="cross-sell__dismiss"
+          aria-label="Dismiss this offer"
+          id="crossSellDismissBtn">Not now</button>
+      </div>`;
+
+      // Track impression
+      if (window.mc) window.mc.track('cross_sell_orator_shown', { placement: 'dashboard' });
+
+      // Dismiss handler — sets silence flag
+      document.getElementById('crossSellDismissBtn').addEventListener('click', function () {
+        localStorage.setItem('cross_sell_orator_dismissed', '1');
+        if (window.mc) window.mc.track('cross_sell_orator_dismissed', { placement: 'dashboard' });
+        slot.innerHTML = '';
+      });
+
+      // Click handler — set 30-day re-show suppression
+      slot.querySelector('[data-event="cross_sell_orator_clicked"]').addEventListener('click', function () {
+        localStorage.setItem('cross_sell_orator_clicked_at', String(Date.now()));
+        if (window.mc) window.mc.track('cross_sell_orator_clicked', { placement: 'dashboard' });
+      });
+    }
+
+    function levelLabel(l) {
+      return ({ raw: 'Raw', polished: 'Polished', magnetic: 'Magnetic', radiant: 'Radiant', sovereign: 'Sovereign' })[l] || 'Raw';
     }
   </script>
 </body>

@@ -49,7 +49,7 @@
     }
 
     function render() {
-      document.getElementById('streakBadge').textContent = (state.streak || 0) + ' 🔥';
+      document.getElementById('streakBadge').textContent = 'Day ' + (state.streak || 0);
       document.getElementById('progressLine').textContent = `${state.completedCount} of ${state.totalCount} complete` + (state.isLocked ? ' · locked' : '');
 
       document.getElementById('items').innerHTML = (state.items || []).map((it) => `

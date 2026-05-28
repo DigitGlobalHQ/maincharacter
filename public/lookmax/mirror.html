@@ -141,7 +141,7 @@
       clearInterval(window._rotIv);
       document.getElementById('analysisView').classList.add('hidden');
       document.getElementById('revealView').classList.remove('hidden');
-      document.getElementById('streakBadge').textContent = (r.streak || 0) + ' 🔥';
+      document.getElementById('streakBadge').textContent = 'Day ' + (r.streak || 0);
       document.getElementById('levelBadge').textContent = levelLabel(r.mirrorLevel);
       document.getElementById('levelLine').textContent = levelLabel(r.mirrorLevel) + ' — ' + r.score + '/100';
       document.getElementById('consultantLine').textContent = r.consultantLine || '';

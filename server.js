@@ -238,47 +238,65 @@ app.all('/webhook', (req, res) => res.redirect(308, '/api/webhook/whatsapp'));
 // HEALTH CHECK
 // ═══════════════════════════════════════════════════════════════════
 
-app.get('/health', (req, res) => {
-  const users = User.getAllUsers();
-  const userCount = Object.keys(users).length;
+// B0: /health is now async so it can await db.healthCheck() (10s cached).
+app.get('/health', async (req, res) => {
+  try {
+    // Parallel: db ping + user count (both may return Promises in pg mode).
+    const [dbHealthy, users, waitlistCount] = await Promise.all([
+      db.healthCheck(),
+      Promise.resolve(User.getAllUsers()),
+      Promise.resolve(EarlyAccess.count()),
+    ]);
+    const usersMap = typeof users === 'object' && !Array.isArray(users) ? users : {};
+    const userCount = Object.keys(usersMap).length;
+    const storage = require('./services/storage');
 
-  res.json({
-    status: 'healthy',
-    service: 'MainCharacter v2.0',
-    environment: NODE_ENV,
-    uptime: Math.round(process.uptime()),
-    uptimeFormatted: formatUptime(process.uptime()),
-    config: {
-      gemini: !!process.env.GEMINI_API_KEY,
-      razorpay: !!process.env.RAZORPAY_KEY_ID,
-      adminPhone: adminLib.getAdminPhones().length > 0,
-      adminCount: adminLib.getAdminPhones().length,
-      sentry: !!process.env.SENTRY_DSN,
-      database: !!process.env.DATABASE_URL,
-      sms: { configured: !!process.env.MSG91_AUTH_KEY },
-      email: { configured: !!process.env.RESEND_API_KEY },
-    },
-    paywall: {
-      public: process.env.PAYWALL_PUBLIC === 'true',
-      waitlistCount: EarlyAccess.count(),
-    },
-    lookmaxxing: {
-      configured: true,
-      version: GIT_SHA,
-    },
-    messaging: {
-      provider: 'whatsapp-cloudapi',
-      mode: whatsapp.getSendMode(),
-      configured: whatsapp.isConfigured(),
-      webhookGuard: whatsapp.webhookGuardMode(),
-      schedulerEnabled: process.env.RUN_SCHEDULER !== 'false',
-    },
-    metrics: {
-      totalUsers: userCount,
-      activeUsers: Object.values(users).filter(u => u.status === 'active').length,
-    },
-    timestamp: new Date().toISOString(),
-  });
+    res.json({
+      status: 'healthy',
+      service: 'MainCharacter v2.0',
+      environment: NODE_ENV,
+      uptime: Math.round(process.uptime()),
+      uptimeFormatted: formatUptime(process.uptime()),
+      config: {
+        gemini: !!process.env.GEMINI_API_KEY,
+        razorpay: !!process.env.RAZORPAY_KEY_ID,
+        adminPhone: adminLib.getAdminPhones().length > 0,
+        adminCount: adminLib.getAdminPhones().length,
+        sentry: !!process.env.SENTRY_DSN,
+        // B0: live ping result, not just env-var presence
+        database: dbHealthy,
+        storage: {
+          configured: storage.isR2Configured(),
+          bucket: process.env.R2_BUCKET || null,
+        },
+        sms: { configured: !!process.env.MSG91_AUTH_KEY },
+        email: { configured: !!process.env.RESEND_API_KEY },
+      },
+      paywall: {
+        public: process.env.PAYWALL_PUBLIC === 'true',
+        waitlistCount,
+      },
+      lookmaxxing: {
+        configured: true,
+        version: GIT_SHA,
+      },
+      messaging: {
+        provider: 'whatsapp-cloudapi',
+        mode: whatsapp.getSendMode(),
+        configured: whatsapp.isConfigured(),
+        webhookGuard: whatsapp.webhookGuardMode(),
+        schedulerEnabled: process.env.RUN_SCHEDULER !== 'false',
+      },
+      metrics: {
+        totalUsers: userCount,
+        activeUsers: Object.values(usersMap).filter(u => u.status === 'active').length,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    slog.error('HEALTH', `health check error: ${err.message}`);
+    res.status(500).json({ status: 'error', error: err.message });
+  }
 });
 
 function formatUptime(seconds) {

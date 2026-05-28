@@ -86,14 +86,23 @@
       </div>
     </div>
 
+    <!-- COPY APPROVED 2026-05-28 (#07): already-mirrored-today banner — shown by JS when today's reading exists -->
+    <!-- see product/copy-pending-approval-2026-05-28.md -->
+    <div id="alreadyMirroredBanner" style="display:none;background:rgba(29,29,32,0.7);border-radius:8px;padding:10px 14px;margin-bottom:14px;color:var(--muted);font-size:13px" role="status" aria-live="polite">
+      You have already sat today. Another reading replaces the first.
+    </div>
+
     <!-- ── Capture view ─────────────────────────────────────────── -->
     <div id="captureView">
-      <!-- TODO copy: spec calls for a Cormorant italic eyebrow "Today." here — design-lookmax-mirror.md §2.1 -->
+      <!-- COPY APPROVED 2026-05-28 (#01): see product/copy-pending-approval-2026-05-28.md -->
+      <p class="eyebrow" style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:0.85rem;color:var(--gold);letter-spacing:.12em;margin-bottom:6px" aria-hidden="true">Today.</p>
       <h1 style="margin-bottom:10px">Take today's mirror.</h1>
       <p class="muted" style="margin-bottom:8px">Natural light. Camera at eye level. The honest angle.</p>
-      <!-- TODO copy: spec calls for a ritual cue line here — design-lookmax-mirror.md §2.1 -->
+      <!-- COPY APPROVED 2026-05-28 (#02): see product/copy-pending-approval-2026-05-28.md -->
+      <p class="muted" style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:14px;margin-bottom:12px">Stand still for a moment. The camera is waiting.</p>
       <p id="cameraHint" class="muted" style="font-size:13px;margin-bottom:16px;display:none">
-        <!-- TODO copy: camera-unavailable hint — design-lookmax-mirror.md §4 -->
+        <!-- COPY APPROVED 2026-05-28 (#04): see product/copy-pending-approval-2026-05-28.md -->
+        The camera is blocked. A photo from your library works the same.
       </p>
       <video id="video" class="preview" autoplay playsinline muted></video>
       <input id="fileInput" type="file" accept="image/*" capture="user" class="hidden" />
@@ -117,7 +126,8 @@
     <!-- ── Analysis view ────────────────────────────────────────── -->
     <div id="analysisView" class="hidden center" style="padding-top:40px" aria-live="polite" role="status">
       <div class="score-big">◆</div>
-      <!-- TODO copy: spec calls for static frame line "The reading takes a minute. Hold." — design-lookmax-mirror.md §2.2 -->
+      <!-- COPY APPROVED 2026-05-28 (#03): see product/copy-pending-approval-2026-05-28.md -->
+      <p class="muted" style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:15px;margin-bottom:10px">The reading takes a minute. Hold.</p>
       <div class="rotline" id="rotline">Mapping skin signal…</div>
     </div>
 
@@ -141,8 +151,10 @@
 
         <div class="card" id="trendCard" style="margin-top:18px">
           <div class="muted" style="font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Last 14 days</div>
-          <!-- TODO copy: spec calls for "Your line begins." caption on Day-1 single-dot — design-lookmax-mirror.md §4 -->
+          <!-- COPY APPROVED 2026-05-28 (#06): "Your line begins." — caption on Day-1 single-dot; rendered by JS below -->
           <canvas id="trend" height="120" aria-label="14-day score trend"></canvas>
+          <!-- COPY APPROVED 2026-05-28 (#06): see product/copy-pending-approval-2026-05-28.md -->
+          <p class="muted" id="trendCaption" style="font-size:12px;margin-top:6px;display:none">Your line begins.</p>
         </div>
       </div>
 
@@ -289,10 +301,19 @@
         })();
       }
 
+      // Already-mirrored banner (#07) — show when streak indicates this is a re-take
+      if (r.replacedToday) {
+        document.getElementById('alreadyMirroredBanner').style.display = '';
+      }
+
       // Beat 2: level line + consultant line (fade at t=2s; instant if reduced-motion)
       const beat2El = document.querySelector('.reveal-beat-2');
       document.getElementById('levelLine').textContent = levelLabel(r.mirrorLevel) + ' — ' + r.score + '/100';
-      document.getElementById('consultantLine').textContent = r.consultantLine || '';
+      // COPY APPROVED 2026-05-28 (#05): first-mirror baseline Consultant line — rendered when no prior trend data
+      const consultantText = (r.isFirstMirror || (r.trend && r.trend.length <= 1 && !r.consultantLine))
+        ? 'Today is the baseline. Hold it. Tomorrow has something to push against.'
+        : (r.consultantLine || '');
+      document.getElementById('consultantLine').textContent = consultantText;
 
       const beat2Delay = reducedMotion ? 0 : 2000;
       setTimeout(() => { beat2El.classList.add('show'); }, beat2Delay);
@@ -303,6 +324,11 @@
         document.querySelector('.reveal-beat-3').classList.add('show');
         renderAxes(r);
         drawTrend(r.trend || []);
+        // COPY APPROVED 2026-05-28 (#06): show "Your line begins." caption on Day-1 single-dot
+        const caption = document.getElementById('trendCaption');
+        if (caption && r.trend && r.trend.length <= 1) {
+          caption.style.display = '';
+        }
         if (window.mc) window.mc.track('mirror_reveal_complete');
       }, beat3Delay);
     }

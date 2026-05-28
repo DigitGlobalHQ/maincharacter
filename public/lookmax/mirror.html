@@ -1,6 +1,8 @@
 <!doctype html>
-<!-- Daily Mirror (Night-4, P4.1). Camera capture → upload → 8-axis score reveal
-     → trend. // TODO copy review on rotating lines + headers. -->
+<!-- Daily Mirror (Night-4, P4.1 → design-spec refactor).
+     Camera capture → upload → 8-axis score reveal (staged 3 beats) → trend.
+     Chart.js REMOVED — replaced with vanilla canvas drawTrend().
+     Copy: keep existing locked strings; new strings deferred to copy-consultant. -->
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -13,62 +15,173 @@
   <link rel="stylesheet" href="/lookmax/app.css" />
   <script src="/track.js" defer></script>
   <style>
-    .preview { width: 100%; border-radius: 14px; border: 1px solid var(--line); background: #000; aspect-ratio: 1/1; object-fit: cover; }
+    /* Capture preview */
+    .preview {
+      width: 100%;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: #000;
+      aspect-ratio: 1/1;
+      object-fit: cover;
+      display: block;
+    }
+    .preview--live {
+      box-shadow: inset 0 0 0 1px rgba(232,184,75,0.6);
+    }
     .cap-row { display: flex; gap: 10px; margin-top: 14px; }
+    .cap-row .btn { min-height: 44px; }
+
+    /* Analysis view */
+    #analysisView .score-big {
+      font-size: 3rem;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+
+    /* Reveal — beat staging (opacity transitions) */
+    .reveal-beat-1,
+    .reveal-beat-2,
+    .reveal-beat-3 {
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    .reveal-beat-1.show,
+    .reveal-beat-2.show,
+    .reveal-beat-3.show {
+      opacity: 1;
+    }
+    /* Beat 1: score-big (count-up handles its own appearance; start visible) */
+    .reveal-beat-1 { opacity: 1; transition: none; }
+
+    /* Axis stagger handled inline by JS; base opacity: */
+    .axis { opacity: 0; transition: opacity 0.3s ease; }
+    .axis.show { opacity: 1; }
+
+    /* Trend card base opacity for beat-3 */
+    #trendCard { opacity: 0; transition: opacity 0.4s ease; }
+    #trendCard.show { opacity: 1; }
+
+    /* Protocol CTA button */
+    #protocolBtn { margin-top: 18px; min-height: 44px; }
+
+    /* Reduced motion overrides */
+    @media (prefers-reduced-motion: reduce) {
+      .reveal-beat-2,
+      .reveal-beat-3,
+      .axis,
+      #trendCard {
+        transition: none !important;
+        opacity: 1 !important;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="page">
     <div class="topbar">
       <div class="who">◆ Daily Mirror</div>
-      <div class="badges"><span class="badge badge--streak" id="streakBadge">—</span><span class="badge badge--level" id="levelBadge">—</span></div>
+      <div class="badges">
+        <span class="badge badge--streak" id="streakBadge">—</span>
+        <span class="badge badge--level" id="levelBadge">—</span>
+      </div>
     </div>
 
-    <!-- Capture -->
+    <!-- ── Capture view ─────────────────────────────────────────── -->
     <div id="captureView">
-      <h1 style="margin-bottom:10px">Take today’s mirror.</h1>
-      <p class="muted" style="margin-bottom:16px">Natural light. Camera at eye level. The honest angle.</p>
+      <!-- TODO copy: spec calls for a Cormorant italic eyebrow "Today." here — design-lookmax-mirror.md §2.1 -->
+      <h1 style="margin-bottom:10px">Take today's mirror.</h1>
+      <p class="muted" style="margin-bottom:8px">Natural light. Camera at eye level. The honest angle.</p>
+      <!-- TODO copy: spec calls for a ritual cue line here — design-lookmax-mirror.md §2.1 -->
+      <p id="cameraHint" class="muted" style="font-size:13px;margin-bottom:16px;display:none">
+        <!-- TODO copy: camera-unavailable hint — design-lookmax-mirror.md §4 -->
+      </p>
       <video id="video" class="preview" autoplay playsinline muted></video>
       <input id="fileInput" type="file" accept="image/*" capture="user" class="hidden" />
       <div class="cap-row">
-        <button class="btn btn--solid" id="captureBtn">Capture</button>
-        <button class="btn btn--ghost" id="useFile">Use a photo</button>
+        <button
+          class="btn btn--solid"
+          id="captureBtn"
+          data-event="mirror_capture_tapped"
+          aria-label="Capture mirror photo"
+        >Capture</button>
+        <button
+          class="btn btn--ghost"
+          id="useFile"
+          data-event="mirror_file_path_chosen"
+          aria-label="Use a photo from your library"
+        >Use a photo</button>
       </div>
-      <div class="err" id="capErr"></div>
+      <div class="err" id="capErr" role="alert" aria-live="polite"></div>
     </div>
 
-    <!-- Analysis -->
-    <div id="analysisView" class="hidden center" style="padding-top:40px">
-      <div class="score-big" style="font-size:3rem;color:var(--muted)">◆</div>
+    <!-- ── Analysis view ────────────────────────────────────────── -->
+    <div id="analysisView" class="hidden center" style="padding-top:40px" aria-live="polite" role="status">
+      <div class="score-big">◆</div>
+      <!-- TODO copy: spec calls for static frame line "The reading takes a minute. Hold." — design-lookmax-mirror.md §2.2 -->
       <div class="rotline" id="rotline">Mapping skin signal…</div>
     </div>
 
-    <!-- Reveal -->
+    <!-- ── Reveal view (staged) ─────────────────────────────────── -->
     <div id="revealView" class="hidden">
-      <div class="score-big" id="scoreBig">0</div>
-      <div class="center muted" id="levelLine" style="margin-bottom:6px"></div>
-      <div class="consultant" id="consultantLine"></div>
-      <div id="axes"></div>
-      <div class="card" style="margin-top:18px">
-        <div class="muted" style="font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Last 14 days</div>
-        <canvas id="trend" height="120"></canvas>
+
+      <!-- Beat 1: score count-up (immediately visible) -->
+      <div class="reveal-beat-1">
+        <div class="score-big" id="scoreBig" aria-label="Mirror score" aria-live="polite">0</div>
       </div>
-      <button class="btn btn--ghost" onclick="location.href='/lookmax/protocol'">Open today’s protocol →</button>
+
+      <!-- Beat 2: level line + consultant line (fade in at t=2s) -->
+      <div class="reveal-beat-2">
+        <div class="center muted" id="levelLine" style="margin-bottom:6px"></div>
+        <div class="consultant" id="consultantLine"></div>
+      </div>
+
+      <!-- Beat 3: axes + trend card (staggered fade at t=2.6s) -->
+      <div class="reveal-beat-3">
+        <div id="axes" aria-label="Axis scores"></div>
+
+        <div class="card" id="trendCard" style="margin-top:18px">
+          <div class="muted" style="font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Last 14 days</div>
+          <!-- TODO copy: spec calls for "Your line begins." caption on Day-1 single-dot — design-lookmax-mirror.md §4 -->
+          <canvas id="trend" height="120" aria-label="14-day score trend"></canvas>
+        </div>
+      </div>
+
+      <!-- Protocol CTA -->
+      <button
+        class="btn btn--ghost"
+        id="protocolBtn"
+        data-event="protocol_entered_from_mirror"
+        onclick="location.href='/lookmax/protocol'"
+      >Open today's protocol →</button>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- NO Chart.js — replaced with vanilla canvas drawTrend() below -->
   <script src="/lookmax/app.js"></script>
   <script>
+    // ── KPI: page view ────────────────────────────────────────────────────────
+    if (window.mc) window.mc.track('mirror_viewed');
+
     const AXIS_LABELS = {
-      skinClarity: 'Skin clarity', jawDefinition: 'Jaw definition', eyeArea: 'Eye area',
-      hairDensity: 'Hair density', posture: 'Posture', facialHarmony: 'Facial harmony',
-      expression: 'Expression', bodyComposition: 'Body composition',
+      skinClarity: 'Skin clarity',
+      jawDefinition: 'Jaw definition',
+      eyeArea: 'Eye area',
+      hairDensity: 'Hair density',
+      posture: 'Posture',
+      facialHarmony: 'Facial harmony',
+      expression: 'Expression',
+      bodyComposition: 'Body composition',
     };
+
     const ROT_LINES = [
-      'Mapping skin signal…', 'Reading jaw geometry…', 'Measuring the eye area…',
-      'Assessing hairline integrity…', 'Checking carriage and posture…', 'Weighing facial harmony…',
+      'Mapping skin signal…',
+      'Reading jaw geometry…',
+      'Measuring the eye area…',
+      'Assessing hairline integrity…',
+      'Checking carriage and posture…',
+      'Weighing facial harmony…',
     ];
+
     let stream = null;
 
     (async function () {
@@ -76,18 +189,25 @@
       if (!user) return;
       LM.renderNav('mirror');
       document.getElementById('levelBadge').textContent = levelLabel(user.mirrorLevel);
-      startCamera();
+      await startCamera();
     })();
 
     async function startCamera() {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-        document.getElementById('video').srcObject = stream;
-      } catch {
-        // Fallback: hide live preview, rely on file capture (older iOS Safari).
+        const video = document.getElementById('video');
+        video.srcObject = stream;
+        video.classList.add('preview--live');
+        if (window.mc) window.mc.track('mirror_camera_active');
+      } catch (_err) {
+        // Fallback: hide live preview, rely on file capture (older iOS Safari / permission denied).
         document.getElementById('video').classList.add('hidden');
+        const hint = document.getElementById('cameraHint');
+        hint.style.display = '';
+        // Label change on main button
         document.getElementById('captureBtn').textContent = 'Open camera';
         document.getElementById('captureBtn').onclick = () => document.getElementById('fileInput').click();
+        if (window.mc) window.mc.track('mirror_camera_unavailable');
       }
     }
 
@@ -96,6 +216,7 @@
       const f = e.target.files && e.target.files[0];
       if (f) blobToScored(f);
     });
+
     document.getElementById('captureBtn').addEventListener('click', () => {
       const video = document.getElementById('video');
       if (!stream || !video.videoWidth) { document.getElementById('fileInput').click(); return; }
@@ -112,6 +233,8 @@
 
     async function blobToScored(blob) {
       if (stream) stream.getTracks().forEach((t) => t.stop());
+      stream = null;
+      document.getElementById('video').classList.remove('preview--live');
       showAnalysis();
       const fd = new FormData();
       fd.append('photo', blob, 'mirror.jpg');
@@ -119,11 +242,14 @@
       try {
         const result = await LM.api('/api/lookmax/mirror', { method: 'POST', body: fd });
         const wait = Math.max(0, 5000 - (Date.now() - started)); // min 5s dwell
+        if (window.mc) window.mc.track('mirror_scored', { score: result.score, mirrorLevel: result.mirrorLevel, streak: result.streak });
         setTimeout(() => reveal(result), wait);
       } catch (e) {
         document.getElementById('analysisView').classList.add('hidden');
         document.getElementById('captureView').classList.remove('hidden');
-        document.getElementById('capErr').textContent = (e && e.data && e.data.error) || 'Scoring failed. Try again.';
+        const msg = (e && e.data && e.data.error) || 'Scoring failed. Try again.';
+        document.getElementById('capErr').textContent = msg;
+        if (window.mc) window.mc.track('mirror_scoring_failed', { error: msg });
       }
     }
 
@@ -133,7 +259,8 @@
       let i = 0;
       const el = document.getElementById('rotline');
       el.textContent = ROT_LINES[0];
-      const iv = setInterval(() => { i = (i + 1) % ROT_LINES.length; el.textContent = ROT_LINES[i]; }, 1600);
+      // Slowed to 2200ms per design spec §2.2 (was 1600ms)
+      const iv = setInterval(() => { i = (i + 1) % ROT_LINES.length; el.textContent = ROT_LINES[i]; }, 2200);
       window._rotIv = iv;
     }
 
@@ -141,46 +268,192 @@
       clearInterval(window._rotIv);
       document.getElementById('analysisView').classList.add('hidden');
       document.getElementById('revealView').classList.remove('hidden');
+
+      // Update badges
       document.getElementById('streakBadge').textContent = 'Day ' + (r.streak || 0);
       document.getElementById('levelBadge').textContent = levelLabel(r.mirrorLevel);
+
+      // Beat 1: score count-up (runs from t=0)
+      const big = document.getElementById('scoreBig');
+      const target = r.score || 0;
+
+      const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reducedMotion) {
+        big.textContent = target;
+      } else {
+        const t0 = Date.now();
+        (function step() {
+          const p = Math.min(1, (Date.now() - t0) / 2000);
+          big.textContent = Math.round(target * p);
+          if (p < 1) requestAnimationFrame(step);
+        })();
+      }
+
+      // Beat 2: level line + consultant line (fade at t=2s; instant if reduced-motion)
+      const beat2El = document.querySelector('.reveal-beat-2');
       document.getElementById('levelLine').textContent = levelLabel(r.mirrorLevel) + ' — ' + r.score + '/100';
       document.getElementById('consultantLine').textContent = r.consultantLine || '';
 
-      // Animate score 0 → final over ~2s
-      const big = document.getElementById('scoreBig');
-      const target = r.score || 0; const t0 = Date.now();
-      (function step() {
-        const p = Math.min(1, (Date.now() - t0) / 2000);
-        big.textContent = Math.round(target * p);
-        if (p < 1) requestAnimationFrame(step);
-      })();
+      const beat2Delay = reducedMotion ? 0 : 2000;
+      setTimeout(() => { beat2El.classList.add('show'); }, beat2Delay);
 
-      // Axis bars with deltas
-      const dY = r.deltaVsYesterday || {}; const dB = r.deltaVsBaseline || {};
+      // Beat 3: axes + trend card (stagger at t=2.6s; instant if reduced-motion)
+      const beat3Delay = reducedMotion ? 0 : 2600;
+      setTimeout(() => {
+        document.querySelector('.reveal-beat-3').classList.add('show');
+        renderAxes(r);
+        drawTrend(r.trend || []);
+        if (window.mc) window.mc.track('mirror_reveal_complete');
+      }, beat3Delay);
+    }
+
+    function renderAxes(r) {
+      const dY = r.deltaVsYesterday || {};
       const axesEl = document.getElementById('axes');
+      const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
       axesEl.innerHTML = Object.keys(AXIS_LABELS).map((k) => {
         const v = (r.axes && r.axes[k]) || 0;
-        const dy = dY[k]; const cls = dy > 0 ? 'up' : dy < 0 ? 'down' : '';
+        const dy = dY[k];
+        const cls = dy > 0 ? 'up' : dy < 0 ? 'down' : '';
         const dyTxt = dy == null ? '' : (dy > 0 ? '▲ ' + dy : dy < 0 ? '▼ ' + Math.abs(dy) : '–');
         return `<div class="axis"><div class="axis-row"><span>${AXIS_LABELS[k]}</span><span class="delta ${cls}">${dyTxt}</span></div><div class="bar"><span data-w="${v}"></span></div></div>`;
       }).join('');
-      requestAnimationFrame(() => axesEl.querySelectorAll('.bar > span').forEach((s) => { s.style.width = s.dataset.w + '%'; }));
 
-      // 14-day trend
-      drawTrend(r.trend || []);
-    }
-
-    function drawTrend(trend) {
-      const ctx = document.getElementById('trend');
-      if (!window.Chart || !trend.length) return;
-      new Chart(ctx, {
-        type: 'line',
-        data: { labels: trend.map((p) => p.date.slice(5)), datasets: [{ data: trend.map((p) => p.score), borderColor: '#e8b84b', backgroundColor: 'rgba(232,184,75,0.12)', fill: true, tension: 0.35, pointRadius: 2 }] },
-        options: { plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, ticks: { color: '#8a877f' }, grid: { color: '#1d1d20' } }, x: { ticks: { color: '#8a877f' }, grid: { display: false } } } },
+      // Animate widths immediately (rAF)
+      requestAnimationFrame(() => {
+        axesEl.querySelectorAll('.bar > span').forEach((s) => { s.style.width = s.dataset.w + '%'; });
       });
+
+      // Stagger axis opacity (80ms apart)
+      const axes = axesEl.querySelectorAll('.axis');
+      axes.forEach((ax, idx) => {
+        if (reducedMotion) { ax.classList.add('show'); return; }
+        setTimeout(() => ax.classList.add('show'), idx * 80);
+      });
+
+      // Trend card fades in last (after all 8 axes at 80ms each = 640ms + buffer)
+      const trendDelay = reducedMotion ? 0 : axes.length * 80 + 200;
+      setTimeout(() => { document.getElementById('trendCard').classList.add('show'); }, trendDelay);
     }
 
-    function levelLabel(l) { return ({ raw: 'Raw', polished: 'Polished', magnetic: 'Magnetic', radiant: 'Radiant', sovereign: 'Sovereign' })[l] || 'Raw'; }
+    // ── Vanilla canvas trend (replaces Chart.js) ─────────────────────────────
+    // Pattern: drawTrajectory from reveal.html, extended with dots + grid lines.
+    function drawTrend(trend) {
+      const canvas = document.getElementById('trend');
+      if (!trend || !trend.length) return;
+      const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // Size canvas to its CSS width
+      canvas.width = canvas.clientWidth || 320;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      const pad = { top: 10, right: 10, bottom: 22, left: 28 };
+      const innerW = w - pad.left - pad.right;
+      const innerH = h - pad.top - pad.bottom;
+
+      const scores = trend.map((p) => p.score);
+      const labels = trend.map((p) => {
+        try { return new Date(p.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).replace(' ', '\n'); }
+        catch (_) { return ''; }
+      });
+      const n = scores.length;
+
+      function ptX(i) { return pad.left + (n < 2 ? innerW / 2 : (i / (n - 1)) * innerW); }
+      function ptY(v) { return pad.top + innerH - (v / 100) * innerH; }
+
+      // Grid lines at 50 and 75
+      ctx.strokeStyle = 'rgba(29,29,32,0.8)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 4]);
+      [50, 75].forEach((v) => {
+        ctx.beginPath();
+        ctx.moveTo(pad.left, ptY(v));
+        ctx.lineTo(pad.left + innerW, ptY(v));
+        ctx.stroke();
+        ctx.fillStyle = '#4a4843';
+        ctx.font = '9px Sora, system-ui';
+        ctx.textAlign = 'right';
+        ctx.fillText(v, pad.left - 4, ptY(v) + 3);
+      });
+      ctx.setLineDash([]);
+
+      // Progressive draw with setLineDash animation (or static if reduced-motion)
+      const goldColor = '#e8b84b';
+      const totalLen = (function () {
+        let len = 0;
+        for (let i = 1; i < n; i++) {
+          const dx = ptX(i) - ptX(i - 1), dy = ptY(scores[i]) - ptY(scores[i - 1]);
+          len += Math.sqrt(dx * dx + dy * dy);
+        }
+        return len;
+      })();
+
+      const duration = 600;
+      const start = performance.now();
+
+      function frame(now) {
+        ctx.clearRect(pad.left, 0, innerW + pad.right, h - pad.bottom);
+
+        const progress = reducedMotion ? 1 : Math.min(1, (now - start) / duration);
+        const drawLen = totalLen * progress;
+
+        // Polyline clipped by progress
+        ctx.strokeStyle = goldColor;
+        ctx.lineWidth = 2;
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        let accumulated = 0;
+        let done = false;
+        for (let i = 0; i < n - 1 && !done; i++) {
+          const x1 = ptX(i), y1 = ptY(scores[i]);
+          const x2 = ptX(i + 1), y2 = ptY(scores[i + 1]);
+          if (i === 0) ctx.moveTo(x1, y1);
+          const segLen = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+          if (accumulated + segLen >= drawLen) {
+            const r = (drawLen - accumulated) / segLen;
+            ctx.lineTo(x1 + r * (x2 - x1), y1 + r * (y2 - y1));
+            done = true;
+          } else {
+            ctx.lineTo(x2, y2);
+            accumulated += segLen;
+          }
+        }
+        if (n === 1) { ctx.moveTo(ptX(0), ptY(scores[0])); }
+        ctx.stroke();
+
+        // Dots only for points within drawn segment
+        let accForDots = 0;
+        for (let i = 0; i < n; i++) {
+          if (i > 0) {
+            const seg = Math.sqrt((ptX(i) - ptX(i - 1)) ** 2 + (ptY(scores[i]) - ptY(scores[i - 1])) ** 2);
+            accForDots += seg;
+          }
+          if (accForDots <= drawLen + 1) {
+            ctx.beginPath();
+            ctx.arc(ptX(i), ptY(scores[i]), 3, 0, Math.PI * 2);
+            ctx.fillStyle = goldColor;
+            ctx.fill();
+          }
+        }
+
+        // X-axis labels (always visible)
+        ctx.fillStyle = '#6b6860';
+        ctx.font = '9px Sora, system-ui';
+        ctx.textAlign = 'center';
+        const step = Math.max(1, Math.floor(n / 4));
+        for (let i = 0; i < n; i += step) {
+          if (labels[i]) ctx.fillText(labels[i].split('\n')[0], ptX(i), h - 6);
+        }
+
+        if (progress < 1) requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    }
+
+    function levelLabel(l) {
+      return ({ raw: 'Raw', polished: 'Polished', magnetic: 'Magnetic', radiant: 'Radiant', sovereign: 'Sovereign' })[l] || 'Raw';
+    }
   </script>
 </body>
 </html>

@@ -1,0 +1,578 @@
+<!-- COPY APPROVED 2026-05-29 (autopilot per spec §1): see product/copy-lookmaxing-audit.md -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lookmaxing — MainCharacter</title>
+  <meta name="description" content="One photo. Five questions. The reading takes a minute. What the room sees in you — written down.">
+  <link rel="stylesheet" href="/lookmaxing/tokens.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=Sora:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ── Layout ── */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    .lm-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      padding: 0 var(--mc-sp-4);
+      border-bottom: 1px solid var(--mc-line);
+    }
+    @media (min-width: 768px) { .lm-nav { height: 72px; padding: 0 var(--mc-sp-6); } }
+
+    .lm-nav__brand {
+      font-family: var(--mc-font-sans);
+      font-size: var(--mc-fs-eyebrow);
+      font-weight: 500;
+      letter-spacing: var(--mc-ls-xwide);
+      text-transform: uppercase;
+      color: var(--mc-silver-mid);
+    }
+    .lm-nav__diamond { color: var(--mc-silver-bright); margin-right: var(--mc-sp-2); }
+
+    /* ── Hero ── */
+    .lm-hero {
+      max-width: var(--mc-content-max);
+      margin: 0 auto;
+      padding: var(--mc-sp-7) var(--mc-sp-4) var(--mc-sp-6);
+      text-align: center;
+    }
+    @media (min-width: 768px) { .lm-hero { padding: var(--mc-sp-8) var(--mc-sp-6) var(--mc-sp-7); } }
+
+    .lm-hero__eyebrow {
+      margin: 0 0 var(--mc-sp-4);
+    }
+    .lm-hero__headline {
+      font-size: var(--mc-fs-h1);
+      margin: 0 0 var(--mc-sp-4);
+    }
+    @media (min-width: 1024px) { .lm-hero__headline { font-size: var(--mc-fs-display); } }
+
+    .lm-hero__sub {
+      font-size: var(--mc-fs-body);
+      color: var(--mc-silver-mid);
+      max-width: 52ch;
+      margin: 0 auto var(--mc-sp-5);
+      line-height: var(--mc-lh-body);
+    }
+    .lm-hero__cta-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--mc-sp-3);
+    }
+    .lm-hero__cta {
+      width: 100%;
+      max-width: 340px;
+    }
+    .lm-hero__badge {
+      margin-top: var(--mc-sp-2);
+    }
+
+    /* ── Video container ── */
+    .lm-video-section {
+      max-width: var(--mc-content-max);
+      margin: 0 auto;
+      padding: 0 var(--mc-sp-4) var(--mc-sp-7);
+    }
+    @media (min-width: 768px) { .lm-video-section { padding: 0 var(--mc-sp-6) var(--mc-sp-7); } }
+
+    .lm-video-container {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      background: var(--mc-near-black);
+      border: 1px solid var(--mc-line);
+      border-radius: var(--mc-r-3);
+      overflow: hidden;
+    }
+    .lm-video-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-mono);
+      letter-spacing: var(--mc-ls-wide);
+      text-transform: uppercase;
+      color: var(--mc-silver-dim);
+    }
+
+    /* ── How it works ── */
+    .lm-how {
+      max-width: var(--mc-content-max);
+      margin: 0 auto;
+      padding: 0 var(--mc-sp-4) var(--mc-sp-7);
+    }
+    @media (min-width: 768px) { .lm-how { padding: 0 var(--mc-sp-6) var(--mc-sp-7); } }
+
+    .lm-section-eyebrow { margin: 0 0 var(--mc-sp-6); text-align: center; }
+
+    .lm-how__steps {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--mc-sp-5);
+    }
+    @media (min-width: 768px) {
+      .lm-how__steps { grid-template-columns: 1fr 1fr 1fr; gap: var(--mc-sp-6); }
+    }
+
+    .lm-step__num {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-eyebrow);
+      letter-spacing: var(--mc-ls-xwide);
+      color: var(--mc-silver-faint);
+      margin: 0 0 var(--mc-sp-3);
+    }
+    .lm-step__title {
+      font-family: var(--mc-font-serif);
+      font-size: var(--mc-fs-h3);
+      color: var(--mc-silver-bright);
+      margin: 0 0 var(--mc-sp-2);
+    }
+    .lm-step__body {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-mid);
+      line-height: var(--mc-lh-body);
+      margin: 0;
+    }
+
+    /* ── Pillars ── */
+    .lm-pillars {
+      max-width: var(--mc-content-max);
+      margin: 0 auto;
+      padding: 0 var(--mc-sp-4) var(--mc-sp-7);
+    }
+    @media (min-width: 768px) { .lm-pillars { padding: 0 var(--mc-sp-6) var(--mc-sp-7); } }
+
+    .lm-pillars__grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--mc-sp-5);
+    }
+    @media (min-width: 768px) { .lm-pillars__grid { grid-template-columns: 1fr 1fr; } }
+
+    .lm-pillar-card {
+      transition: border-color var(--mc-dur-base) var(--mc-ease),
+                  transform var(--mc-dur-base) var(--mc-ease);
+    }
+    .lm-pillar-card:hover {
+      border-color: var(--mc-line-strong);
+      transform: translateY(-4px);
+    }
+    .lm-pillar-card__eyebrow { margin: 0 0 var(--mc-sp-3); }
+    .lm-pillar-card__hook {
+      font-size: var(--mc-fs-h2);
+      margin: 0 0 var(--mc-sp-3);
+    }
+    .lm-pillar-card__body {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-mid);
+      margin: 0 0 var(--mc-sp-5);
+      line-height: var(--mc-lh-body);
+    }
+    .lm-pillar-card__status {
+      display: inline-block;
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-eyebrow);
+      letter-spacing: var(--mc-ls-wide);
+      color: var(--mc-silver-faint);
+      border: 1px solid var(--mc-line);
+      padding: var(--mc-sp-1) var(--mc-sp-2);
+      border-radius: var(--mc-r-2);
+      margin-bottom: var(--mc-sp-3);
+    }
+
+    /* ── Repeat CTA ── */
+    .lm-repeat-cta {
+      max-width: var(--mc-content-max);
+      margin: 0 auto;
+      padding: 0 var(--mc-sp-4) var(--mc-sp-7);
+      text-align: center;
+    }
+    @media (min-width: 768px) { .lm-repeat-cta { padding: 0 var(--mc-sp-6) var(--mc-sp-7); } }
+    .lm-repeat-cta__sub {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-faint);
+      margin: var(--mc-sp-3) 0 0;
+    }
+
+    /* ── Footer ── */
+    .lm-footer {
+      border-top: 1px solid var(--mc-line);
+      padding: var(--mc-sp-6) var(--mc-sp-4);
+      text-align: center;
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-faint);
+    }
+    .lm-footer a { color: var(--mc-silver-dim); }
+    .lm-footer a:hover { color: var(--mc-silver-bright); }
+
+    /* ── Waitlist Modal ── */
+    .lm-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--mc-sp-4);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--mc-dur-base) var(--mc-ease);
+    }
+    .lm-modal-backdrop.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .lm-modal {
+      width: 100%;
+      max-width: 420px;
+      box-shadow: var(--mc-shadow-elevated);
+      transform: scale(0.96);
+      transition: transform var(--mc-dur-base) var(--mc-ease-out);
+    }
+    .lm-modal-backdrop.is-open .lm-modal {
+      transform: scale(1);
+    }
+    .lm-modal__eyebrow { margin: 0 0 var(--mc-sp-3); }
+    .lm-modal__heading {
+      font-size: var(--mc-fs-h2);
+      margin: 0 0 var(--mc-sp-3);
+    }
+    .lm-modal__body {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-silver-mid);
+      margin: 0 0 var(--mc-sp-5);
+      line-height: var(--mc-lh-body);
+    }
+    .lm-modal__input {
+      width: 100%;
+      background: var(--mc-elev-2);
+      border: 1px solid var(--mc-line-strong);
+      border-radius: var(--mc-r-2);
+      color: var(--mc-silver-bright);
+      font-family: var(--mc-font-sans);
+      font-size: var(--mc-fs-body);
+      padding: var(--mc-sp-3) var(--mc-sp-4);
+      margin-bottom: var(--mc-sp-4);
+      transition: border-color var(--mc-dur-base) var(--mc-ease);
+    }
+    .lm-modal__input::placeholder { color: var(--mc-silver-faint); }
+    .lm-modal__input:focus-visible {
+      outline: 2px solid var(--mc-light-point);
+      outline-offset: 2px;
+      border-color: var(--mc-silver-mid);
+    }
+    .lm-modal__cta { width: 100%; }
+    .lm-modal__close {
+      position: absolute;
+      top: var(--mc-sp-4);
+      right: var(--mc-sp-4);
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: 0;
+      color: var(--mc-silver-dim);
+      cursor: pointer;
+      font-size: 1.25rem;
+      border-radius: var(--mc-r-2);
+    }
+    .lm-modal__close:hover { color: var(--mc-silver-bright); }
+    .lm-modal__close:focus-visible { outline: 2px solid var(--mc-light-point); }
+    .lm-modal--relative { position: relative; }
+    .lm-modal__success {
+      font-family: var(--mc-font-serif);
+      font-style: italic;
+      font-size: var(--mc-fs-h3);
+      color: var(--mc-silver-bright);
+      text-align: center;
+      padding: var(--mc-sp-6) 0;
+    }
+    .lm-modal__error {
+      font-size: var(--mc-fs-small);
+      color: var(--mc-error);
+      margin-bottom: var(--mc-sp-3);
+    }
+
+    /* ── Hero fade-in animation ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .lm-anim { opacity: 0; animation: fadeUp var(--mc-dur-slow) var(--mc-ease-out) forwards; }
+    .lm-anim--1 { animation-delay: 0ms; }
+    .lm-anim--2 { animation-delay: 80ms; }
+    .lm-anim--3 { animation-delay: 160ms; }
+    .lm-anim--4 { animation-delay: 240ms; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .lm-anim { opacity: 1; animation: none; }
+    }
+  </style>
+</head>
+<body class="lookmaxing">
+
+<!-- ── Navigation ── -->
+<nav class="lm-nav" aria-label="Main navigation">
+  <a href="/lookmaxing" class="lm-nav__brand" aria-label="MainCharacter Lookmaxing">
+    <span class="lm-nav__diamond" aria-hidden="true">◆</span>MAINCHARACTER
+  </a>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="lm-hero" aria-labelledby="hero-headline">
+  <p class="mc-eyebrow lm-hero__eyebrow lm-anim lm-anim--1">THE AURA READING</p>
+  <h1 id="hero-headline" class="mc-serif mc-serif--italic lm-hero__headline lm-anim lm-anim--2">
+    Before you open your mouth, you have already been read.
+  </h1>
+  <p class="lm-hero__sub lm-anim lm-anim--3">
+    One photo. Five questions. The reading takes a minute. What the room sees in you — written down.
+  </p>
+  <div class="lm-hero__cta-wrap lm-anim lm-anim--4">
+    <a
+      href="/lookmaxing/start"
+      class="mc-btn-primary mc-light-point-glow lm-hero__cta"
+      data-event="lookmaxing_cta_clicked"
+      data-event-props='{"position":"hero"}'
+      aria-label="Get Your Aura Reading"
+    >
+      Get Your Aura Reading
+    </a>
+    <p class="mc-eyebrow lm-hero__badge">3-MIN · FREE</p>
+  </div>
+</section>
+
+<!-- ── Video ── -->
+<section class="lm-video-section" aria-label="Introduction video">
+  <div class="lm-video-container">
+    <!-- REPLACE WITH YOUTUBE EMBED — autoplay-muted, loop, minimal controls -->
+    <div class="lm-video-placeholder" aria-hidden="true">Video loading.</div>
+  </div>
+</section>
+
+<hr class="mc-hairline" style="max-width:var(--mc-content-max);margin:0 auto var(--mc-sp-6);">
+
+<!-- ── How it works ── -->
+<section class="lm-how" aria-labelledby="how-heading">
+  <p class="mc-eyebrow lm-section-eyebrow" id="how-heading">THREE STEPS · ONE READING</p>
+  <div class="lm-how__steps" role="list">
+    <div role="listitem">
+      <p class="lm-step__num">01 /</p>
+      <h3 class="lm-step__title">One photo.</h3>
+      <p class="lm-step__body">Natural light. Camera at eye level. The honest angle.</p>
+    </div>
+    <div role="listitem">
+      <p class="lm-step__num">02 /</p>
+      <h3 class="lm-step__title">The reading.</h3>
+      <p class="lm-step__body">Aura Score, rank, and the four signals the room picks up first. Free.</p>
+    </div>
+    <div role="listitem">
+      <p class="lm-step__num">03 /</p>
+      <h3 class="lm-step__title">Seven days.</h3>
+      <p class="lm-step__body">A daily Mirror, a personal protocol, and a weekly line you can argue with the camera over.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="mc-hairline" style="max-width:var(--mc-content-max);margin:0 auto var(--mc-sp-6);">
+
+<!-- ── Pillars ── -->
+<section class="lm-pillars" aria-labelledby="pillars-heading">
+  <p class="mc-eyebrow lm-section-eyebrow" id="pillars-heading">TWO QUESTS · ONE PROTOCOL</p>
+  <div class="lm-pillars__grid">
+    <!-- Lookmaxing pillar — live -->
+    <div class="mc-card lm-pillar-card">
+      <p class="mc-eyebrow lm-pillar-card__eyebrow">LOOKMAXING</p>
+      <h2 class="mc-serif mc-serif--italic lm-pillar-card__hook">The room reads you before you speak.</h2>
+      <p class="lm-pillar-card__body">The reading is free. The work begins the day after.</p>
+      <a
+        href="/lookmaxing/start"
+        class="mc-btn-ghost"
+        data-event="lookmaxing_cta_clicked"
+        data-event-props='{"position":"pillar"}'
+      >
+        Get Your Aura Reading →
+      </a>
+    </div>
+
+    <!-- Orator pillar — coming soon -->
+    <div class="mc-card lm-pillar-card">
+      <p class="mc-eyebrow lm-pillar-card__eyebrow">THE ORATOR</p>
+      <span class="lm-pillar-card__status">COMING SOON</span>
+      <h2 class="mc-serif mc-serif--italic lm-pillar-card__hook">The way you sound when it matters.</h2>
+      <p class="lm-pillar-card__body" style="color:var(--mc-silver-dim)">The protocol is being rebuilt. A seat on the waitlist holds your place.</p>
+      <button
+        class="mc-btn-ghost"
+        id="orator-waitlist-btn"
+        data-event="orator_waitlist_joined"
+        data-event-props='{"step":"modal_open"}'
+        aria-haspopup="dialog"
+        aria-expanded="false"
+      >
+        Join the waitlist →
+      </button>
+    </div>
+  </div>
+</section>
+
+<hr class="mc-hairline" style="max-width:var(--mc-content-max);margin:0 auto var(--mc-sp-6);">
+
+<!-- ── Repeat CTA ── -->
+<section class="lm-repeat-cta">
+  <a
+    href="/lookmaxing/start"
+    class="mc-btn-primary"
+    data-event="lookmaxing_cta_clicked"
+    data-event-props='{"position":"repeat"}'
+  >
+    Get Your Aura Reading →
+  </a>
+  <p class="lm-repeat-cta__sub">A minute of your time. No account needed to see it.</p>
+</section>
+
+<!-- ── Footer ── -->
+<footer class="lm-footer">
+  <p>◆ MainCharacter · The Consultant</p>
+  <p style="margin-top:var(--mc-sp-2);">
+    <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a>
+  </p>
+  <p style="margin-top:var(--mc-sp-2);font-size:var(--mc-fs-eyebrow);letter-spacing:var(--mc-ls-wide);">
+    The Sage — in development
+  </p>
+</footer>
+
+<!-- ── Orator Waitlist Modal ── -->
+<div
+  class="lm-modal-backdrop"
+  id="orator-modal"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="orator-modal-heading"
+  aria-hidden="true"
+>
+  <div class="mc-card lm-modal lm-modal--relative">
+    <button class="lm-modal__close" id="orator-modal-close" aria-label="Close waitlist">&#215;</button>
+    <p class="mc-eyebrow lm-modal__eyebrow">THE ORATOR</p>
+    <h2 id="orator-modal-heading" class="mc-serif mc-serif--italic lm-modal__heading">Hold a seat.</h2>
+    <p class="lm-modal__body">A short note when the protocol opens. No marketing in between. Leave the address you actually read.</p>
+    <div id="orator-modal-form-wrap">
+      <div id="orator-modal-error" class="lm-modal__error" role="alert" aria-live="polite" hidden></div>
+      <label for="orator-email" class="mc-eyebrow" style="display:block;margin-bottom:var(--mc-sp-2);">Email</label>
+      <input
+        type="email"
+        id="orator-email"
+        class="lm-modal__input"
+        placeholder="you@somewhere.com"
+        autocomplete="email"
+        required
+      >
+      <button
+        class="mc-btn-primary lm-modal__cta"
+        id="orator-modal-submit"
+        data-event="orator_waitlist_joined"
+        data-event-props='{"step":"submit"}'
+      >
+        Hold my seat ◆
+      </button>
+    </div>
+    <div id="orator-modal-success" class="lm-modal__success" hidden aria-live="polite">
+      Held. We will write once, when it opens. ◆
+    </div>
+  </div>
+</div>
+
+<script src="/track.js" defer></script>
+<script>
+(function () {
+  'use strict';
+
+  // ── KPI: landing viewed (trackOnce) ──
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.mc && window.mc.trackOnce) {
+      window.mc.trackOnce('lookmaxing_landing_viewed', {});
+    }
+  });
+
+  // ── Waitlist modal ──
+  var modal = document.getElementById('orator-modal');
+  var openBtn = document.getElementById('orator-waitlist-btn');
+  var closeBtn = document.getElementById('orator-modal-close');
+  var submitBtn = document.getElementById('orator-modal-submit');
+  var emailInput = document.getElementById('orator-email');
+  var errorEl = document.getElementById('orator-modal-error');
+  var formWrap = document.getElementById('orator-modal-form-wrap');
+  var successEl = document.getElementById('orator-modal-success');
+
+  function openModal() {
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    openBtn.setAttribute('aria-expanded', 'true');
+    setTimeout(function () { emailInput.focus(); }, 300);
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    openBtn.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+    openBtn.focus();
+  }
+
+  openBtn.addEventListener('click', openModal);
+  closeBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) closeModal();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
+  });
+
+  submitBtn.addEventListener('click', function () {
+    var email = emailInput.value.trim();
+    if (!email || !email.includes('@')) {
+      errorEl.textContent = 'A valid email address is required.';
+      errorEl.hidden = false;
+      emailInput.focus();
+      return;
+    }
+    errorEl.hidden = true;
+    submitBtn.setAttribute('aria-busy', 'true');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '· · ·';
+
+    fetch('/api/waitlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, source: 'orator_waitlist' }),
+    })
+      .then(function () {
+        formWrap.hidden = true;
+        successEl.hidden = false;
+      })
+      .catch(function () {
+        submitBtn.setAttribute('aria-busy', 'false');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Hold my seat ◆';
+        errorEl.textContent = 'Something went wrong. Try again.';
+        errorEl.hidden = false;
+      });
+  });
+
+  // ── Video placeholder — YouTube IFrame API hook ──
+  // When the founder pastes a YouTube URL, replace the placeholder with an iframe.
+  // The KPI events fire via the YT API onStateChange callback.
+  // Placeholder is always the safe fallback.
+}());
+</script>
+</body>
+</html>

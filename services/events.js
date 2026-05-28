@@ -67,9 +67,11 @@ const ALLOWED_EVENTS = new Set([
   // Retention
   'dashboard_loaded',
   'reveal_watched',
+  // NOW-2 / B2 — Day-30 re-audit KPI events (4 events per NOW-2 spec)
   'reaudit_card_shown',
   'reaudit_started',
   'reaudit_completed',
+  'reaudit_reveal_viewed',
   // Conversion
   'bundle_attached',
   'cross_sell_orator_shown',

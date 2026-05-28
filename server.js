@@ -214,6 +214,8 @@ app.use('/api/audit', auditRoutes);
 // (mirror/protocol/hair/dashboard/reveal) is gated by requireLookmaxAuth.
 app.use('/api/lookmax', require('./routes/lookmax-auth'));
 app.use('/api/lookmax', require('./routes/lookmax'));
+// Day-30 re-audit engine (NOW-2 / B2). Gated by requireLookmaxAuth (same as lookmax.js).
+app.use('/api/lookmax', require('./routes/reaudit'));
 
 // Token-gated photo serving (Night-4, P4/P5). A user can only read their own
 // files: the JWT's userId must match the {userId} path segment. Photos live in

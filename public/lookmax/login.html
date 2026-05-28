@@ -1,7 +1,12 @@
 <!doctype html>
-<!-- Lookmaxxing PWA login (Night-4, P3.3). OTP is the default UI but is dormant
-     until WhatsApp Cloud API is live + approved; until then it routes to the
-     admin login. // TODO copy review on user-facing strings. -->
+<!-- Lookmaxxing PWA — Login gate (Login Gate P0-1).
+     Three states on one DOM: request / check-inbox / consume-error.
+     When LOOKMAX_EMAIL_LOGIN=true (server via /api/lookmax/auth/method → {method:'email'}):
+       renders email magic-link flow.
+     When flag off (method:'admin-only'):
+       renders legacy "OTP unavailable — admin login" fallback.
+     Copy slots per spec-login-gate-copy.md (founder-approved strings).
+     No new CSS tokens, no new fonts, no icon libraries. -->
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -14,85 +19,300 @@
   <link rel="stylesheet" href="/lookmax/app.css" />
 </head>
 <body>
-  <div class="page" style="max-width:440px;padding-top:64px">
-    <div class="center">
-      <div class="eyebrow">◆ MainCharacter</div>
-      <h1 style="margin:14px 0 6px">Lookmaxxing</h1>
-      <p class="muted" style="margin-bottom:26px">The mirror is honest. Enter to begin.</p>
-    </div>
+  <main role="main" aria-labelledby="loginHeadline">
+    <div class="page center" style="max-width:440px;padding-top:64px">
 
-    <div class="card">
-      <div id="otpStep">
-        <div class="field">
-          <label for="phone">WhatsApp number</label>
-          <input id="phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="10-digit number" />
+      <div class="eyebrow" aria-hidden="true">◆ MainCharacter</div>
+      <h1 id="loginHeadline" style="margin:14px 0 6px" data-copy="login.headline"><em>Enter the room.</em></h1>
+      <p class="muted" style="margin-bottom:26px" data-copy="login.sub">Your email below. A single-use link arrives within a minute, valid for fifteen.</p>
+
+      <div class="card">
+
+        <!-- ── State A: Request (default when no ?token and method='email') ── -->
+        <div id="stateRequest" role="region" aria-label="Request entry link">
+          <form id="requestForm" novalidate>
+            <div class="field">
+              <label for="email" id="emailLabel" data-copy="login.email.label">Your email</label>
+              <input
+                id="email"
+                type="email"
+                inputmode="email"
+                autocomplete="email"
+                placeholder="you@example.com"
+                data-copy="login.email.placeholder"
+                required
+              />
+            </div>
+            <button class="btn btn--solid" type="submit" id="sendBtn" data-copy="login.cta">Send the link</button>
+            <p class="hint" style="margin-top:10px">The link expires in 15 minutes and can only be used once.</p>
+            <div class="err" id="reqErr" role="alert" aria-live="polite"></div>
+          </form>
         </div>
-        <button class="btn btn--solid" id="sendOtp">Send code</button>
-        <p class="hint" id="otpNote">OTP unavailable yet — <a class="link" href="/lookmax/admin-login">use Admin login →</a></p>
-      </div>
 
-      <div id="verifyStep" class="hidden">
-        <div class="field">
-          <label for="otp">Enter the 6-digit code</label>
-          <input id="otp" type="tel" inputmode="numeric" maxlength="6" placeholder="••••••" />
+        <!-- ── State B: Check-inbox (after successful request) ── -->
+        <div id="stateInbox" class="hidden" role="region" aria-live="polite" aria-label="Check inbox">
+          <p class="consultant" id="inboxHeadline" tabindex="-1" data-copy="login.checkInbox.headline">
+            <!-- Populated by JS with masked email -->
+          </p>
+          <p class="hint" id="inboxBody" data-copy="login.checkInbox.body">
+            Valid for fifteen minutes, single use. Check your spam folder if it does not arrive.
+          </p>
+          <p class="hint" id="countdownHint"></p>
+          <button
+            class="btn btn--ghost hidden"
+            id="resendBtn"
+            type="button"
+            data-copy="login.checkInbox.resend"
+          >Send another &rarr;</button>
         </div>
-        <button class="btn btn--solid" id="verify">Verify</button>
-      </div>
 
-      <div class="err" id="err"></div>
-    </div>
+        <!-- ── State C: Consume-error (when ?token= fails) ── -->
+        <div id="stateError" class="hidden" role="region" aria-live="polite" aria-label="Link error">
+          <p class="err" id="expiredErr" role="alert" data-copy="login.error.expired">
+            This link is no longer valid. Request a new one below.
+          </p>
+          <form id="errorForm" novalidate>
+            <div class="field" style="margin-top:12px">
+              <label for="emailRetry" data-copy="login.email.label">Your email</label>
+              <input
+                id="emailRetry"
+                type="email"
+                inputmode="email"
+                autocomplete="email"
+                placeholder="you@example.com"
+                required
+              />
+            </div>
+            <button class="btn btn--solid" type="submit" id="retryBtn" data-copy="login.cta">Send the link</button>
+            <p class="hint" style="margin-top:10px">The link expires in 15 minutes and can only be used once.</p>
+            <div class="err" id="retryErr" role="alert" aria-live="polite"></div>
+          </form>
+        </div>
 
-    <p class="footer-note">Daily mirror. Daily ritual. Weekly reveal.</p>
-  </div>
+        <!-- ── Admin-only fallback (when method='admin-only', flag off) ── -->
+        <div id="stateAdmin" class="hidden" role="region" aria-label="Admin login">
+          <p class="hint" style="margin-bottom:12px">Login is currently available to administrators only.</p>
+          <a class="btn btn--ghost" href="/lookmax/admin-login" style="display:inline-block;text-align:center;text-decoration:none;">Admin login &rarr;</a>
+        </div>
+
+        <!-- ── Loading state (while method is being discovered or token consumed) ── -->
+        <div id="stateLoading" role="status" aria-live="polite" class="hidden">
+          <p class="hint" style="text-align:center;padding:12px 0"><!-- TODO copy review login.loading --></p>
+        </div>
+
+      </div><!-- /.card -->
+
+      <p class="footer-note" data-copy="login.footer">◆ MainCharacter · The Consultant</p>
+
+    </div><!-- /.page -->
+  </main>
 
   <script src="/lookmax/app.js"></script>
   <script>
-    const errEl = document.getElementById('err');
-    const phoneEl = document.getElementById('phone');
-    const sendBtn = document.getElementById('sendOtp');
+    // ── Constants (overridable for tests) ──
+    window.__LM_RESEND_DELAY_MS = window.__LM_RESEND_DELAY_MS || 60000;
 
-    sendBtn.addEventListener('click', async () => {
-      errEl.textContent = '';
-      const phone = phoneEl.value.replace(/\D/g, '');
-      if (!/^\d{10,13}$/.test(phone)) { errEl.textContent = 'Enter a valid number.'; return; }
-      sendBtn.disabled = true;
+    // ── Email masking helper — exposed on window for tests ──
+    window.__authUI = window.__authUI || {};
+    window.__authUI.maskEmail = function maskEmail(e) {
       try {
-        const res = await fetch('/api/lookmax/auth/request-otp', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone }),
+        var parts = String(e).split('@');
+        if (parts.length !== 2 || !parts[0]) return e;
+        return parts[0][0] + '••••@' + parts[1];
+      } catch (_) { return e; }
+    };
+
+    // ── Email validation ──
+    function isValidEmail(v) {
+      return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(v || '').trim());
+    }
+    window.__authUI.isValidEmail = isValidEmail;
+
+    // ── State switcher ──
+    var STATES = ['stateRequest', 'stateInbox', 'stateError', 'stateAdmin', 'stateLoading'];
+    function showState(id) {
+      STATES.forEach(function(s) {
+        var el = document.getElementById(s);
+        if (el) {
+          if (s === id) { el.classList.remove('hidden'); }
+          else { el.classList.add('hidden'); }
+        }
+      });
+    }
+
+    // ── Transition helpers (opacity crossfade using existing .18s btn timing) ──
+    function fadeIn(el) {
+      el.style.opacity = '0';
+      el.classList.remove('hidden');
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          el.style.transition = 'opacity .18s ease';
+          el.style.opacity = '1';
         });
-        const data = await res.json().catch(() => ({}));
-        if (data.status === 'unavailable') {
-          location.href = '/lookmax/admin-login?phone=' + encodeURIComponent(phone);
-          return;
-        }
-        if (data.status === 'sent') {
-          document.getElementById('otpStep').classList.add('hidden');
-          document.getElementById('verifyStep').classList.remove('hidden');
-        } else {
-          errEl.textContent = data.message || 'Could not send a code. Use admin login.';
-          sendBtn.disabled = false;
-        }
-      } catch {
-        errEl.textContent = 'Network error. Try again.';
-        sendBtn.disabled = false;
+      });
+    }
+
+    // ── POST to /api/lookmax/auth/request-link ──
+    async function requestLink(email, errEl, btnEl) {
+      errEl.textContent = '';
+      if (!isValidEmail(email)) {
+        errEl.textContent = 'Enter a valid email address.';
+        return false;
       }
+      btnEl.disabled = true;
+      try {
+        var res = await fetch('/api/lookmax/auth/request-link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        });
+        var data = await res.json().catch(function() { return {}; });
+        if (!res.ok || data.status === 'error') {
+          errEl.textContent = 'Something interrupted the send. Try again in a moment.';
+          btnEl.disabled = false;
+          return false;
+        }
+        // Always {status:'sent'} — show check-inbox state
+        showCheckInbox(email.trim());
+        return true;
+      } catch (_) {
+        errEl.textContent = 'Something interrupted the send. Try again in a moment.';
+        btnEl.disabled = false;
+        return false;
+      }
+    }
+
+    // ── Show check-inbox state ──
+    function showCheckInbox(email) {
+      var masked = window.__authUI.maskEmail(email);
+      var headline = document.getElementById('inboxHeadline');
+      headline.textContent = 'The link is on its way to ' + masked + '.';
+      showState('stateInbox');
+      headline.focus();
+      startResendCountdown(email);
+    }
+
+    // ── 60s resend countdown ──
+    var _countdownTimer = null;
+    function startResendCountdown(email) {
+      if (_countdownTimer) clearInterval(_countdownTimer);
+      var resendBtn = document.getElementById('resendBtn');
+      var countdownHint = document.getElementById('countdownHint');
+      resendBtn.classList.add('hidden');
+      resendBtn.disabled = true;
+
+      var delay = window.__LM_RESEND_DELAY_MS;
+      var start = Date.now();
+
+      function tick() {
+        var elapsed = Date.now() - start;
+        var remaining = Math.max(0, Math.ceil((delay - elapsed) / 1000));
+        if (remaining > 0) {
+          countdownHint.textContent = 'Send another in ' + remaining + 's.';
+        } else {
+          clearInterval(_countdownTimer);
+          _countdownTimer = null;
+          countdownHint.textContent = '';
+          resendBtn.disabled = false;
+          fadeIn(resendBtn);
+        }
+      }
+
+      tick();
+      _countdownTimer = setInterval(tick, 500);
+
+      // Wire resend button (detach any previous listener by replacing)
+      var newBtn = resendBtn.cloneNode(true);
+      resendBtn.parentNode.replaceChild(newBtn, resendBtn);
+      newBtn.addEventListener('click', function() {
+        newBtn.disabled = true;
+        requestLink(email, document.createElement('div'), newBtn).then(function(sent) {
+          if (sent) startResendCountdown(email);
+          else newBtn.disabled = false;
+        });
+      });
+    }
+
+    // ── Consume the ?token= from URL on page load ──
+    async function consumeToken(token) {
+      showState('stateLoading');
+      try {
+        var res = await fetch('/api/lookmax/auth/consume-link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token }),
+        });
+        var data = await res.json().catch(function() { return {}; });
+        if (res.ok && data.token) {
+          LM.setToken(data.token);
+          location.href = '/lookmax/';
+        } else {
+          // Show consume-error state and strip token from URL
+          history.replaceState(null, '', location.pathname);
+          showState('stateError');
+          document.getElementById('emailRetry').focus();
+        }
+      } catch (_) {
+        history.replaceState(null, '', location.pathname);
+        showState('stateError');
+        document.getElementById('emailRetry').focus();
+      }
+    }
+
+    // ── Wire the request form (State A) ──
+    document.getElementById('requestForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var email = document.getElementById('email').value;
+      var errEl = document.getElementById('reqErr');
+      var btnEl = document.getElementById('sendBtn');
+      requestLink(email, errEl, btnEl);
+    });
+    // Clear error on input
+    document.getElementById('email').addEventListener('input', function() {
+      document.getElementById('reqErr').textContent = '';
     });
 
-    document.getElementById('verify').addEventListener('click', async () => {
-      errEl.textContent = '';
-      const phone = phoneEl.value.replace(/\D/g, '');
-      const otp = document.getElementById('otp').value.replace(/\D/g, '');
-      try {
-        const res = await fetch('/api/lookmax/auth/verify-otp', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone, otp }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok && data.token) { LM.setToken(data.token); location.href = '/lookmax/'; }
-        else errEl.textContent = 'That code did not match. Try again.';
-      } catch { errEl.textContent = 'Network error. Try again.'; }
+    // ── Wire the error-state form (State C) ──
+    document.getElementById('errorForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var email = document.getElementById('emailRetry').value;
+      var errEl = document.getElementById('retryErr');
+      var btnEl = document.getElementById('retryBtn');
+      requestLink(email, errEl, btnEl);
     });
+    document.getElementById('emailRetry').addEventListener('input', function() {
+      document.getElementById('retryErr').textContent = '';
+    });
+
+    // ── Page init ──
+    async function init() {
+      // 1. If there is a ?token= in the URL, try to consume it immediately.
+      var params = new URLSearchParams(location.search);
+      var token = params.get('token');
+      if (token) {
+        consumeToken(token);
+        return;
+      }
+
+      // 2. No token — discover which login method the server wants.
+      showState('stateLoading');
+      try {
+        var res = await fetch('/api/lookmax/auth/method');
+        var data = await res.json().catch(function() { return {}; });
+        if (data.method === 'email') {
+          showState('stateRequest');
+          document.getElementById('email').focus();
+        } else {
+          // admin-only (flag off or OTP mode)
+          showState('stateAdmin');
+        }
+      } catch (_) {
+        // On network error discovering the method, show the admin fallback
+        showState('stateAdmin');
+      }
+    }
+
+    init();
   </script>
 </body>
 </html>

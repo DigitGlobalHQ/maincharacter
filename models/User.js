@@ -98,6 +98,15 @@ function createUser({ name, phone, pillar = 'orator', preferredTime = '08:00' })
     firstLoginToken: null,       // 32-byte hex minted at subscription.activated webhook
     firstLoginExpiresAt: null,   // ms epoch; 15 min TTL from webhook mint
     firstLoginConsumedAt: null,  // ISO date when exchanged; null = not yet used
+
+    // ── NOW-2 / B2 — Day-30 re-audit engine ──
+    // lookmaxBaseline is set at subscription.activated (see routes/api.js).
+    // reAuditResult and reAuditCompletedThisCycle are set by routes/reaudit.js.
+    // DPDPA: lookmaxBaseline.photoStorageKeys contains R2 keys — never returned
+    // to any client-facing endpoint (must be stripped in routes/reaudit.js).
+    lookmaxBaseline: null,          // { scores, leverageAxis, overall, capturedAt, photoStorageKeys }
+    reAuditCompletedThisCycle: false, // true after the first Day-30 re-audit completes
+    reAuditResult: null,            // { scores, deltas, overallDelta, mirrorLevel, completedAt }
   };
 
   users[phone] = user;
@@ -380,6 +389,9 @@ function _rowToUser(row) {
     firstLoginToken:         row.first_login_token || null,
     firstLoginExpiresAt:     row.first_login_expires_at || null,
     firstLoginConsumedAt:    row.first_login_consumed_at || null,
+    // NOW-2 / B2 — Day-30 re-audit fields
+    reAuditCompletedThisCycle: row.re_audit_completed_this_cycle || false,
+    reAuditResult:           row.re_audit_result || null,
   };
 }
 
@@ -466,6 +478,9 @@ async function _pg_updateUser(phone, updates) {
     magicLinkExpiresAt: 'magic_link_expires_at', magicLinkConsumedAt: 'magic_link_consumed_at',
     firstLoginToken: 'first_login_token', firstLoginExpiresAt: 'first_login_expires_at',
     firstLoginConsumedAt: 'first_login_consumed_at', lastActive: 'last_active',
+    // NOW-2 / B2 — Day-30 re-audit
+    reAuditCompletedThisCycle: 're_audit_completed_this_cycle',
+    reAuditResult: 're_audit_result',
   };
 
   const setClauses = [];
@@ -474,7 +489,7 @@ async function _pg_updateUser(phone, updates) {
     const col = colMap[key];
     if (!col) continue; // skip unknown keys
     // JSONB columns
-    if (['scores', 'wordsLearned', 'chronicle', 'pushSubscription', 'lookmaxBaseline'].includes(key)) {
+    if (['scores', 'wordsLearned', 'chronicle', 'pushSubscription', 'lookmaxBaseline', 'reAuditResult'].includes(key)) {
       setClauses.push(`${col} = $${params.push(JSON.stringify(val))}`);
     } else {
       setClauses.push(`${col} = $${params.push(val)}`);

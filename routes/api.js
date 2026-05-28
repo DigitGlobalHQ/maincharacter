@@ -762,16 +762,36 @@ async function processPaymentEvent(event) {
       updates.firstLoginToken = crypto.randomBytes(32).toString('hex');
       updates.firstLoginExpiresAt = Date.now() + 15 * 60 * 1000;
       updates.firstLoginConsumedAt = null;
-      // B0 — lookmaxBaseline scaffold: snapshot the converting audit's axis scores
-      // onto the user record so NOW-2 Day-30 re-audit can do a side-by-side diff.
-      // Only written once (at first activation); never overwritten by subsequent
-      // subscription.charged or reactivation events (guard: !user.lookmaxBaseline).
+      // NOW-2: capture full durable lookmaxBaseline at first activation.
+      // Stored as { scores, leverageAxis, overall, capturedAt, photoStorageKeys }.
+      // The AuditSession TTL is 24h but the baseline must survive indefinitely —
+      // copying into the user record here makes it durable regardless of TTL.
+      // Guard: only written once (!user.lookmaxBaseline) — never overwritten by
+      // subscription.charged or reactivation events.
       if (!user.lookmaxBaseline && user.auditSessionId) {
         try {
           const AuditSession = require('../models/AuditSession');
           const auditSession = AuditSession.getSession(user.auditSessionId);
           if (auditSession && auditSession.aestheticScores) {
-            updates.lookmaxBaseline = auditSession.aestheticScores;
+            const scores = auditSession.aestheticScores;
+            // Compute average overall (8-axis mean, rounded)
+            const axes = Object.values(scores);
+            const overall = Math.round(axes.reduce((s, v) => s + v, 0) / axes.length);
+            // Build photoStorageKeys map from AuditSession photos (DPDPA: R2 keys
+            // live server-side only — never returned to any client endpoint).
+            const photoStorageKeys = {};
+            if (Array.isArray(auditSession.photos)) {
+              for (const p of auditSession.photos) {
+                if (p.kind && p.storageKey) photoStorageKeys[p.kind] = p.storageKey;
+              }
+            }
+            updates.lookmaxBaseline = {
+              scores,
+              leverageAxis: auditSession.weakestAxis || null,
+              overall,
+              capturedAt: new Date().toISOString(),
+              photoStorageKeys,
+            };
             log('LOOKMAX', `lookmaxBaseline snapshotted for ${phone} from audit ${user.auditSessionId}`);
           }
         } catch (err) {

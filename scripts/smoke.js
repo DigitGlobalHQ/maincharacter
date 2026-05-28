@@ -141,6 +141,24 @@ async function run() {
     const lmOtpJson = await lmOtp.json();
     check('POST /api/lookmax/auth/request-otp → unavailable (OTP dormant)', lmOtpJson.status === 'unavailable');
 
+    // Lookmaxing Stage-1 Audit Engine surfaces (Wave 2B, stage-1-audit-spec.md §3)
+    const lmxLanding = await fetch(`${BASE}/lookmaxing`);
+    const lmxLandingBody = await lmxLanding.text();
+    check('GET /lookmaxing → 200', lmxLanding.status === 200);
+    check('/lookmaxing serves lookmaxing landing', /lookmaxing/i.test(lmxLandingBody));
+    const lmxStart = await fetch(`${BASE}/lookmaxing/start`);
+    check('GET /lookmaxing/start → 200', lmxStart.status === 200);
+    const lmxQuiz = await fetch(`${BASE}/lookmaxing/quiz`);
+    check('GET /lookmaxing/quiz → 200', lmxQuiz.status === 200);
+    const lmxCapture = await fetch(`${BASE}/lookmaxing/capture`);
+    check('GET /lookmaxing/capture → 200', lmxCapture.status === 200);
+    const lmxFork = await fetch(`${BASE}/lookmaxing/fork`);
+    check('GET /lookmaxing/fork → 200', lmxFork.status === 200);
+    // Guest API
+    const lmxGuest = await fetch(`${BASE}/api/lookmaxing/guest`, { method: 'POST' });
+    const lmxGuestJson = await lmxGuest.json();
+    check('POST /api/lookmaxing/guest → 200 with guestId', lmxGuest.status === 200 && !!lmxGuestJson.guestId);
+
     // early-access waitlist capture (Night-4 P0.3)
     const early = await fetch(`${BASE}/api/waitlist/early-access`, {
       method: 'POST',

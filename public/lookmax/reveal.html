@@ -72,7 +72,6 @@
       font-size: 14px;
       color: var(--muted);
       margin-bottom: 10px;
-      /* TODO copy: share-frame line — design-lookmax-reveal.md §2.3 */
     }
     .share-primary .btn { min-height: 44px; }
     .reveal-platforms {
@@ -226,8 +225,8 @@
       <div class="consultant hidden" id="weeklyConsultant" aria-live="polite"></div>
 
       <!-- Share controls -->
-      <!-- TODO copy: share-frame line — design-lookmax-reveal.md §2.3 -->
-      <p class="share-frame" aria-hidden="true"></p>
+      <!-- COPY APPROVED 2026-05-28 (#18): see product/copy-pending-approval-2026-05-28.md -->
+      <p class="share-frame" aria-hidden="true">This is what shares — your week as a quiet line.</p>
 
       <div class="share-primary">
         <button
@@ -268,10 +267,10 @@
     </div>
 
     <!-- ── Day-30 side-by-side view (?mode=day30) ──────────────── -->
+    <!-- COPY APPROVED 2026-05-28 (#22): topbar "◆ The Second Reading" — set in loadDay30() JS below -->
+    <!-- COPY APPROVED 2026-05-28 (#23): h1 "Thirty days, beside Day 1." — see product/copy-pending-approval-2026-05-28.md -->
     <div id="day30View" aria-label="Day 30 second reading" role="region">
-      <!-- TODO copy: topbar title "◆ The Second Reading" — design-lookmax-reveal.md §2.4 -->
-      <!-- TODO copy: h1 "Thirty days, beside Day 1." — design-lookmax-reveal.md §2.4 -->
-      <h1 id="day30Headline" style="margin-bottom:18px">Your second reading.</h1>
+      <h1 id="day30Headline" style="margin-bottom:18px">Thirty days, beside Day 1.</h1>
 
       <!-- Beat 1: photos -->
       <div class="day30-photos" id="day30Photos">
@@ -289,11 +288,11 @@
           <canvas id="day30Traj" height="60" aria-label="Day 1 to Day 30 trajectory"></canvas>
         </div>
 
-        <!-- Consultant line (server-supplied) -->
+        <!-- Consultant line (server-supplied via /api/lookmax/reaudit/result consultantLine) -->
         <div class="consultant hidden" id="day30Consultant" aria-live="polite"></div>
 
-        <!-- Close line (server-supplied) -->
-        <!-- TODO copy: close line per NOW-2 §3.5 — design-lookmax-reveal.md §9 -->
+        <!-- Close line (server-supplied via /api/lookmax/reaudit/result closeLine) -->
+        <!-- COPY APPROVED 2026-05-28 (#28): template in data/reveal-copy-constants.js — see product/copy-pending-approval-2026-05-28.md -->
         <div class="consultant hidden" id="day30CloseLine" aria-live="polite" style="border-left-color:var(--muted);color:var(--muted)"></div>
       </div>
     </div>
@@ -399,8 +398,8 @@
     // ── Day-30 mode ────────────────────────────────────────────────────────────
     async function loadDay30() {
       // Update topbar for Day-30 mode
-      // TODO copy: topbar "◆ The Second Reading" — design-lookmax-reveal.md §2.4
       document.getElementById('day30View').style.display = '';
+      // COPY APPROVED 2026-05-28 (#22): topbar "◆ The Second Reading" — see product/copy-pending-approval-2026-05-28.md
       document.getElementById('topbarTitle').textContent = '◆ The Second Reading';
 
       let d;
@@ -445,8 +444,16 @@
       }
       const cap1 = document.createElement('div');
       cap1.className = 'photo-caption';
-      // TODO copy: "Day 1 — DD MMM" — design-lookmax-reveal.md §9
-      cap1.textContent = 'Day 1';
+      // COPY APPROVED 2026-05-28 (#24): "Day 1 — DD MMM" — see product/copy-pending-approval-2026-05-28.md
+      if (d.baselineDate) {
+        try {
+          const d1 = new Date(d.baselineDate);
+          const ddMmm = d1.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+          cap1.textContent = 'Day 1 — ' + ddMmm;
+        } catch (_) { cap1.textContent = 'Day 1 —'; }
+      } else {
+        cap1.textContent = 'Day 1 —';
+      }
       day1Div.appendChild(cap1);
       photosEl.appendChild(day1Div);
 
@@ -465,8 +472,8 @@
       }
       const cap2 = document.createElement('div');
       cap2.className = 'photo-caption';
-      // TODO copy: "Day 30 — today" — design-lookmax-reveal.md §9
-      cap2.textContent = 'Day 30';
+      // COPY APPROVED 2026-05-28 (#24): "Day 30 — today" — see product/copy-pending-approval-2026-05-28.md
+      cap2.textContent = 'Day 30 — today';
       day30Div.appendChild(cap2);
       photosEl.appendChild(day30Div);
 
@@ -489,7 +496,7 @@
           cl.classList.remove('hidden');
         }
         if (d.closeLine) {
-          // TODO copy: close line — design-lookmax-reveal.md §9
+          // COPY APPROVED 2026-05-28 (#28): close line from server (data/reveal-copy-constants.js reauditCloseLine())
           const cll = document.getElementById('day30CloseLine');
           cll.textContent = d.closeLine;
           cll.classList.remove('hidden');

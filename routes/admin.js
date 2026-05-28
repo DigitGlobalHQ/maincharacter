@@ -13,6 +13,7 @@ const whatsapp = require('../services/whatsapp');
 const sms = require('../services/sms');
 const auth = require('../lib/auth');
 const admin = require('../lib/admin');
+const lookmaxAuth = require('../lib/lookmax-auth');
 const { AESTHETIC_AXES } = require('../data/lookmax-prompts');
 
 const BASE_URL = process.env.UPGRADE_BASE_URL || 'https://maincharacter.digitglobalservices.com';
@@ -725,6 +726,13 @@ router.post('/grant', requireAuth, (req, res) => {
   log('GRANT', `comp access granted to ${normalEmail} (plans: ${plans.join(', ')})`);
 
   const auraStatus = User.computeAuraStatus(user);
+
+  // Admin-issued direct JWT — skips the magic-link consume round-trip so that
+  // Chrome speculative-prefetch (or any link-scanner) cannot burn the single-use
+  // token before the founder's actual click. The Dogfood Tools panel uses this
+  // to set localStorage and redirect straight to /lookmax/.
+  const directJwt = lookmaxAuth.signLookmaxToken(user);
+
   res.json({
     user: {
       token: user.token,
@@ -740,6 +748,7 @@ router.post('/grant', requireAuth, (req, res) => {
     },
     sessionToken,
     magicLinkUrl,
+    jwt: directJwt,
   });
 });
 

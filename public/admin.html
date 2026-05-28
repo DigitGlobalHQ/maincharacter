@@ -875,6 +875,13 @@ const DOGFOOD_CONFIGS = {
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || r.status);
+      // Direct-JWT path (skips magic-link consume; immune to Chrome prefetch).
+      // Stash the JWT under the lookmax key and open the dashboard in a new tab.
+      if (d.jwt) {
+        try { localStorage.setItem('lookmax.token', d.jwt); } catch (_) {}
+        try { window.open('/lookmax/', '_blank'); } catch (_) {}
+        return 'Access granted. Dashboard opened in a new tab. If the popup was blocked, click here: /lookmax/';
+      }
       return `Access granted. Magic-link: ${d.magicLinkUrl}`;
     },
   },

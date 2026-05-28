@@ -74,3 +74,36 @@ describe('landing.html — Aura++ reveal section (P2.2/P2.3)', () => {
     expect(html).not.toContain('--ink-soft');
   });
 });
+
+describe('landing.html — coming-soon-modal listener (P1 regression)', () => {
+  it('modal div exists in the HTML', () => {
+    expect(html).toContain('id="coming-soon-modal"');
+  });
+
+  it('backdrop-click listener is deferred inside DOMContentLoaded, not bare in the IIFE', () => {
+    // The bare pattern that caused TypeError: null.addEventListener fires before
+    // the modal div is parsed. Assert the fixed form is present and the broken
+    // form is absent.
+    expect(html).toContain(
+      "document.addEventListener('DOMContentLoaded', function() {"
+    );
+    // The broken bare call must not appear — the getElementById for the modal
+    // must not be a direct child of the IIFE at execution time.
+    // We check that there is no line that does getElementById('coming-soon-modal').addEventListener
+    // outside of a DOMContentLoaded wrapper by checking the raw text ordering.
+    const domReadyIdx  = html.indexOf("document.addEventListener('DOMContentLoaded'");
+    const bareCallPat  = "document.getElementById('coming-soon-modal').addEventListener";
+    const bareIdx      = html.indexOf(bareCallPat);
+    // The addEventListener call on the modal must appear AFTER the DOMContentLoaded open.
+    expect(bareIdx).toBeGreaterThan(domReadyIdx);
+  });
+
+  it('modal div is declared after the closing </script> tag in source order', () => {
+    // Structural guard: this relationship is what makes the DOMContentLoaded
+    // deferral necessary. If someone moves the modal above the script this test
+    // will flag it as a required review point.
+    const scriptCloseIdx = html.lastIndexOf('</script>');
+    const modalDivIdx    = html.indexOf('id="coming-soon-modal"');
+    expect(modalDivIdx).toBeGreaterThan(scriptCloseIdx);
+  });
+});

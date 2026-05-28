@@ -380,3 +380,44 @@ alongside the map, eviction fires inside `ipRecordFailure` before each `ipCooldo
 The eviction runs only when the map is at-or-above cap (10k entries, ~800KB worst-case), which
 is unreachable under normal operation but closes the theoretical unbounded-growth asymmetry
 the audit flagged.
+
+---
+
+## 2026-05-28 — Razorpay recurring-payments blocker discovered during dogfood
+
+Founder attempted the first end-to-end payment test of the new login gate. Razorpay
+hosted checkout returned **"seller does not support recurring payments"** even though the
+subscription object was created successfully (`sub_Suhr5kDlLNt5Gg`). Root cause: the
+Razorpay account does NOT have Subscriptions / recurring payments enabled — an account-level
+flag that requires a Razorpay support ticket + (typically) GST cert, MOA/AOA, and a
+brief description of the recurring product.
+
+**Status:** No code change required. The codebase is doing the right thing — creating
+subscription objects via `services/razorpay.js createSubscription()`. The blocker is
+purely a Razorpay-account-side enablement.
+
+**Impact:** Gates the entire revenue flow. Until Razorpay enables Subscriptions on this
+account, NO subscription can be charged — silent-first-login cannot be dogfooded end-to-end,
+NOW-1/2/3 cannot reach real paying users.
+
+**Action:** Logged as FOUNDER_ACTIONS_THIS_WEEK.md item #10 with a 🚨 banner at the top
+of that file. Founder opens the Razorpay support ticket; 1-3 business days typical wait.
+
+**Dogfood workaround during the wait:** Use `POST /api/admin/seed-test-user` (existing
+admin endpoint at `routes/admin.js:198`) to create a synthetic Aura++ user with seeded
+audit + protocol. Walk the Lookmaxxing PWA screens (dashboard / mirror / protocol / hair)
+via that seeded user. Limitation: seed-test-user does NOT mint a `firstLoginToken` (only
+the Razorpay webhook does), so the silent-first-login path on `/payment-confirmed` remains
+untested until Razorpay enables recurring. The Lookmaxxing screens themselves are fully
+walkable.
+
+**PAYWALL_PUBLIC flip-back:** Founder flipped to `true` for the test, but since no
+checkout can complete on the blocked account, kept on `true` provides zero benefit and
+non-zero exposure (a real visitor could attempt and fail confusingly). Flipped back to
+`false` immediately on discovery of the blocker.
+
+---
+
+## 2026-05-28 — P1 landing page console error fix
+
+**Deferred `#coming-soon-modal` backdrop listener into `DOMContentLoaded`:** The modal div is declared after the closing `</script>` tag, so `getElementById('coming-soon-modal')` returned `null` at IIFE execution time — throwing `TypeError: Cannot read properties of null (reading 'addEventListener')` on every page load. Wrapped the three-line listener wiring in `document.addEventListener('DOMContentLoaded', …)` so it runs after the full DOM is parsed. Three regression tests added to `tests/landing.test.js` to guard this ordering permanently.

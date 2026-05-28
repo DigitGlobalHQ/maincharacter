@@ -88,6 +88,16 @@ function createUser({ name, phone, pillar = 'orator', preferredTime = '08:00' })
     auditSessionId: null,        // links to the AuditSession that converted them
     lookmaxxingStartedAt: null,  // ISO date Lookmaxxing protocol began (Day-30 trigger)
     pushSubscription: null,      // web-push PushSubscription JSON (PWA notifications)
+
+    // ── Login Gate (P0-1) — email magic-link auth fields ──
+    // All nullable; written lazily by auth routes / webhook. Never stored in
+    // plaintext logs (lib/log-mask.js). See spec-login-gate.md §6.
+    magicLinkToken: null,        // 32-byte hex, single-use, TTL via magicLinkExpiresAt
+    magicLinkExpiresAt: null,    // ms epoch; null = not set
+    magicLinkConsumedAt: null,   // ISO date when consumed; null = not yet used
+    firstLoginToken: null,       // 32-byte hex minted at subscription.activated webhook
+    firstLoginExpiresAt: null,   // ms epoch; 15 min TTL from webhook mint
+    firstLoginConsumedAt: null,  // ISO date when exchanged; null = not yet used
   };
 
   users[phone] = user;
@@ -111,6 +121,23 @@ function getUserByPhone(phone) {
 function getUserByToken(token) {
   const users = loadUsers();
   return Object.values(users).find(u => u.token === token) || null;
+}
+
+/**
+ * Get user by email address (case-insensitive, trimmed). Used by the
+ * email magic-link login path (Login Gate P0-1). Tolerates legacy records
+ * that have no email field.
+ * @param {string|null|undefined} email
+ * @returns {object|null}
+ */
+function getUserByEmail(email) {
+  if (!email) return null;
+  const target = String(email).trim().toLowerCase();
+  if (!target) return null;
+  const users = loadUsers();
+  return Object.values(users).find(
+    (u) => u.email && String(u.email).trim().toLowerCase() === target
+  ) || null;
 }
 
 /**
@@ -294,6 +321,7 @@ module.exports = {
   createUser,
   getUserByPhone,
   getUserByToken,
+  getUserByEmail,
   getUserBySubscriptionId,
   updateUser,
   addScore,

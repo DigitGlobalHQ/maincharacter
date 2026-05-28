@@ -61,6 +61,15 @@
     .done h2 { font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500; font-size: 26px; margin-bottom: 10px; }
     .done p { color: var(--muted); font-size: 15px; }
     .footer { color: #5f5d58; font-size: 12px; margin-top: 28px; }
+    /* Verbatim from paywall.html:43-50 — SHARED: keep in sync with paywall.html */
+    .audit-summary {
+      display: none;
+      max-width: 600px; margin: 18px auto 0;
+      border: 1px solid var(--line); border-radius: 12px;
+      background: var(--panel); padding: 16px 20px;
+      text-align: center; color: var(--ink); font-size: 14px;
+    }
+    .audit-summary b { color: var(--gold); font-weight: 600; }
   </style>
 </head>
 <body>
@@ -68,6 +77,10 @@
     <div class="eyebrow">◆ MainCharacter</div>
     <h1>The Chamber opens this weekend.</h1>
     <p class="lede">Add your number — you'll be the first walked in. ◆ MainCharacter</p>
+
+    <!-- [COPY DRAFT — founder approval] F1 audit echo: "Your Aura Score: X/100. Axis is your leverage point." -->
+    <!-- Shown only when a valid auditSessionToken is present in the URL. Hidden silently on 404/409/network error. -->
+    <div class="audit-summary" id="waitlistAuditSummary" aria-live="polite"></div>
 
     <form class="form" id="form">
       <div class="field">
@@ -90,9 +103,14 @@
     <div class="footer">The diagnosis is free. The discipline arrives soon.</div>
   </div>
 
+  <script src="/shared/audit-echo.js"></script>
   <script>
     const params = new URLSearchParams(location.search);
     const auditSessionToken = params.get('auditSessionToken') || null;
+
+    // F1: echo the audit score above the form using the shared helper.
+    // On 404/409/any error, loadAuditEcho hides the element — form still works.
+    loadAuditEcho(auditSessionToken, 'waitlistAuditSummary');
     const form = document.getElementById('form');
     const errEl = document.getElementById('err');
     const btn = document.getElementById('submit');

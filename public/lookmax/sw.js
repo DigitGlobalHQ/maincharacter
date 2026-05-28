@@ -1,14 +1,18 @@
 /**
- * Lookmaxxing PWA service worker (Night-4, P2.3).
+ * Lookmaxxing PWA service worker (Night-4, P2.3 + B4 push).
  *
  * Cache-first for the app shell (HTML pages, icons, manifest) so the ritual
  * opens instantly and offline. Network-first with a cache fallback for
  * /api/lookmax/* so data stays fresh but a flaky connection still renders.
  *
+ * B4 additions:
+ *   - push event: shows a notification when the server fires a mirror nudge.
+ *   - notificationclick: opens /lookmax/mirror (or the url from the payload).
+ *
  * Bump CACHE_VERSION on any shell change to invalidate old caches.
  */
 
-const CACHE_VERSION = 'lookmax-v1';
+const CACHE_VERSION = 'lookmax-v2';
 const SHELL = [
   '/lookmax/',
   '/lookmax/index.html',
@@ -36,6 +40,63 @@ self.addEventListener('activate', (event) => {
       .keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_VERSION).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
+  );
+});
+
+// ─── B4: Push notification handler ───────────────────────────────────────────
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = {};
+  }
+
+  const title = data.title || '◆ MainCharacter';
+  // TODO copy review: notification body — deferred pending copy-consultant approval
+  const body = data.body && data.body !== '<!-- TODO copy -->'
+    ? data.body
+    : ''; // TODO copy review: mirror nudge body line
+  const icon = data.icon || '/lookmax/icons/icon-192.png';
+  const badge = data.badge || '/lookmax/icons/icon-192.png';
+  const url = data.url || '/lookmax/mirror';
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon,
+      badge,
+      tag: 'mirror-nudge',
+      renotify: false,
+      data: { url },
+    })
+  );
+});
+
+// ─── B4: Notification click → open mirror page ────────────────────────────────
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url)
+    ? event.notification.data.url
+    : '/lookmax/mirror';
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Focus an existing window on the mirror page if one is open
+        for (const client of clientList) {
+          if (client.url.includes('/lookmax') && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        // Otherwise open a new window
+        if (self.clients.openWindow) {
+          return self.clients.openWindow(targetUrl);
+        }
+      })
   );
 });
 

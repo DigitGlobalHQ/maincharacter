@@ -93,6 +93,10 @@
       </div>
     </div>
 
+    <!-- Saved Aura Reading (funnel-repair Item 1): preserved free reading from
+         the audit, shown when the user chose "Maybe later". Empty until fetched. -->
+    <div id="aura-reading-slot"></div>
+
     <!-- Primary Mirror tile (full-width, promoted) -->
     <div id="tile-mirror"></div>
 
@@ -120,6 +124,12 @@
       const user = await LM.requireSession();
       if (!user) return; // requireSession redirects to /lookmax/login
       LM.renderNav('profile');
+
+      // ── Saved Aura Reading (funnel-repair Item 1) ──────────────────────────
+      // The audit free reading is persisted server-side on the user's session.
+      // If we have its id, surface it here so "Maybe later" lands on a preserved
+      // reading the user can return to and resolve.
+      renderAuraReading().catch(() => {});
 
       let d;
       try { d = await LM.api('/api/lookmax/dashboard'); }
@@ -264,6 +274,47 @@
 
     function levelLabel(l) {
       return ({ raw: 'Raw', polished: 'Polished', magnetic: 'Magnetic', radiant: 'Radiant', sovereign: 'Sovereign' })[l] || 'Raw';
+    }
+
+    // ── Saved Aura Reading card (funnel-repair Item 1) ─────────────────────────
+    function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+    async function renderAuraReading() {
+      const auditId = localStorage.getItem('lookmax.auditId');
+      const slot = document.getElementById('aura-reading-slot');
+      if (!auditId || !slot) return;
+      const token = LM.getToken();
+      if (!token) return;
+      let data;
+      try {
+        const res = await fetch('/api/lookmaxing/audit/' + encodeURIComponent(auditId), {
+          headers: { 'Authorization': 'Bearer ' + token },
+        });
+        if (!res.ok) return; // no reading to show (e.g. expired) — fail quietly
+        data = await res.json();
+      } catch (e) { return; }
+      const r = data && data.report;
+      if (!r || typeof r.auraScore !== 'number') return;
+
+      const signals = (r.freeSignals || []).map(function (s) { return escapeHtml(s.label); }).join('  ·  ');
+      const rank = escapeHtml(r.rank || '');
+      const face = escapeHtml(r.faceShape || '');
+      const paid = !!data.paid;
+      const ctaHref = paid ? ('/lookmaxing/audit/' + auditId + '/full') : ('/lookmaxing/audit/' + auditId);
+      const ctaLabel = paid ? 'View your full reading ◆' : 'Resolve the reading ◆';
+
+      slot.innerHTML =
+        '<a href="' + ctaHref + '" class="card card--cta" data-event="dashboard_aura_reading_clicked" ' +
+        'style="display:block;text-decoration:none;color:inherit;margin-bottom:16px" aria-label="Your Aura Reading">' +
+          '<div class="muted" style="font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Your Aura Reading</div>' +
+          '<div style="display:flex;align-items:baseline;gap:12px">' +
+            '<span style="font-family:\'Cormorant Garamond\',serif;font-size:44px;line-height:1">' + r.auraScore + '</span>' +
+            '<span class="muted" style="font-size:13px;text-transform:uppercase;letter-spacing:1px">' + rank + (face ? ' · ' + face : '') + '</span>' +
+          '</div>' +
+          (signals ? '<p class="muted" style="font-size:13px;margin-top:10px">' + signals + '</p>' : '') +
+          '<p style="font-size:13px;margin-top:14px">' + ctaLabel + '</p>' +
+        '</a>';
+
+      if (window.mc) window.mc.track('dashboard_aura_reading_shown', { paid: paid });
     }
 
     // ── B4: Push notification subscription prompt ──────────────────────────────

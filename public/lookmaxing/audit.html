@@ -766,7 +766,14 @@
     document.body.style.overflow = '';
   }
 
-  paywallCloseBtn.addEventListener('click', closePaywall);
+  // "Maybe later" — the free reading is already saved to the account (user-owned
+  // session). Carry the user to their dashboard, where the reading is preserved
+  // so they can return and resolve it later. (funnel-repair Item 1)
+  paywallCloseBtn.addEventListener('click', function () {
+    if (window.mc) window.mc.track('lookmaxing_pay_failed', { reason: 'dismissed' });
+    try { if (auditId) localStorage.setItem('lookmax.auditId', auditId); } catch (e) {}
+    window.location.href = '/lookmax/';
+  });
   paywallModal.addEventListener('click', function (e) {
     if (e.target === paywallModal) {
       if (window.mc) window.mc.track('lookmaxing_pay_failed', { reason: 'dismissed' });

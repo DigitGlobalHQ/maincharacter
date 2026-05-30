@@ -143,6 +143,7 @@
       <div class="reveal-beat-2">
         <div class="center muted" id="levelLine" style="margin-bottom:6px"></div>
         <div class="consultant" id="consultantLine"></div>
+        <div class="consultant" id="nightContext" style="display:none;font-size:14px;opacity:.85;margin-top:8px"></div>
       </div>
 
       <!-- Beat 3: axes + trend card (staggered fade at t=2.6s) -->
@@ -158,10 +159,40 @@
         </div>
       </div>
 
+      <!-- ── Night log (Phase 3.2) — last night, powers tomorrow's read ── -->
+      <div class="card" id="nightLogCard" style="margin-top:18px">
+        <div class="muted" style="font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">Last night</div>
+        <p class="muted" style="font-size:13px;margin-bottom:14px">A quick log sharpens tomorrow's read. Honest, not perfect.</p>
+
+        <div class="nl-row" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <label for="nlSleep" style="font-size:14px;color:var(--ink)">Sleep</label>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button type="button" class="nl-step" data-target="nlSleep" data-delta="-1" aria-label="Less sleep">−</button>
+            <span id="nlSleepVal" style="min-width:64px;text-align:center;color:var(--ink)">7 hrs</span>
+            <button type="button" class="nl-step" data-target="nlSleep" data-delta="1" aria-label="More sleep">+</button>
+          </div>
+        </div>
+        <div class="nl-row" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <label for="nlWater" style="font-size:14px;color:var(--ink)">Water</label>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button type="button" class="nl-step" data-target="nlWater" data-delta="-1" aria-label="Less water">−</button>
+            <span id="nlWaterVal" style="min-width:64px;text-align:center;color:var(--ink)">6 glasses</span>
+            <button type="button" class="nl-step" data-target="nlWater" data-delta="1" aria-label="More water">+</button>
+          </div>
+        </div>
+        <div class="nl-row" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <label for="nlSalt" style="font-size:14px;color:var(--ink)">Salt or alcohol last night</label>
+          <button type="button" id="nlSalt" role="switch" aria-checked="false" class="nl-toggle" style="border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:20px;padding:6px 16px;font-size:13px;cursor:pointer">No</button>
+        </div>
+        <button class="btn btn--ghost" id="nlSave" data-event="night_log_saved">Save last night ◆</button>
+        <div class="muted" id="nlMsg" style="font-size:13px;margin-top:8px;display:none" role="status" aria-live="polite"></div>
+      </div>
+
       <!-- Protocol CTA -->
       <button
         class="btn btn--ghost"
         id="protocolBtn"
+        style="margin-top:14px"
         data-event="protocol_entered_from_mirror"
         onclick="location.href='/lookmax/protocol'"
       >Open today's protocol →</button>
@@ -201,8 +232,58 @@
       if (!user) return;
       LM.renderNav('mirror');
       document.getElementById('levelBadge').textContent = levelLabel(user.mirrorLevel);
+      initNightLog();
       await startCamera();
     })();
+
+    // ── Night log (Phase 3.2) ───────────────────────────────────────────────
+    var nlState = { sleepHours: 7, waterGlasses: 6, saltAlcoholFlag: false };
+    function nlRender() {
+      document.getElementById('nlSleepVal').textContent = nlState.sleepHours + ' hrs';
+      document.getElementById('nlWaterVal').textContent = nlState.waterGlasses + (nlState.waterGlasses === 1 ? ' glass' : ' glasses');
+      var t = document.getElementById('nlSalt');
+      t.textContent = nlState.saltAlcoholFlag ? 'Yes' : 'No';
+      t.setAttribute('aria-checked', nlState.saltAlcoholFlag ? 'true' : 'false');
+      t.style.color = nlState.saltAlcoholFlag ? 'var(--gold)' : 'var(--muted)';
+      t.style.borderColor = nlState.saltAlcoholFlag ? 'rgba(232,184,75,0.5)' : 'var(--line)';
+    }
+    async function initNightLog() {
+      try {
+        var res = await LM.api('/api/lookmax/night-log/today');
+        var n = res && res.nightLog;
+        if (n) {
+          if (n.sleepHours != null) nlState.sleepHours = n.sleepHours;
+          if (n.waterGlasses != null) nlState.waterGlasses = n.waterGlasses;
+          nlState.saltAlcoholFlag = !!n.saltAlcoholFlag;
+        }
+      } catch (_) { /* unauthenticated/offline — keep defaults */ }
+      nlRender();
+      Array.prototype.forEach.call(document.querySelectorAll('.nl-step'), function (btn) {
+        btn.style.cssText = 'border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;width:34px;height:34px;font-size:18px;cursor:pointer';
+        btn.addEventListener('click', function () {
+          var key = btn.getAttribute('data-target') === 'nlSleep' ? 'sleepHours' : 'waterGlasses';
+          var hi = key === 'sleepHours' ? 14 : 15;
+          nlState[key] = Math.max(0, Math.min(hi, nlState[key] + Number(btn.getAttribute('data-delta'))));
+          nlRender();
+        });
+      });
+      document.getElementById('nlSalt').addEventListener('click', function () {
+        nlState.saltAlcoholFlag = !nlState.saltAlcoholFlag; nlRender();
+      });
+      document.getElementById('nlSave').addEventListener('click', async function () {
+        var msg = document.getElementById('nlMsg');
+        var btn = document.getElementById('nlSave');
+        btn.disabled = true;
+        try {
+          await LM.api('/api/lookmax/night-log', { method: 'POST', body: JSON.stringify(nlState) });
+          msg.textContent = 'Logged. It will shape tomorrow’s read. ◆';
+          msg.style.display = '';
+        } catch (_) {
+          msg.textContent = 'Could not save just now. Try again in a moment.';
+          msg.style.display = '';
+        } finally { btn.disabled = false; }
+      });
+    }
 
     async function startCamera() {
       try {
@@ -314,6 +395,13 @@
         ? 'Today is the baseline. Hold it. Tomorrow has something to push against.'
         : (r.consultantLine || '');
       document.getElementById('consultantLine').textContent = consultantText;
+
+      // Night-log context (Phase 3.2): why today's read may have moved.
+      var nightEl = document.getElementById('nightContext');
+      if (nightEl) {
+        if (r.nightContext) { nightEl.textContent = r.nightContext; nightEl.style.display = ''; }
+        else { nightEl.style.display = 'none'; }
+      }
 
       const beat2Delay = reducedMotion ? 0 : 2000;
       setTimeout(() => { beat2El.classList.add('show'); }, beat2Delay);

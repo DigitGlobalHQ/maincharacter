@@ -50,8 +50,10 @@ function save(data) {
 }
 
 function bucket(data, userId) {
-  if (!data.users[userId]) data.users[userId] = { mirrors: [], protocols: {}, hair: [] };
-  return data.users[userId];
+  if (!data.users[userId]) data.users[userId] = { mirrors: [], protocols: {}, hair: [], nightLogs: [] };
+  const b = data.users[userId];
+  if (!b.nightLogs) b.nightLogs = []; // back-fill for buckets created before night logs
+  return b;
 }
 
 /** Today's date as YYYY-MM-DD in IST (the protocol/mirror day boundary). */
@@ -156,6 +158,57 @@ function lockProtocolToday(userId) {
   return day;
 }
 
+// ─── NIGHT LOG ───────────────────────────────────────────────────
+// Last night's sleep / water / salt-alcohol. Powers tomorrow's mirror delta
+// context. State-and-habit only — no medical content (passes safety validator).
+
+/** Clamp a number into [lo, hi], returning `def` for non-finite input. */
+function clampNum(v, lo, hi, def) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return def;
+  return Math.max(lo, Math.min(hi, n));
+}
+
+/**
+ * Upsert tonight's night log (one per IST date — re-logging replaces).
+ * @param {string} userId
+ * @param {{ sleepHours?:number, waterGlasses?:number, saltAlcoholFlag?:boolean, notes?:string }} entry
+ * @returns the saved record
+ */
+function addNightLog(userId, entry = {}) {
+  const data = load();
+  const b = bucket(data, userId);
+  const date = istDate();
+  const rec = {
+    date,
+    sleepHours: clampNum(entry.sleepHours, 0, 14, null),
+    waterGlasses: clampNum(entry.waterGlasses, 0, 15, null),
+    saltAlcoholFlag: !!entry.saltAlcoholFlag,
+    notes: String(entry.notes || '').slice(0, 280),
+    createdAt: new Date().toISOString(),
+  };
+  const idx = b.nightLogs.findIndex((n) => n.date === date);
+  if (idx >= 0) b.nightLogs[idx] = rec;
+  else b.nightLogs.push(rec);
+  save(data);
+  return rec;
+}
+
+/** All night logs for a user, oldest first. */
+function getNightLogs(userId) {
+  return bucket(load(), userId).nightLogs;
+}
+
+/** The night log for a specific IST date (YYYY-MM-DD), or null. */
+function nightLogForDate(userId, date) {
+  return getNightLogs(userId).find((n) => n.date === date) || null;
+}
+
+/** Tonight's (today IST) night log, or null. */
+function nightLogForToday(userId) {
+  return nightLogForDate(userId, istDate());
+}
+
 // ─── HAIR TRACKING ───────────────────────────────────────────────
 
 /** Append a hair-tracking record. Returns the saved record. */
@@ -224,6 +277,10 @@ module.exports = {
   addHair,
   getHair,
   latestHair,
+  addNightLog,
+  getNightLogs,
+  nightLogForDate,
+  nightLogForToday,
   setOtp,
   verifyOtp,
 };

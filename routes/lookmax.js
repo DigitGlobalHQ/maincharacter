@@ -145,11 +145,58 @@ router.post('/mirror', upload.single('photo'), async (req, res) => {
       streak,
       trend,
       consultantLine,
+      nightContext: nightContextLine(user.token),
     });
   } catch (err) {
     log.error('MIRROR', err.message);
     res.status(500).json({ error: 'mirror scoring failed' });
   }
+});
+
+/** Yesterday's IST date (YYYY-MM-DD) relative to today. */
+function yesterdayIst() {
+  const todayMs = new Date(`${Lookmax.istDate()}T00:00:00.000Z`).getTime();
+  return new Date(todayMs - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+/**
+ * Deterministic, validator-clean "why it may have moved" line from LAST night's
+ * log. State/habit context only — no health claims. Returns null when no log.
+ */
+function nightContextLine(userId) {
+  const log = Lookmax.nightLogForDate(userId, yesterdayIst());
+  if (!log) return null;
+  if (log.saltAlcoholFlag) {
+    return "Last night's salt and drink tend to show as morning puffiness. Today's read carries that. ◆";
+  }
+  if (log.sleepHours != null && log.sleepHours < 6) {
+    return 'Short sleep last night shows first in the eyes. The read reflects the night, not the trend. ◆';
+  }
+  if (log.sleepHours != null && log.sleepHours >= 7 && !log.saltAlcoholFlag) {
+    return 'A clean night behind this read. When the basics hold, the mirror tends to agree. ◆';
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Night Log — last night's sleep / water / salt-alcohol (Phase 3.2)
+// ═══════════════════════════════════════════════════════════════════
+
+router.post('/night-log', (req, res) => {
+  const user = req.lookmaxUser;
+  const body = req.body || {};
+  const saved = Lookmax.addNightLog(user.token, {
+    sleepHours: body.sleepHours,
+    waterGlasses: body.waterGlasses,
+    saltAlcoholFlag: body.saltAlcoholFlag,
+    notes: body.notes,
+  });
+  res.json({ ok: true, nightLog: saved });
+});
+
+router.get('/night-log/today', (req, res) => {
+  const user = req.lookmaxUser;
+  res.json({ nightLog: Lookmax.nightLogForToday(user.token) });
 });
 
 /** Read the user's converting-audit baseline scores, if present. */

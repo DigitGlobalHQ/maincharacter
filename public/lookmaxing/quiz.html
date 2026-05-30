@@ -55,6 +55,12 @@
     .lm-quiz-screen.is-active { display: flex; }
 
     .lm-quiz-eyebrow { margin: 0 0 var(--mc-sp-4); }
+    /* funnel-repair P4: a thin line-glyph per question — same light-line language. */
+    .lm-quiz-glyph { width: 38px; height: 38px; margin: 0 0 var(--mc-sp-3); color: var(--mc-silver-mid); }
+    .lm-quiz-glyph svg { width: 100%; height: 100%; display: block; stroke: currentColor; fill: none; stroke-width: 1.1; stroke-linecap: round; stroke-linejoin: round; }
+    .lm-quiz-glyph svg .pt { fill: var(--mc-ink-white); stroke: none; }
+    @media (prefers-reduced-motion: no-preference) { .lm-quiz-screen.is-active .lm-quiz-glyph { animation: glyphFade var(--mc-dur-slow) var(--mc-ease) both; } }
+    @keyframes glyphFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 0.92; transform: none; } }
     .lm-quiz-question {
       font-size: var(--mc-fs-h2);
       margin: 0 0 var(--mc-sp-5);
@@ -203,6 +209,7 @@
 
 <!-- Q1 -->
 <section class="lm-quiz-screen is-active" id="q1-screen" aria-labelledby="q1-text">
+  <div class="lm-quiz-glyph" aria-hidden="true"><svg viewBox="0 0 40 40"><circle cx="20" cy="23" r="8.5"/><circle class="pt" cx="20" cy="7" r="2"/><path d="M9 32a13 13 0 0 1 22 0"/></svg></div>
   <p class="mc-eyebrow lm-quiz-eyebrow">CALIBRATION · Q1</p>
   <h1 id="q1-text" class="mc-serif mc-serif--italic lm-quiz-question">What you would change about how you arrive in a room — pick the one closest.</h1>
   <fieldset class="lm-quiz-options" id="q1-options" aria-label="Options for question 1">
@@ -244,6 +251,7 @@
 
 <!-- Q2 -->
 <section class="lm-quiz-screen" id="q2-screen" aria-labelledby="q2-text">
+  <div class="lm-quiz-glyph" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M20 6c6 7 9.5 11.5 9.5 16.5a9.5 9.5 0 0 1-19 0C10.5 17.5 14 13 20 6z"/><path d="M15.5 24a4.5 4.5 0 0 0 4.5 3.5"/></svg></div>
   <p class="mc-eyebrow lm-quiz-eyebrow">CALIBRATION · Q2</p>
   <h1 id="q2-text" class="mc-serif mc-serif--italic lm-quiz-question">Your skin, most days.</h1>
   <fieldset class="lm-quiz-options" id="q2-options" aria-label="Options for question 2">
@@ -285,6 +293,7 @@
 
 <!-- Q3 -->
 <section class="lm-quiz-screen" id="q3-screen" aria-labelledby="q3-text">
+  <div class="lm-quiz-glyph" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M8 31C8 18 13 10 20 10s12 8 12 21"/><path d="M14 31c0-9 2.5-15 6-16M26 31c0-9-2.5-15-6-16M20 31V14"/></svg></div>
   <p class="mc-eyebrow lm-quiz-eyebrow">CALIBRATION · Q3</p>
   <h1 id="q3-text" class="mc-serif mc-serif--italic lm-quiz-question">The hair on your head right now.</h1>
   <fieldset class="lm-quiz-options" id="q3-options" aria-label="Options for question 3">
@@ -326,6 +335,7 @@
 
 <!-- Q4 -->
 <section class="lm-quiz-screen" id="q4-screen" aria-labelledby="q4-text">
+  <div class="lm-quiz-glyph" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M28 26a11 11 0 1 1-13.5-15.5A9 9 0 0 0 28 26z"/><circle class="pt" cx="29" cy="12" r="1.6"/></svg></div>
   <p class="mc-eyebrow lm-quiz-eyebrow">CALIBRATION · Q4</p>
   <h1 id="q4-text" class="mc-serif mc-serif--italic lm-quiz-question">Your sleep, this week.</h1>
   <fieldset class="lm-quiz-options" id="q4-options" aria-label="Options for question 4">
@@ -367,6 +377,7 @@
 
 <!-- Q5 -->
 <section class="lm-quiz-screen" id="q5-screen" aria-labelledby="q5-text">
+  <div class="lm-quiz-glyph" aria-hidden="true"><svg viewBox="0 0 40 40"><circle cx="20" cy="22" r="11.5"/><path d="M20 22V15M20 22l5.5 3"/><path d="M16.5 6.5h7"/><circle class="pt" cx="20" cy="22" r="1.2"/></svg></div>
   <p class="mc-eyebrow lm-quiz-eyebrow">CALIBRATION · Q5</p>
   <h1 id="q5-text" class="mc-serif mc-serif--italic lm-quiz-question">Your current ritual around how you look.</h1>
   <fieldset class="lm-quiz-options" id="q5-options" aria-label="Options for question 5">

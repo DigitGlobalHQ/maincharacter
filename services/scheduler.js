@@ -202,11 +202,17 @@ async function sendMirrorPushNudges() {
   return { sent };
 }
 
+// ─── Health (observable on /health, so the per-minute tick can be verified on
+// live without Render log access — funnel-repair) ───
+const _health = { startedAt: null, lastTickAt: null, ticks: 0, lastError: null, lastErrorAt: null };
+function getHealth() { return { ..._health }; }
+
 /**
  * Start the scheduler.
  */
 function start() {
   log('INIT', 'Starting scheduler (every minute check)');
+  _health.startedAt = new Date().toISOString();
 
   // Check every minute
   cron.schedule('* * * * *', async () => {
@@ -214,7 +220,11 @@ function start() {
       await sendMorningMessages();
       await sendMirrorNudges();
       await maybeRegenerateWeeklyProtocols();
+      _health.lastTickAt = new Date().toISOString();
+      _health.ticks += 1;
     } catch (err) {
+      _health.lastError = err.message;
+      _health.lastErrorAt = new Date().toISOString();
       log('ERROR', `Scheduler error: ${err.message}`);
     }
   });
@@ -242,4 +252,4 @@ function start() {
   log('INIT', 'Scheduler started');
 }
 
-module.exports = { start, sendMorningMessages, sendMirrorNudges, sendMirrorPushNudges, checkMissedMessages };
+module.exports = { start, sendMorningMessages, sendMirrorNudges, sendMirrorPushNudges, checkMissedMessages, getHealth };

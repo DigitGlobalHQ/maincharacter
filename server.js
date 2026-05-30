@@ -315,6 +315,7 @@ app.get('/health', async (req, res) => {
         webhookGuard: whatsapp.webhookGuardMode(),
         schedulerEnabled: process.env.RUN_SCHEDULER !== 'false',
       },
+      scheduler: scheduler.getHealth(),
       metrics: {
         totalUsers: userCount,
         activeUsers: Object.values(usersMap).filter(u => u.status === 'active').length,

@@ -18,7 +18,11 @@
    The `_sanitizeReport()` backstop guarantees safety regardless of model output.
 3. **The public-paywall flip stays yours.** Razorpay is TEST mode; `PAYWALL_PUBLIC`
    is not being touched. Everything is staged for your one-click flip.
-4. Anything needing your Google login / admin password for live browser QA is
+4. **Pick the theme direction.** You left two theme samples for approval (charcoal vs
+   aubergine, commit e9eac31). The funnel (`/lookmaxing/*`) runs the newer black+silver
+   system; the PWA (`/lookmax/*`) still runs obsidian+gold. Unifying them needs your pick
+   first — held rather than guessed (Phase 2.7).
+5. Anything needing your Google login / admin password for live browser QA is
    listed per-item below as it comes up.
 
 ---
@@ -57,4 +61,38 @@ from the actual engine code paths — validator sweep over all text = `violation
 - **Conversion verdict:** neutral (safety change, no funnel-step change).
 - **QA proof:** unit + full-suite green locally; **live deploy + browser verify pending** (next).
 
-_Phases 2–4 below as they ship._
+---
+
+## PHASE 2 — FUNNEL POLISH & FIXES 🟢 in progress
+
+- **2.1 getAllUsers sweep** — ✅ verified clean. Grep across routes/services/lib/models
+  finds zero un-awaited adapted `User.*` calls; the only match is the explanatory
+  comment above an already-awaited helper in `routes/lookmax-auth.js`. Live
+  `/health.scheduler.lastError = null`. **QA: pass.**
+- **2.2 45-day persistent session** — ✅ shipped earlier (commit 42fdb46) + tests green
+  (`funnel-repair-p2-google`). Auth-aware nav verified by suite.
+- **2.3 Centre the sign-in box** — ✅ shipped. The single sign-in card was floating in
+  the left of a 2-col grid under a centred header; now constrained to one centred
+  420px column at all breakpoints (`.lm-fork__cards--single`). _Design: on-brand,
+  centred. QA: verified local + (live pending below)._
+- **2.4 Terms / Privacy / 18+** — ✅ shipped. Consent line under the sign-in buttons;
+  new on-brand `/terms` + `/privacy` pages carrying the "not a medical service / no
+  medication or dosages" disclaimer (reinforces Phase 1) + DPDPA/GDPR data-rights.
+  Smoke +3 (42/42).
+- **2.5 No blank screens / analysing state** — ✅ shipped. Full-screen analysing overlay
+  on `capture.html` (pulsing diamond + rotating Consultant lines) covers the ~5-15s
+  reading; hands off to `audit.html`'s existing loading skeleton. Reduced-motion aware.
+  165 frontend tests green.
+- **2.6 "Maybe Later" → dashboard card** — ✅ shipped earlier (commit 568b120), tests green.
+- **2.7 Theme-consistency sweep** — ⏸ **STAGED — FOUNDER DECISION.** The `/lookmax/*` PWA
+  pages use the obsidian+gold theme (`app.css`, matches CLAUDE.md §2). The `/lookmaxing/*`
+  funnel uses the newer `mc-*` black+silver+aubergine system from the funnel-repair theme
+  **proposals — which were left as two samples FOR your approval (commit e9eac31)**. Forcing
+  one system across all 8 PWA pages would guess an unmade design decision and risk the
+  design-spec tests. Held for your theme pick + design-agent execution. _See NEEDS FOUNDER._
+- **2.8 Trial CTA** — ✅ shipped. Reads "Start your free 7-day trial →" where the Daily
+  Mirror begins (fork.html).
+- **2.9 Admin signed-up users table + 401** — ✅ shipped earlier (commit 196ce17),
+  `admin-funnel` tests green (table fields + 401-without-auth).
+
+_Phases 3–4 below as they ship._

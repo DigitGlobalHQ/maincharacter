@@ -118,7 +118,15 @@ the actual task language end-to-end.
 
 **2. Email magic-link delivery** (config): under `messaging.mode = allowlist`, add your test email to `EMAIL_ALLOWLIST` (or test with `ADMIN_EMAIL`). Flipping `WHATSAPP_SEND_MODE=all` is a separate founder checkpoint — not required just to test.
 
-**P2 STATUS: 🟡 Google built (awaiting your OAuth client to verify live); email login verified for existing users; funnel sign-up + quiz-routing folded into P1.**
+**Bridge bug found via Render logs + fixed (`895647b`):** after Google auth succeeded
+("sign-in for d***@gmail.com → bridge"), the one-shot exchange 401'd "token not found".
+Root cause: `getUserByFirstLoginToken`/`getUserByMagicLinkToken` called `User.getAllUsers()`
+without `await` — a plain object under the JSON store (so dev/tests passed) but a **Promise
+under Postgres (live)**, making `Object.values(<Promise>)` empty so the freshly-minted token
+was never found. Fixed (await both); also un-breaks magic-link consume + post-payment
+first-login on live PG. +1 regression test (async-getAllUsers). Founder to retry the sign-in.
+
+**P2 STATUS: 🟡 Google built + bridge fixed; awaiting founder's retry to confirm end-to-end.**
 ## P1 — Remove guest flow; sign-in required first
 
 Shipped across 3 commits (`1755390` backend, `5d4394d` frontend+email) + the test

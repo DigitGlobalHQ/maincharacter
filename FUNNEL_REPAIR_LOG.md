@@ -94,7 +94,31 @@ the actual task language end-to-end.
 
 ---
 
-## P2 — Sign-in (Google + email) — _not started_
+## P2 — Sign-in (Google + email)
+
+### Findings
+- **Google sign-in was never built** — no `/auth/google` route, no `google-auth-library`, no OAuth client. The button was a dead link to `/lookmax/login`.
+- **Email magic-link is built and works** for *existing* users (verified locally: request-link → consume-link → JWT). It "doesn't send" on live because `messaging.mode = allowlist` and `services/email.js:113` suppresses any non-allowlisted recipient.
+- **New funnel visitors can't sign up via email**: request-link is enumeration-safe and *no-ops* for unknown emails (never creates an account); after consume, `login.html` lands at `/lookmax/`, not the quiz. Both are sign-up + routing concerns → folded into **P1** (sign-in-first funnel rework).
+
+### Built (commits `37ac6f9`, `5074dac`; tests +8 → 1141; smoke 38/38)
+- `GET /api/lookmax/auth/google/start` + `/callback` (Authorization Code flow, CSRF-safe, no new dep)
+- `User.getOrCreateByEmail` (synthetic-phone account model — see DECISIONS.md)
+- `/lookmax/oauth-complete` session bridge; `start.html` Google button rewired
+- Gated on `GOOGLE_OAUTH_CLIENT_ID` + `GOOGLE_OAUTH_CLIENT_SECRET`; until set, `/start` redirects back with `?error=google_unavailable`
+
+### Blocked / needs founder (P2)
+**1. Create the Google Cloud OAuth client** (only you can — credentials):
+   1. console.cloud.google.com → create/select a project → "APIs & Services" → "OAuth consent screen": External, app name "MainCharacter", your support email, add the `…/auth/userinfo.email`, `…/auth/userinfo.profile`, `openid` scopes; add yourself as a Test user.
+   2. "Credentials" → Create credentials → OAuth client ID → **Web application**.
+   3. **Authorized JavaScript origin:** `https://maincharacter.digitglobalservices.com`
+   4. **Authorized redirect URI (exact):** `https://maincharacter.digitglobalservices.com/api/lookmax/auth/google/callback`
+   5. Copy the Client ID + Client secret → set in Render env as `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET`. (Optional `GOOGLE_OAUTH_REDIRECT_URI` if you ever change the path; otherwise it's derived from `UPGRADE_BASE_URL`.) Redeploy.
+   6. Tell me when it's live and I'll verify the full Google round-trip on the live site.
+
+**2. Email magic-link delivery** (config): under `messaging.mode = allowlist`, add your test email to `EMAIL_ALLOWLIST` (or test with `ADMIN_EMAIL`). Flipping `WHATSAPP_SEND_MODE=all` is a separate founder checkpoint — not required just to test.
+
+**P2 STATUS: 🟡 Google built (awaiting your OAuth client to verify live); email login verified for existing users; funnel sign-up + quiz-routing folded into P1.**
 ## P1 — Remove guest flow — _not started_
 ## P3 — Homepage / logo / Orator / theme proposal — _not started_
 ## P4 — Quiz visuals — _not started_

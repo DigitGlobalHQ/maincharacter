@@ -168,9 +168,17 @@ waitlist modal; all hero/nav/bottom CTAs route to `/lookmaxing`.
 - _Logo across ALL pages:_ landing now uses the image; the `/lookmaxing` funnel navs use
   the `◆ MAINCHARACTER` wordmark. Decision needed: put the image in every nav, or treat
   the `◆` wordmark as the consistent mark (it already is across the funnel).
-- _Colour-theme proposal:_ the brief wants ONE sample page of a proposed unified theme
-  (aubergine-purple-with-one-metallic-accent vs refined charcoal) screenshotted for approval
-  before any wider roll-out. Awaiting founder direction (founder signalled a liking for the
-  aubergine-purple pillar look) — see the checkpoint question.
+- _Colour-theme proposal:_ ✅ delivered (founder asked for BOTH directions). Two standalone
+  sample pages on the same representative "reading" surface, for live side-by-side comparison
+  — **not** wired into the funnel, awaiting founder pick before any roll-out:
+  - Aubergine + light-point: `/lookmaxing/theme-preview-aubergine.html` (commit `e9eac31`)
+  - Charcoal + silver + light-point: `/lookmaxing/theme-preview-charcoal.html`
+  Both keep the single white light-point as the one accent. Once you pick (or say "stay as-is"),
+  I roll the chosen palette across the surfaces — or leave the current black/silver if neither wins.
+- _Logo across ALL pages:_ ✅ done — the monogram now sits in every `/lookmaxing` funnel nav
+  (index/start/quiz/capture/audit/audit-full/fork) + the homepage, matching treatment.
+
+**P3 STATUS: ✅ core shipped** (homepage re-skinned, logo everywhere, Orator Coming-Soon).
+Theme direction is the one open founder decision (two samples live for comparison).
 
 ## P4 — Quiz visuals — _not started_ (polish, last per the brief)

@@ -40,7 +40,7 @@ function getCurrentIST() {
  */
 async function sendMorningMessages() {
   const currentTime = getCurrentIST();
-  const users = User.getUsersForTime(currentTime);
+  const users = await User.getUsersForTime(currentTime);
 
   if (users.length === 0) return;
 
@@ -68,12 +68,12 @@ async function sendMorningMessages() {
 
       // Add all words for this day
       if (DAYS[nextDay]) {
-        User.addWordsLearned(user.phone, DAYS[nextDay].words, nextDay);
+        await User.addWordsLearned(user.phone, DAYS[nextDay].words, nextDay);
       }
 
       await whatsapp.sendMessageSafe(user.phone, message);
 
-      User.updateUser(user.phone, {
+      await User.updateUser(user.phone, {
         day: nextDay,
         awaitingResponse: true,
         lastMorningSent: new Date().toISOString(),
@@ -95,7 +95,7 @@ async function sendMorningMessages() {
  */
 async function sendMirrorNudges() {
   const currentTime = getCurrentIST();
-  const users = Object.values(User.getAllUsers()).filter(
+  const users = Object.values(await User.getAllUsers()).filter(
     (u) => u.lookmaxxingActive && (u.mirrorReminderTime || '06:30') === currentTime
   );
   if (users.length === 0) return;
@@ -127,7 +127,7 @@ function maybeRegenerateWeeklyProtocols() {
  * If a user should have received their message today but hasn't, send it now.
  */
 async function checkMissedMessages() {
-  const allUsers = User.getAllUsers();
+  const allUsers = await User.getAllUsers();
   const today = new Date().toDateString();
 
   for (const [phone, user] of Object.entries(allUsers)) {
@@ -148,11 +148,11 @@ async function checkMissedMessages() {
       
       if (message) {
         if (DAYS[nextDay]) {
-          User.addWordsLearned(user.phone, DAYS[nextDay].words, nextDay);
+          await User.addWordsLearned(user.phone, DAYS[nextDay].words, nextDay);
         }
         
         await whatsapp.sendMessageSafe(user.phone, message);
-        User.updateUser(user.phone, {
+        await User.updateUser(user.phone, {
           day: nextDay,
           awaitingResponse: true,
           lastMorningSent: new Date().toISOString(),
@@ -177,7 +177,7 @@ async function sendMirrorPushNudges() {
   }
 
   const push = require('./push');
-  const allUsers = User.getAllUsers();
+  const allUsers = await User.getAllUsers();
   let sent = 0;
 
   for (const user of Object.values(allUsers)) {

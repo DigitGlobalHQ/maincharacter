@@ -267,7 +267,7 @@ router.post('/auth/consume-link', async (req, res) => {
   }
 
   // Valid — clear the token fields and issue a JWT.
-  User.updateUser(user.phone, {
+  await User.updateUser(user.phone, {
     magicLinkToken: null,
     magicLinkExpiresAt: null,
     magicLinkConsumedAt: new Date().toISOString(),
@@ -275,7 +275,7 @@ router.post('/auth/consume-link', async (req, res) => {
   ipRecordSuccess(ip);
   log.info('CONSUME-LINK', `JWT issued for ${maskPhone(user.phone)}`);
 
-  const updatedUser = User.getUserByPhone(user.phone);
+  const updatedUser = await User.getUserByPhone(user.phone);
   return res.json({ token: signLookmaxToken(updatedUser), user: publicUser(updatedUser) });
 });
 
@@ -319,7 +319,7 @@ router.post('/auth/exchange-first-login', async (req, res) => {
   }
 
   // Valid — clear the firstLogin fields and issue a JWT.
-  User.updateUser(user.phone, {
+  await User.updateUser(user.phone, {
     firstLoginToken: null,
     firstLoginExpiresAt: null,
     firstLoginConsumedAt: new Date().toISOString(),
@@ -327,13 +327,13 @@ router.post('/auth/exchange-first-login', async (req, res) => {
   ipRecordSuccess(ip);
   log.info('EXCHANGE-FIRST-LOGIN', `JWT issued for ${maskPhone(user.phone)}`);
 
-  const updatedUser = User.getUserByPhone(user.phone);
+  const updatedUser = await User.getUserByPhone(user.phone);
   return res.json({ token: signLookmaxToken(updatedUser), user: publicUser(updatedUser) });
 });
 
 // ─── Admin bypass login ─── (unchanged from Night-4, log line masked)
 
-router.post('/auth/admin-login', (req, res) => {
+router.post('/auth/admin-login', async (req, res) => {
   const { phone, password } = req.body || {};
   const normalised = normalizePhone(phone);
   if (!adminLib.isAdminPhone(normalised) || !auth.checkPassword(password)) {
@@ -341,10 +341,10 @@ router.post('/auth/admin-login', (req, res) => {
     return res.status(401).json({ error: 'phone or password incorrect' });
   }
   // Ensure an activated user exists for this admin phone.
-  let user = User.getUserByPhone(normalised);
+  let user = await User.getUserByPhone(normalised);
   if (!user) {
-    user = User.createUser({ name: 'Founder', phone: normalised, pillar: 'aesthetic' });
-    user = User.updateUser(normalised, { lookmaxxingActive: true, lookmaxxingStartedAt: new Date().toISOString() });
+    await User.createUser({ name: 'Founder', phone: normalised, pillar: 'aesthetic' });
+    user = await User.updateUser(normalised, { lookmaxxingActive: true, lookmaxxingStartedAt: new Date().toISOString() });
   }
   log.info('ADMIN-LOGIN', `admin authenticated: ${maskPhone(normalised)}`);
   res.json({ token: signLookmaxToken(user), user: publicUser(user) });
@@ -383,15 +383,15 @@ router.post('/auth/request-otp', async (req, res) => {
 
 // ─── Verify OTP (unchanged — resurfaces with WhatsApp OTP) ───
 
-router.post('/auth/verify-otp', (req, res) => {
+router.post('/auth/verify-otp', async (req, res) => {
   const { phone, otp } = req.body || {};
   const normalised = normalizePhone(phone);
   if (!Lookmax.verifyOtp(normalised, otp)) {
     return res.status(401).json({ error: 'invalid or expired code' });
   }
-  let user = User.getUserByPhone(normalised);
+  let user = await User.getUserByPhone(normalised);
   if (!user) {
-    user = User.createUser({ name: 'Seeker', phone: normalised, pillar: 'aesthetic' });
+    user = await User.createUser({ name: 'Seeker', phone: normalised, pillar: 'aesthetic' });
   }
   res.json({ token: signLookmaxToken(user), user: publicUser(user) });
 });

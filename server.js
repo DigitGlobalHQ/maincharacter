@@ -351,9 +351,19 @@ sentry.setupExpressErrorHandler(app);
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, _next) => {
+  if (res.headersSent) return;
+  // Client errors (malformed JSON body → 400, payload too large → 413) come up
+  // through body-parser with a 4xx status. Honour them instead of masking as 500,
+  // and don't page Sentry for ordinary bad input.
+  const status = err.status || err.statusCode;
+  if (typeof status === 'number' && status >= 400 && status < 500) {
+    const msg = err.type === 'entity.parse.failed' ? 'Malformed request body.'
+      : status === 413 ? 'Request too large.'
+      : 'Bad request.';
+    return res.status(status).json({ error: msg });
+  }
   sentry.captureException(err);
   slog.error('UNHANDLED', err.message, { path: req.path, stack: err.stack });
-  if (res.headersSent) return;
   res.status(500).json({ error: 'Internal server error' });
 });
 

@@ -101,6 +101,12 @@ async function run() {
     const privacy = await fetch(`${BASE}/privacy`);
     check('GET /privacy → 200', privacy.status === 200);
 
+    // malformed JSON body is a client error (400), not a 500 (server.js handler)
+    const badJson = await fetch(`${BASE}/api/waitlist/early-access`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{bad',
+    });
+    check('malformed JSON body → 400 (not 500)', badJson.status === 400);
+
     // paywall safety gate (Night-4 P0.3): PAYWALL_PUBLIC unset → waitlist page.
     check('/health paywall gate is off by default', healthJson.paywall && healthJson.paywall.public === false);
     check('/health reports lookmaxxing configured', healthJson.lookmaxxing && healthJson.lookmaxxing.configured === true);

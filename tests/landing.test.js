@@ -27,11 +27,12 @@ describe('landing.html — locked copy (byte-identical guard)', () => {
 });
 
 describe('landing.html — 2-pillar update (P2.1)', () => {
-  it('Lookmaxxing card replaces the Aesthetic card and links to /audit', () => {
+  it('Lookmaxxing card replaces the Aesthetic card and links to /lookmaxing', () => {
     expect(html).toContain('<h3 class="pcard__name">Lookmaxxing</h3>');
-    // The card now uses an <a href="/audit"> for keyboard accessibility (design spec §11)
-    // instead of the old onclick=window.location.href pattern.
-    expect(html).toContain('href="/audit"');
+    // funnel-repair P3: the card now routes to the live /lookmaxing funnel
+    // (the legacy /audit funnel is cordoned off).
+    expect(html).toContain('href="/lookmaxing"');
+    expect(html).not.toContain('href="/audit"');
     expect(html).toContain('Get Your Aura Reading');
     // Day-30 promise (not Day-7) for Lookmaxxing.
     expect(html).toContain('By Day 30 you will see the version of you the camera has been waiting to capture.');
@@ -66,8 +67,7 @@ describe('landing.html — Aura++ reveal section (P2.2/P2.3)', () => {
 
   it('has the pricing strip and bundle CTA', () => {
     expect(html).toContain('Orator ₹799 · Lookmaxxing ₹1,499 · Aura++ ₹1,999/mo (saves ₹299)');
-    expect(html).toContain('/audit?intent=bundle');
-    expect(html).toContain('Unlock both →');
+    expect(html).toContain('Unlock both →'); // bundle CTA now routes to /lookmaxing (P3 cordon)
   });
 
   it('introduces no new design tokens (uses existing var(--…) only)', () => {

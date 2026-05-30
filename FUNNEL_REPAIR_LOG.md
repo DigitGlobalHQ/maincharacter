@@ -148,5 +148,29 @@ since the model is phone-keyed and these sign-ups have no phone yet. See DECISIO
 **P1 STATUS: ✅ shipped + structurally verified.** The full signed-in walk
 (sign in → quiz → photo → reading, tied to the account) is confirmed by the same
 founder sign-in click that closes P2 — one action verifies both.
-## P3 — Homepage / logo / Orator / theme proposal — _not started_
-## P4 — Quiz visuals — _not started_
+## P3 — Homepage / logo / Orator / theme proposal — 🟡 in progress
+
+**Homepage re-skin (done, live):** founder chose re-skin (not redirect). `landing.html`
+`/` is no longer the gold Orator page — re-skinned to the black/silver `/lookmaxing`
+identity by remapping the gold + pillar accent CSS variables to silver and sweeping the
+hardcoded gold/amber/purple/teal hex+rgb values to the silver system (the logo's single
+white light-point is the one accent). Locked hero/pillar/rank copy untouched. Commits
+`b3a76cc` + `98facbc` (logo asset). Verified live: zero gold, obsidian bg, `/lookmaxing`
+CTAs, zero `/audit` links.
+
+**Orator = Coming Soon:** already wired (Wave 2C) — the Orator pcard opens the Coming-Soon
+waitlist modal; all hero/nav/bottom CTAs route to `/lookmaxing`.
+
+**Logo:** the monogram now sits in the homepage nav (cropped from
+`public/maincharacter-logo.jpeg`, committed — it had been untracked and 404'd on first deploy).
+
+**Still open (P3):**
+- _Logo across ALL pages:_ landing now uses the image; the `/lookmaxing` funnel navs use
+  the `◆ MAINCHARACTER` wordmark. Decision needed: put the image in every nav, or treat
+  the `◆` wordmark as the consistent mark (it already is across the funnel).
+- _Colour-theme proposal:_ the brief wants ONE sample page of a proposed unified theme
+  (aubergine-purple-with-one-metallic-accent vs refined charcoal) screenshotted for approval
+  before any wider roll-out. Awaiting founder direction (founder signalled a liking for the
+  aubergine-purple pillar look) — see the checkpoint question.
+
+## P4 — Quiz visuals — _not started_ (polish, last per the brief)

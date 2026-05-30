@@ -12,8 +12,11 @@ import fs from 'node:fs';
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-lmx-pdf-'));
 process.env.AUDIT_V2_STORE_PATH = path.join(tmpDir, 'audit-v2.json');
+process.env.USERS_FILE_PATH = path.join(tmpDir, 'users.json');
+process.env.WAITLIST_FILE_PATH = path.join(tmpDir, 'waitlist.json');
 process.env.EVENTS_BACKEND = 'file';
 process.env.EVENTS_JSONL_PATH = path.join(tmpDir, 'events.jsonl');
+process.env.JWT_SECRET = 'test-jwt-secret';
 // Ensure R2 is NOT configured so storage.putPhoto goes through dry-run,
 // and getSignedUrl returns null — PDF endpoint falls back to a data URL.
 delete process.env.R2_ACCOUNT_ID;
@@ -24,6 +27,7 @@ delete process.env.R2_BUCKET;
 const request = (await import('supertest')).default;
 const express = (await import('express')).default;
 const lookmaxingRouter = (await import('../routes/lookmaxing.js')).default;
+const { makeSession } = await import('./helpers/lookmax-session.js');
 
 const app = express();
 app.use(express.json());
@@ -58,15 +62,14 @@ const SAMPLE_REPORT = {
 };
 
 describe('PDF generation — GET /api/lookmaxing/audit/:id/pdf', () => {
-  let guestCookie;
+  let bearer;
   let auditId;
 
   beforeAll(async () => {
-    const guestRes = await request(app).post('/api/lookmaxing/guest');
-    guestCookie = guestRes.headers['set-cookie']?.[0] || '';
+    ({ bearer } = await makeSession());
     const quizRes = await request(app)
       .post('/api/lookmaxing/quiz')
-      .set('Cookie', guestCookie)
+      .set('Authorization', bearer)
       .send({
         answers: [
           { questionId: 'q1', choice: 'A', label: 'Powerful.' },
@@ -84,12 +87,12 @@ describe('PDF generation — GET /api/lookmaxing/audit/:id/pdf', () => {
   });
 
   it('403 when audit is not paid', async () => {
-    // Create a separate unpaid audit
-    const g2 = await request(app).post('/api/lookmaxing/guest');
-    const c2 = g2.headers['set-cookie']?.[0] || '';
+    // Create a separate unpaid audit (different user)
+    const s2 = await makeSession();
+    const c2 = s2.bearer;
     const q2 = await request(app)
       .post('/api/lookmaxing/quiz')
-      .set('Cookie', c2)
+      .set('Authorization', c2)
       .send({
         answers: [
           { questionId: 'q1', choice: 'A', label: 'Powerful.' },
@@ -105,14 +108,14 @@ describe('PDF generation — GET /api/lookmaxing/audit/:id/pdf', () => {
 
     const res = await request(app)
       .get(`/api/lookmaxing/audit/${unpaidId}/pdf`)
-      .set('Cookie', c2);
+      .set('Authorization', c2);
     expect(res.status).toBe(403);
   });
 
   it('generates a PDF and returns a URL (or inline content when R2 is off)', async () => {
     const res = await request(app)
       .get(`/api/lookmaxing/audit/${auditId}/pdf`)
-      .set('Cookie', guestCookie);
+      .set('Authorization', bearer);
 
     expect(res.status).toBe(200);
     // When R2 is not configured, the route returns a signed-url: null + a base64 pdf field
@@ -126,10 +129,10 @@ describe('PDF generation — GET /api/lookmaxing/audit/:id/pdf', () => {
   it('second call returns cached result without re-generating', async () => {
     const res1 = await request(app)
       .get(`/api/lookmaxing/audit/${auditId}/pdf`)
-      .set('Cookie', guestCookie);
+      .set('Authorization', bearer);
     const res2 = await request(app)
       .get(`/api/lookmaxing/audit/${auditId}/pdf`)
-      .set('Cookie', guestCookie);
+      .set('Authorization', bearer);
 
     expect(res1.status).toBe(200);
     expect(res2.status).toBe(200);
@@ -141,19 +144,18 @@ describe('PDF generation — GET /api/lookmaxing/audit/:id/pdf', () => {
     }
   });
 
-  it('403 when a different guest tries to access the PDF', async () => {
-    const other = await request(app).post('/api/lookmaxing/guest');
-    const otherCookie = other.headers['set-cookie']?.[0] || '';
+  it('403 when a different user tries to access the PDF', async () => {
+    const other = await makeSession();
     const res = await request(app)
       .get(`/api/lookmaxing/audit/${auditId}/pdf`)
-      .set('Cookie', otherCookie);
+      .set('Authorization', other.bearer);
     expect(res.status).toBe(403);
   });
 
   it('404 for unknown audit', async () => {
     const res = await request(app)
       .get('/api/lookmaxing/audit/00000000-0000-0000-0000-000000000000/pdf')
-      .set('Cookie', guestCookie);
+      .set('Authorization', bearer);
     expect(res.status).toBe(404);
   });
 });

@@ -13,14 +13,18 @@ import crypto from 'node:crypto';
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-lmx-pay-'));
 process.env.AUDIT_V2_STORE_PATH = path.join(tmpDir, 'audit-v2.json');
+process.env.USERS_FILE_PATH = path.join(tmpDir, 'users.json');
+process.env.WAITLIST_FILE_PATH = path.join(tmpDir, 'waitlist.json');
 process.env.EVENTS_BACKEND = 'file';
 process.env.EVENTS_JSONL_PATH = path.join(tmpDir, 'events.jsonl');
+process.env.JWT_SECRET = 'test-jwt-secret';
 // Use a test webhook secret so we can construct valid signatures.
 process.env.RAZORPAY_WEBHOOK_SECRET = 'test_webhook_secret_lookmaxing';
 
 const request = (await import('supertest')).default;
 const express = (await import('express')).default;
 const lookmaxingRouter = (await import('../routes/lookmaxing.js')).default;
+const { makeSession } = await import('./helpers/lookmax-session.js');
 
 const app = express();
 // Must capture raw body for signature verification (mirrors server.js).
@@ -41,16 +45,15 @@ function razorpaySign(rawBody, secret = 'test_webhook_secret_lookmaxing') {
 }
 
 describe('Lookmaxing payment flow', () => {
-  let guestCookie;
+  let bearer;
   let auditId;
 
   beforeAll(async () => {
-    // Create guest + audit session
-    const guestRes = await request(app).post('/api/lookmaxing/guest');
-    guestCookie = guestRes.headers['set-cookie']?.[0] || '';
+    // Sign in + create audit session (guest flow removed — funnel-repair P1)
+    ({ bearer } = await makeSession());
     const quizRes = await request(app)
       .post('/api/lookmaxing/quiz')
-      .set('Cookie', guestCookie)
+      .set('Authorization', bearer)
       .send({
         answers: [
           { questionId: 'q1', choice: 'A', label: 'Powerful.' },
@@ -67,7 +70,7 @@ describe('Lookmaxing payment flow', () => {
     it('returns an order object with amount 9900', async () => {
       const res = await request(app)
         .post('/api/lookmaxing/pay/order')
-        .set('Cookie', guestCookie)
+        .set('Authorization', bearer)
         .send({ auditId });
       expect(res.status).toBe(200);
       expect(res.body.amount).toBe(9900);
@@ -80,7 +83,7 @@ describe('Lookmaxing payment flow', () => {
     it('returns 400 when auditId is missing', async () => {
       const res = await request(app)
         .post('/api/lookmaxing/pay/order')
-        .set('Cookie', guestCookie)
+        .set('Authorization', bearer)
         .send({});
       expect(res.status).toBe(400);
     });
@@ -88,7 +91,7 @@ describe('Lookmaxing payment flow', () => {
     it('returns 404 when auditId does not exist', async () => {
       const res = await request(app)
         .post('/api/lookmaxing/pay/order')
-        .set('Cookie', guestCookie)
+        .set('Authorization', bearer)
         .send({ auditId: '00000000-0000-0000-0000-000000000000' });
       expect(res.status).toBe(404);
     });
@@ -120,7 +123,7 @@ describe('Lookmaxing payment flow', () => {
       // Verify the audit is now paid
       const auditRes = await request(app)
         .get(`/api/lookmaxing/audit/${auditId}`)
-        .set('Cookie', guestCookie);
+        .set('Authorization', bearer);
       expect(auditRes.body.paid).toBe(true);
     });
 

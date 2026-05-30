@@ -12,12 +12,16 @@ import crypto from 'node:crypto';
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-lmx-consent-'));
 process.env.AUDIT_V2_STORE_PATH = path.join(tmpDir, 'audit-v2.json');
+process.env.USERS_FILE_PATH = path.join(tmpDir, 'users.json');
+process.env.WAITLIST_FILE_PATH = path.join(tmpDir, 'waitlist.json');
 process.env.EVENTS_BACKEND = 'file';
 process.env.EVENTS_JSONL_PATH = path.join(tmpDir, 'events.jsonl');
+process.env.JWT_SECRET = 'test-jwt-secret';
 
 const request = (await import('supertest')).default;
 const express = (await import('express')).default;
 const lookmaxingRouter = (await import('../routes/lookmaxing.js')).default;
+const { makeSession } = await import('./helpers/lookmax-session.js');
 
 const app = express();
 app.use(express.json());
@@ -26,20 +30,17 @@ app.use('/api/lookmaxing', lookmaxingRouter);
 afterAll(() => fs.rmSync(tmpDir, { recursive: true, force: true }));
 
 describe('Consent gate — /api/lookmaxing/analyze', () => {
-  let guestCookie;
+  let bearer;
   let auditId;
 
   beforeAll(async () => {
-    // Step 1: mint a guest session
-    const guestRes = await request(app).post('/api/lookmaxing/guest');
-    expect(guestRes.status).toBe(200);
-    guestCookie = guestRes.headers['set-cookie']?.[0] || '';
-    expect(guestCookie).toMatch(/mc_lookmaxing_guest=/);
+    // Step 1: sign in (guest flow removed — funnel-repair P1)
+    ({ bearer } = await makeSession());
 
     // Step 2: submit quiz answers
     const quizRes = await request(app)
       .post('/api/lookmaxing/quiz')
-      .set('Cookie', guestCookie)
+      .set('Authorization', bearer)
       .send({
         answers: [
           { questionId: 'q1', choice: 'A', label: 'I want to read as powerful.' },
@@ -57,7 +58,7 @@ describe('Consent gate — /api/lookmaxing/analyze', () => {
   it('412 when consent_18plus is not set on the session', async () => {
     const res = await request(app)
       .post('/api/lookmaxing/analyze')
-      .set('Cookie', guestCookie)
+      .set('Authorization', bearer)
       .send({ auditId });
     expect(res.status).toBe(412);
     expect(res.body.error).toBe('consent_required');
@@ -67,7 +68,7 @@ describe('Consent gate — /api/lookmaxing/analyze', () => {
     // Patch the session's consent flag to false via capture endpoint
     const captureRes = await request(app)
       .post('/api/lookmaxing/capture')
-      .set('Cookie', guestCookie)
+      .set('Authorization', bearer)
       .field('auditId', auditId)
       .field('consent_18plus', 'false')
       .attach('photo', Buffer.from([0xff, 0xd8, 0xff, 0xe0]), 'face.jpg');
@@ -76,7 +77,7 @@ describe('Consent gate — /api/lookmaxing/analyze', () => {
 
     const res = await request(app)
       .post('/api/lookmaxing/analyze')
-      .set('Cookie', guestCookie)
+      .set('Authorization', bearer)
       .send({ auditId });
     expect(res.status).toBe(412);
     expect(res.body.error).toBe('consent_required');

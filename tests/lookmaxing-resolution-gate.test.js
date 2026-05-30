@@ -13,11 +13,15 @@ import fs from 'node:fs';
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-lmx-gate-'));
 process.env.AUDIT_V2_STORE_PATH = path.join(tmpDir, 'audit-v2.json');
+process.env.USERS_FILE_PATH = path.join(tmpDir, 'users.json');
+process.env.WAITLIST_FILE_PATH = path.join(tmpDir, 'waitlist.json');
 process.env.EVENTS_BACKEND = 'file';
 process.env.EVENTS_JSONL_PATH = path.join(tmpDir, 'events.jsonl');
+process.env.JWT_SECRET = 'test-jwt-secret';
 
 const request = (await import('supertest')).default;
 const express = (await import('express')).default;
+const { makeSession } = await import('./helpers/lookmax-session.js');
 
 // Full sample Gemini report matching the spec §6 schema
 const SAMPLE_REPORT = {
@@ -61,16 +65,15 @@ beforeAll(async () => {
 afterAll(() => fs.rmSync(tmpDir, { recursive: true, force: true }));
 
 describe('Resolution gate — GET /api/lookmaxing/audit/:id', () => {
-  let guestCookie;
+  let bearer;
   let auditId;
 
   beforeAll(async () => {
-    const guestRes = await request(app).post('/api/lookmaxing/guest');
-    guestCookie = guestRes.headers['set-cookie']?.[0] || '';
+    ({ bearer } = await makeSession());
     // Create an audit with quiz answers and a report pre-seeded
     const quizRes = await request(app)
       .post('/api/lookmaxing/quiz')
-      .set('Cookie', guestCookie)
+      .set('Authorization', bearer)
       .send({
         answers: [
           { questionId: 'q1', choice: 'A', label: 'Powerful.' },
@@ -90,7 +93,7 @@ describe('Resolution gate — GET /api/lookmaxing/audit/:id', () => {
   it('free resolution (paid=false) strips all premium blocks', async () => {
     const res = await request(app)
       .get(`/api/lookmaxing/audit/${auditId}`)
-      .set('Cookie', guestCookie);
+      .set('Authorization', bearer);
     expect(res.status).toBe(200);
     expect(res.body.paid).toBe(false);
 
@@ -109,7 +112,7 @@ describe('Resolution gate — GET /api/lookmaxing/audit/:id', () => {
 
     const res = await request(app)
       .get(`/api/lookmaxing/audit/${auditId}`)
-      .set('Cookie', guestCookie);
+      .set('Authorization', bearer);
     expect(res.status).toBe(200);
     expect(res.body.paid).toBe(true);
 
@@ -118,19 +121,18 @@ describe('Resolution gate — GET /api/lookmaxing/audit/:id', () => {
     }
   });
 
-  it('returns 403 when guest_id does not match', async () => {
-    const otherGuest = await request(app).post('/api/lookmaxing/guest');
-    const otherCookie = otherGuest.headers['set-cookie']?.[0] || '';
+  it('returns 403 when the user does not own the audit', async () => {
+    const other = await makeSession();
     const res = await request(app)
       .get(`/api/lookmaxing/audit/${auditId}`)
-      .set('Cookie', otherCookie);
+      .set('Authorization', other.bearer);
     expect(res.status).toBe(403);
   });
 
   it('returns 404 for unknown audit id', async () => {
     const res = await request(app)
       .get('/api/lookmaxing/audit/00000000-0000-0000-0000-000000000000')
-      .set('Cookie', guestCookie);
+      .set('Authorization', bearer);
     expect(res.status).toBe(404);
   });
 });

@@ -6,11 +6,12 @@
  * Mounted at /api/lookmaxing/* in server.js.
  * Cited spec: briefs/stage-1-audit-spec.md §8 (backend contracts).
  *
- * Auth model:
- *   - guest_id cookie (mc_lookmaxing_guest): HttpOnly, SameSite=Lax, 24h,
- *     Path=/api/lookmaxing. Minted by POST /guest.
- *   - user JWT (Authorization: Bearer): Lookmaxxing-scoped, from lookmax-auth.
- *   Routes that mutate sessions check ownership: guest_id OR user_id match.
+ * Auth model (funnel-repair P1 — guest flow removed):
+ *   - user JWT (Authorization: Bearer, or ?token=): Lookmaxxing-scoped, from
+ *     lookmax-auth. Sign-in (Google / email) is required before the audit, so
+ *     every session is owned by a real user_id. Ownership = user_id match.
+ *   - The old guest_id cookie + POST /guest + POST /merge were removed; the
+ *     baseline carry-over now happens directly at payment (see /pay/webhook).
  *
  * Resolution gate (spec §5):
  *   free (paid=false)  → strips decomposition, biggestLever, quests,
@@ -142,58 +143,28 @@ function applyResolutionGate(report, paid) {
   return stripped;
 }
 
-// ─── Cookie helpers ────────────────────────────────────────────────────────────
-
-const COOKIE_NAME = 'mc_lookmaxing_guest';
-const COOKIE_TTL_MS = 24 * 60 * 60 * 1000; // 24 h
-
-function mintGuestCookie(res, guestId) {
-  res.cookie(COOKIE_NAME, guestId, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/api/lookmaxing',
-    maxAge: COOKIE_TTL_MS,
-  });
-}
-
-function clearGuestCookie(res) {
-  res.clearCookie(COOKIE_NAME, { path: '/api/lookmaxing' });
-}
-
-function getGuestId(req) {
-  return (req.cookies && req.cookies[COOKIE_NAME]) || null;
-}
-
-// ─── Auth helper — guest OR user ────────────────────────────────────────────
+// ─── Auth helper — signed-in user only (funnel-repair P1) ────────────────────
+// The guest flow was removed: sign-in (Google / email magic-link) is required
+// before the audit, so every session is owned by a real user. Identity comes
+// from the Lookmaxing JWT (Bearer header, or ?token= for link-style fetches).
 
 /**
- * Resolve the acting identity from cookie or JWT.
- * Returns { guestId, userId } — at most one is set.
- * Returns null if neither is present.
+ * Resolve the acting user from the Lookmaxing JWT.
+ * Returns { userId } or null when no valid token is present.
  */
 function resolveActor(req) {
-  const guestId = getGuestId(req);
-  if (guestId) return { guestId, userId: null };
-
   const header = req.headers['authorization'] || '';
   const bearer = header.startsWith('Bearer ') ? header.slice(7) : null;
-  if (bearer) {
-    const decoded = verifyLookmaxToken(bearer);
-    if (decoded) return { guestId: null, userId: decoded.userId };
-  }
+  const token = bearer || (req.query && req.query.token) || null;
+  const decoded = token ? verifyLookmaxToken(token) : null;
+  if (decoded && decoded.userId) return { userId: decoded.userId };
   return null;
 }
 
-/**
- * Check ownership of an audit session.
- * Returns true if the actor (guest or user) matches the session owner.
- */
+/** Check ownership of an audit session — the actor's userId must match. */
 function canAccess(session, actor) {
   if (!session || !actor) return false;
-  if (actor.guestId && session.guestId === actor.guestId) return true;
-  if (actor.userId && session.userId === actor.userId) return true;
-  return false;
+  return !!(actor.userId && session.userId === actor.userId);
 }
 
 // ─── Gemini audit-prompts module (Wave 1C) ────────────────────────────────────
@@ -516,50 +487,9 @@ async function _setAuditPaidForTest(auditId, paid) {
 // ROUTES
 // ══════════════════════════════════════════════════════════════════════════════
 
-// Cookie parsing middleware (express 4/5 does not include cookieParser by default).
-// We parse only the single cookie we own to avoid pulling in a full cookie-parser dep.
-router.use((req, res, next) => {
-  req.cookies = req.cookies || {};
-  const raw = req.headers.cookie || '';
-  for (const part of raw.split(';')) {
-    const [k, ...v] = part.trim().split('=');
-    if (k && v.length) req.cookies[k.trim()] = v.join('=').trim();
-  }
-  next();
-});
-
-// ─── POST /guest ──────────────────────────────────────────────────────────────
-
-router.post('/guest', (req, res) => {
-  const guestId = crypto.randomUUID();
-  const now     = new Date().toISOString();
-  const expires = new Date(Date.now() + COOKIE_TTL_MS).toISOString();
-
-  // Create an empty session row owned by this guest.
-  _putSession({
-    id:          guestId, // use guestId as session "marker" ID temporarily
-    guestId,
-    userId:      null,
-    quizAnswers: null,
-    photoKey:    null,
-    geminiReport: null,
-    paid:        false,
-    paidAt:      null,
-    razorpayPaymentId: null,
-    consentGiven: false,
-    pdfKey:      null,
-    pdfBase64:   null,
-    createdAt:   now,
-    updatedAt:   now,
-    expiresAt:   expires,
-  });
-
-  mintGuestCookie(res, guestId);
-  events.trackAnonymous('lookmaxing_fork_guest', {}, guestId).catch(() => {});
-  return res.json({ guestId });
-});
-
 // ─── POST /quiz ───────────────────────────────────────────────────────────────
+// Sign-in required (funnel-repair P1): every audit is owned by a signed-in user.
+// Returns the new auditId; the frontend carries it through capture → analyze.
 
 router.post('/quiz', (req, res) => {
   const actor = resolveActor(req);
@@ -578,56 +508,40 @@ router.post('/quiz', (req, res) => {
     label:      String(a.label      || '').slice(0, 200),
   }));
 
-  // Locate or create the session for this actor.
-  let auditId;
-  if (actor.guestId) {
-    // Guest-owned session already created by POST /guest.
-    // The session ID is the guestId (one session per guest at a time).
-    auditId = actor.guestId;
-    const session = _getSession(auditId);
-    if (!session) return res.status(404).json({ error: 'session not found — call POST /guest first' });
-    _updateSession(auditId, { quizAnswers: safe });
-  } else {
-    // User-owned session: create a new session UUID separate from the userId.
-    auditId = crypto.randomUUID();
-    const now = new Date().toISOString();
-    _putSession({
-      id:          auditId,
-      guestId:     null,
-      userId:      actor.userId,
-      quizAnswers: safe,
-      photoKey:    null,
-      geminiReport: null,
-      paid:        false,
-      paidAt:      null,
-      razorpayPaymentId: null,
-      consentGiven: false,
-      pdfKey:      null,
-      pdfBase64:   null,
-      createdAt:   now,
-      updatedAt:   now,
-      expiresAt:   null, // user-owned, lives forever
-    });
-  }
+  // User-owned session: the session id is a fresh UUID, distinct from the userId.
+  const auditId = crypto.randomUUID();
+  const now = new Date().toISOString();
+  _putSession({
+    id:          auditId,
+    guestId:     null, // column retained for back-compat; always null now
+    userId:      actor.userId,
+    quizAnswers: safe,
+    photoKey:    null,
+    geminiReport: null,
+    paid:        false,
+    paidAt:      null,
+    razorpayPaymentId: null,
+    consentGiven: false,
+    pdfKey:      null,
+    pdfBase64:   null,
+    createdAt:   now,
+    updatedAt:   now,
+    expiresAt:   null, // user-owned, lives forever
+  });
 
-  events.trackAnonymous('lookmaxing_quiz_completed', { auditId }, actor.guestId || actor.userId).catch(() => {});
+  events.trackAnonymous('lookmaxing_quiz_completed', { auditId }, actor.userId).catch(() => {});
   return res.json({ auditId, answersStored: safe.length });
 });
 
 // ─── POST /capture ────────────────────────────────────────────────────────────
 
-// Mounted at BOTH `/capture` and `/photo`: the frontend (capture.html) posts to
-// `/photo` and expects the server to resolve the auditId from the guest session,
-// while existing tests post to `/capture` with an explicit auditId. Both work.
+// Mounted at BOTH `/photo` (capture.html) and `/capture` (tests). The signed-in
+// frontend carries the auditId returned by /quiz and sends it here.
 router.post(['/capture', '/photo'], upload.single('photo'), async (req, res) => {
   const actor = resolveActor(req);
   if (!actor) return res.status(401).json({ error: 'unauthorized' });
 
-  // auditId may be supplied in the body; if omitted, resolve it from the actor.
-  // For a guest, the session id IS the guestId (one audit per guest at a time).
-  let auditId = String(req.body.auditId || '').trim();
-  if (!auditId && actor.guestId) auditId = actor.guestId;
-
+  const auditId = String(req.body.auditId || '').trim();
   const consentRaw  = String(req.body.consent_18plus || '').trim().toLowerCase();
   const consentGiven = consentRaw === 'true' || consentRaw === '1';
 
@@ -673,7 +587,7 @@ router.post(['/capture', '/photo'], upload.single('photo'), async (req, res) => 
   // photo, regardless of whether R2 is configured. Cleared after analyze.
   _updateSession(auditId, { photoKey, photoB64: photoBuffer.toString('base64') });
 
-  events.trackAnonymous('lookmaxing_photo_uploaded', { auditId }, actor.guestId || actor.userId).catch(() => {});
+  events.trackAnonymous('lookmaxing_photo_uploaded', { auditId }, actor.userId).catch(() => {});
   return res.json({ ok: true, auditId });
 });
 
@@ -727,7 +641,7 @@ router.post('/analyze', async (req, res) => {
   // Drop the raw photo bytes from the session now that the reading is generated.
   _updateSession(auditId, { geminiReport: report, analyzedAt: new Date().toISOString(), photoB64: null });
 
-  events.trackAnonymous('lookmaxing_audit_generated', { auditId }, actor.guestId || actor.userId).catch(() => {});
+  events.trackAnonymous('lookmaxing_audit_generated', { auditId }, actor.userId).catch(() => {});
 
   // Return free-resolution view (no premium fields).
   return res.json({
@@ -751,7 +665,7 @@ router.get('/audit/:id', (req, res) => {
     return res.status(403).json({ error: 'forbidden' });
   }
 
-  events.trackAnonymous('lookmaxing_audit_viewed', { auditId: id }, actor.guestId || actor.userId).catch(() => {});
+  events.trackAnonymous('lookmaxing_audit_viewed', { auditId: id }, actor.userId).catch(() => {});
 
   return res.json({
     auditId: id,
@@ -806,7 +720,7 @@ router.post('/pay/order', async (req, res) => {
       };
     }
 
-    events.trackAnonymous('lookmaxing_pay_initiated', { auditId }, actor.guestId || actor.userId).catch(() => {});
+    events.trackAnonymous('lookmaxing_pay_initiated', { auditId }, actor.userId).catch(() => {});
 
     return res.json({
       orderId:  order.id,
@@ -863,103 +777,42 @@ router.post('/pay/webhook', async (req, res) => {
     razorpayPaymentId: paymentId,
   });
 
-  // ₹99 credit toward month one — if user-owned, increment paywall_credits.
+  // ₹99 credit toward month one + set the Day-30 baseline. This is the moment
+  // the guest→user merge used to do (funnel-repair P1: sessions are user-owned
+  // from the start, so the baseline is written directly here, not via /merge).
   if (session.userId) {
     try {
       const user = await User.getUserByToken(session.userId);
       if (user) {
+        const updates = {};
         const current = typeof user.paywallCredits === 'number' ? user.paywallCredits : 0;
-        await User.updateUser(user.phone, { paywallCredits: current + 99 });
+        updates.paywallCredits = current + 99;
+
+        // Carry the report into users.lookmaxBaseline if unset. The shape must be
+        // compatible with reaudit.js computeEligibility() (checks .scores) and the
+        // Daily Mirror — see DECISIONS.md (stage-1 merge compat shim).
+        if (!user.lookmaxBaseline && session.geminiReport) {
+          const report = session.geminiReport;
+          updates.lookmaxBaseline = {
+            ...report, // full report for Gemini context pass-through
+            scores:           _buildCompatScores(report),
+            leverageAxis:     report.biggestLever ? report.biggestLever.metric : null,
+            overall:          report.auraScore || 0,
+            capturedAt:       new Date().toISOString(),
+            photoStorageKeys: session.photoKey ? [session.photoKey] : [],
+          };
+        }
+        await User.updateUser(user.phone, updates);
       }
     } catch (err) {
-      log.warn('PAY-WEBHOOK', `paywall_credits update failed: ${err.message}`);
+      log.warn('PAY-WEBHOOK', `post-payment user update failed: ${err.message}`);
     }
   }
 
-  events.trackAnonymous('lookmaxing_pay_succeeded', { auditId, paymentId }, session.guestId || session.userId).catch(() => {});
+  events.trackAnonymous('lookmaxing_pay_succeeded', { auditId, paymentId }, session.userId).catch(() => {});
 
   log.info('PAY-WEBHOOK', `payment.captured for audit ${auditId}`);
   return res.json({ ok: true });
-});
-
-// ─── POST /merge ──────────────────────────────────────────────────────────────
-
-router.post('/merge', async (req, res) => {
-  // Requires BOTH: guest_id cookie AND user JWT.
-  const guestId = getGuestId(req);
-  if (!guestId) return res.status(400).json({ error: 'guest cookie required' });
-
-  const header  = req.headers['authorization'] || '';
-  const bearer  = header.startsWith('Bearer ') ? header.slice(7) : null;
-  const decoded = bearer ? verifyLookmaxToken(bearer) : null;
-  if (!decoded || !decoded.userId) return res.status(401).json({ error: 'unauthorized' });
-
-  const userId = decoded.userId; // this is the user.token UUID
-
-  // Find the guest's audit session.
-  const guestSession = _getSession(guestId);
-  if (!guestSession || guestSession.guestId !== guestId) {
-    // No guest session found — still clear the cookie and return gracefully.
-    clearGuestCookie(res);
-    return res.json({ auditId: null, mergedRows: 0 });
-  }
-
-  // Bind session to user.
-  _updateSession(guestId, {
-    userId,
-    guestId:   null,
-    expiresAt: null, // user-owned rows never expire
-  });
-
-  // Carry the report into users.lookmaxBaseline if unset.
-  // The shape stored in lookmaxBaseline must be compatible with the existing
-  // reaudit.js computeEligibility() which checks lookmaxBaseline.scores.
-  // We wrap the gemini report's auraScore into a compatible scores object so
-  // baselineAvailable returns true without modifying reaudit.js (DECISIONS.md).
-  let baselineUpdated = false;
-  if (guestSession.geminiReport) {
-    try {
-      const user = await User.getUserByToken(userId);
-      if (user && !user.lookmaxBaseline) {
-        const report = guestSession.geminiReport;
-        // Build a compatibility shim: map decomposition scores to the 8-axis shape
-        // that the Daily Mirror and re-audit engines expect (skinClarity, jawDefinition,
-        // eyeArea, hairDensity, posture, facialHarmony, expression, bodyComposition).
-        const scores = _buildCompatScores(report);
-        const baseline = {
-          // Full report for Gemini context pass-through
-          ...report,
-          // Compatibility fields for reaudit.js + vision.js (DECISIONS.md)
-          scores,
-          leverageAxis: report.biggestLever ? report.biggestLever.metric : null,
-          overall:      report.auraScore || 0,
-          capturedAt:   new Date().toISOString(),
-          photoStorageKeys: guestSession.photoKey ? [guestSession.photoKey] : [],
-        };
-        await User.updateUser(user.phone, { lookmaxBaseline: baseline });
-        baselineUpdated = true;
-      }
-    } catch (err) {
-      log.warn('MERGE', `lookmaxBaseline update failed: ${err.message}`);
-    }
-  }
-
-  // Audit-log (best-effort, not a hard dependency).
-  try {
-    const db = require('../lib/db'); // eslint-disable-line global-require
-    if (db.isAvailable()) {
-      await db.query(
-        `INSERT INTO data_rights_log (user_id, action, props) VALUES
-         ((SELECT id FROM users WHERE token = $1), 'guest_merge', $2)`,
-        [userId, JSON.stringify({ guestId, auditId: guestId, ts: new Date().toISOString() })]
-      );
-    }
-  } catch { /* non-critical */ }
-
-  clearGuestCookie(res);
-  events.trackAnonymous('lookmaxing_merge_completed', { auditId: guestId, baselineUpdated }, userId).catch(() => {});
-
-  return res.json({ auditId: guestId, mergedRows: 1, baselineUpdated });
 });
 
 // ─── GET /audit/:id/pdf ───────────────────────────────────────────────────────
@@ -981,7 +834,7 @@ router.get('/audit/:id/pdf', async (req, res) => {
     if (session.pdfKey) {
       url = await storage.getSignedUrl(session.pdfKey, 24 * 60 * 60); // 24 h
     }
-    events.trackAnonymous('lookmaxing_pdf_downloaded', { auditId: id, cached: true }, actor.guestId || actor.userId).catch(() => {});
+    events.trackAnonymous('lookmaxing_pdf_downloaded', { auditId: id, cached: true }, actor.userId).catch(() => {});
     return res.json({
       auditId:   id,
       url,
@@ -1014,7 +867,7 @@ router.get('/audit/:id/pdf', async (req, res) => {
     _updateSession(id, { pdfBase64 });
   }
 
-  events.trackAnonymous('lookmaxing_pdf_downloaded', { auditId: id }, actor.guestId || actor.userId).catch(() => {});
+  events.trackAnonymous('lookmaxing_pdf_downloaded', { auditId: id }, actor.userId).catch(() => {});
 
   return res.json({ auditId: id, url, pdfBase64, cached: false });
 });

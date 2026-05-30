@@ -154,10 +154,13 @@ async function run() {
     check('GET /lookmaxing/capture → 200', lmxCapture.status === 200);
     const lmxFork = await fetch(`${BASE}/lookmaxing/fork`);
     check('GET /lookmaxing/fork → 200', lmxFork.status === 200);
-    // Guest API
+    // Guest flow removed (funnel-repair P1): /guest is gone, sign-in is required.
     const lmxGuest = await fetch(`${BASE}/api/lookmaxing/guest`, { method: 'POST' });
-    const lmxGuestJson = await lmxGuest.json();
-    check('POST /api/lookmaxing/guest → 200 with guestId', lmxGuest.status === 200 && !!lmxGuestJson.guestId);
+    check('POST /api/lookmaxing/guest → 404 (guest flow removed)', lmxGuest.status === 404);
+    const lmxQuizNoAuth = await fetch(`${BASE}/api/lookmaxing/quiz`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answers: [] }),
+    });
+    check('POST /api/lookmaxing/quiz without sign-in → 401', lmxQuizNoAuth.status === 401);
 
     // early-access waitlist capture (Night-4 P0.3)
     const early = await fetch(`${BASE}/api/waitlist/early-access`, {

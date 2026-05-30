@@ -30,6 +30,28 @@ describe('safety-validator: REJECTS forbidden output', () => {
     });
   }
 
+  // Real-world evasions a vision model could emit instead of the generic terms.
+  const evasions = [
+    ['brand: Rogaine', 'Apply Rogaine to the scalp nightly'],
+    ['brand: Propecia', 'Ask about Propecia for the hairline'],
+    ['brand: Nizoral', 'Use Nizoral shampoo twice a week'],
+    ['brand: Mintop/Tugain', 'Mintop or Tugain on the crown'],
+    ['brand: Retino-A', 'Dab Retino-A at night'],
+    ['dht blocker', 'Try a DHT blocker'],
+    ['supplement: fish oil', 'Add fish oil daily'],
+    ['supplement: omega-3', 'Take omega-3 each morning'],
+    ['supplement: vitamin D', 'Start a vitamin D supplement'],
+    ['supplement: gummies', 'Hair gummies every day'],
+    ['procedure: derma pen / GFC', 'Book a derma pen or GFC session'],
+    ['obfuscated percent (double space)', 'Use the 5  % solution'],
+    ['obfuscated mg', 'Take 2.5  mg nightly'],
+  ];
+  for (const [name, text] of evasions) {
+    it(`flags evasion: ${name}`, () => {
+      expect(V.isSafe(text), text).toBe(false);
+    });
+  }
+
   it('replaces an unsafe task with a safe-library task', () => {
     const { safe, task, violations } = V.validateTask(
       { id: 'hair-1', axis: 'hairDensity', title: 'Minoxidil 5%, once daily', instruction: '1ml topical. RCT-supported.' },

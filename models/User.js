@@ -627,3 +627,32 @@ module.exports = {
   addToWaitlist,
   getWaitlist,
 };
+
+/**
+ * Find-or-create a user by email — the entry point for email/Google sign-ups that
+ * have no WhatsApp phone yet (the Lookmaxing funnel, where sign-in precedes the audit).
+ *
+ * The User model is phone-keyed (`phone TEXT NOT NULL UNIQUE`). Email/OAuth accounts
+ * are therefore keyed by a SYNTHETIC phone id (`e` + 18 hex chars) — never collides
+ * with a real 10/12-digit number and survives phone-normalisation unchanged. The real
+ * identity is `email`; a real phone can be attached later if the user takes up Orator.
+ * Decision logged in DECISIONS.md (funnel-repair P2).
+ *
+ * Composes the backend-adapted exports above, so it works under both JSON and Postgres.
+ * @param {{email:string, name?:string, provider?:string}} params
+ * @returns {Promise<object>} the live user record
+ */
+async function getOrCreateByEmail({ email, name, provider = 'email' }) {
+  const normalised = String(email || '').trim().toLowerCase();
+  if (!normalised || !normalised.includes('@')) {
+    throw new Error('getOrCreateByEmail requires a valid email');
+  }
+  const existing = await module.exports.getUserByEmail(normalised);
+  if (existing) return existing;
+
+  const synthetic = 'e' + crypto.randomBytes(9).toString('hex'); // 19 chars, non-numeric
+  await module.exports.createUser({ name: name || 'Seeker', phone: synthetic, pillar: 'aesthetic' });
+  return module.exports.updateUser(synthetic, { email: normalised, authProvider: provider });
+}
+
+module.exports.getOrCreateByEmail = getOrCreateByEmail;

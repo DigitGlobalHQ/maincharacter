@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--
+  oauth-complete.html — sign-in bridge (funnel-repair P2)
+  The Google callback redirects here with ?flt=<one-shot firstLoginToken>&next=<funnel path>.
+  We exchange the one-shot token for the 24h lookmax JWT (no JWT ever appears in a URL),
+  store it under localStorage['lookmax.token'] via LM.setToken, then continue into the funnel.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex" />
+  <title>Signing you in — MainCharacter</title>
+  <link rel="stylesheet" href="/lookmaxing/tokens.css" />
+  <style>
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: var(--mc-obsidian, #070708); color: var(--mc-ink, #f4f1ea);
+      font-family: 'Sora', system-ui, sans-serif;
+      display: flex; align-items: center; justify-content: center; min-height: 100vh;
+    }
+    .lm-signing { text-align: center; opacity: 0.9; }
+    .lm-signing__mark { font-size: 0.75rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mc-silver, #b8b8c0); }
+    .lm-signing__msg { margin-top: 1rem; font-size: 0.95rem; color: var(--mc-silver-faint, #8a8a92); }
+    .lm-dots span {
+      display: inline-block; width: 5px; height: 5px; margin: 0 3px; border-radius: 50%;
+      background: var(--mc-ink, #f4f1ea); opacity: 0.4; animation: lm-pulse 1.2s infinite ease-in-out;
+    }
+    .lm-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .lm-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes lm-pulse { 0%, 80%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .lm-dots span { animation: none; } }
+  </style>
+</head>
+<body class="lookmaxing">
+  <div class="lm-signing" role="status" aria-live="polite">
+    <div class="lm-signing__mark">◆ MainCharacter</div>
+    <div class="lm-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="lm-signing__msg" id="msg">Signing you in.</div>
+  </div>
+
+  <script src="/lookmax/app.js"></script>
+  <script>
+    (function () {
+      var params = new URLSearchParams(location.search);
+      var flt = params.get('flt');
+      var next = params.get('next') || '/lookmaxing/quiz';
+      // Only ever continue to our own funnel — never an open redirect.
+      if (!/^\/(lookmaxing|lookmax)(\/|$|\?)/.test(next)) next = '/lookmaxing/quiz';
+      var msg = document.getElementById('msg');
+
+      function bail() {
+        msg.textContent = 'That sign-in could not be completed. Returning you to the start.';
+        setTimeout(function () { location.href = '/lookmaxing/start?error=signin'; }, 1400);
+      }
+
+      if (!flt) { bail(); return; }
+
+      fetch('/api/lookmax/auth/exchange-first-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstLoginToken: flt }),
+      })
+        .then(function (res) { return res.ok ? res.json() : null; })
+        .then(function (data) {
+          if (data && data.token && window.LM) {
+            window.LM.setToken(data.token);
+            location.replace(next);
+          } else {
+            bail();
+          }
+        })
+        .catch(bail);
+    }());
+  </script>
+</body>
+</html>

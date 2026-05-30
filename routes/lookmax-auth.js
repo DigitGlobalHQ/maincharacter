@@ -383,7 +383,138 @@ router.get('/me', requireLookmaxAuth, (req, res) => {
 
 router.post('/auth/logout', (req, res) => res.json({ ok: true }));
 
+// ═══════════════════════════════════════════════════════════════════
+// GOOGLE SIGN-IN — OAuth 2.0 Authorization Code flow (funnel-repair P2)
+// ═══════════════════════════════════════════════════════════════════
+// No new dependency: the code↔token exchange uses Node's global fetch, and the
+// session is delivered via the existing one-shot firstLoginToken + the
+// /auth/exchange-first-login route (no JWT ever placed in a URL).
+// Enabled only when GOOGLE_OAUTH_CLIENT_ID + GOOGLE_OAUTH_CLIENT_SECRET are set;
+// until then /auth/google/start redirects back with ?error=google_unavailable.
+
+const GOOGLE_AUTH_URL  = 'https://accounts.google.com/o/oauth2/v2/auth';
+const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
+
+function googleConfigured() {
+  return !!(process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET);
+}
+function googleRedirectUri() {
+  if (process.env.GOOGLE_OAUTH_REDIRECT_URI) return process.env.GOOGLE_OAUTH_REDIRECT_URI;
+  const base = (process.env.UPGRADE_BASE_URL || '').replace(/\/$/, '');
+  return `${base}/api/lookmax/auth/google/callback`;
+}
+function stateSecret() {
+  return process.env.JWT_SECRET || process.env.ADMIN_JWT_SECRET || 'maincharacter-lookmax-dev';
+}
+/** Only allow redirects back into our own funnel — never an open redirect. */
+function safeNext(next) {
+  const n = typeof next === 'string' ? next : '';
+  return /^\/(lookmaxing|lookmax)(\/|$|\?)/.test(n) ? n : '/lookmaxing/quiz';
+}
+function signState(payload) {
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const sig = crypto.createHmac('sha256', stateSecret()).update(body).digest('base64url');
+  return `${body}.${sig}`;
+}
+function verifyState(state) {
+  if (!state || !state.includes('.')) return null;
+  const [body, sig] = state.split('.');
+  const expect = crypto.createHmac('sha256', stateSecret()).update(body).digest('base64url');
+  const a = Buffer.from(sig); const b = Buffer.from(expect);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  try {
+    const p = JSON.parse(Buffer.from(body, 'base64url').toString());
+    if (p.exp && Date.now() > p.exp) return null;
+    return p;
+  } catch { return null; }
+}
+
+// GET /auth/google/start — kick off the consent redirect.
+router.get('/auth/google/start', (req, res) => {
+  if (!googleConfigured()) {
+    log.warn('GOOGLE', 'start hit but Google OAuth is not configured');
+    return res.redirect('/lookmaxing/start?error=google_unavailable');
+  }
+  const next = safeNext(req.query.next);
+  const nonce = crypto.randomBytes(16).toString('hex');
+  res.cookie('g_oauth_nonce', nonce, {
+    httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production',
+    path: '/api/lookmax', maxAge: 10 * 60 * 1000,
+  });
+  const state = signState({ next, nonce, exp: Date.now() + 10 * 60 * 1000 });
+  const url = new URL(GOOGLE_AUTH_URL);
+  url.searchParams.set('client_id', process.env.GOOGLE_OAUTH_CLIENT_ID);
+  url.searchParams.set('redirect_uri', googleRedirectUri());
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('scope', 'openid email profile');
+  url.searchParams.set('state', state);
+  url.searchParams.set('access_type', 'online');
+  url.searchParams.set('prompt', 'select_account');
+  return res.redirect(url.toString());
+});
+
+// GET /auth/google/callback — exchange the code, find/create the user, bridge a session.
+router.get('/auth/google/callback', async (req, res) => {
+  const fail = (reason) => {
+    log.warn('GOOGLE', `callback failed: ${reason}`);
+    return res.redirect('/lookmaxing/start?error=google_signin');
+  };
+  if (!googleConfigured()) return fail('not configured');
+
+  const { code, state } = req.query;
+  if (!code || !state) return fail('missing code/state');
+  const parsed = verifyState(String(state));
+  if (!parsed) return fail('bad/expired state');
+
+  // CSRF: the nonce cookie set at /start must match the one bound into the state.
+  const cookieHeader = req.headers.cookie || '';
+  const nonceEntry = cookieHeader.split(';').map((s) => s.trim()).find((s) => s.startsWith('g_oauth_nonce='));
+  const nonceVal = nonceEntry ? nonceEntry.slice('g_oauth_nonce='.length) : null;
+  res.clearCookie('g_oauth_nonce', { path: '/api/lookmax' });
+  if (!nonceVal || nonceVal !== parsed.nonce) return fail('nonce mismatch');
+
+  // Exchange the authorization code for tokens (server-to-server, with our secret).
+  let tok;
+  try {
+    const body = new URLSearchParams({
+      code: String(code),
+      client_id: process.env.GOOGLE_OAUTH_CLIENT_ID,
+      client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+      redirect_uri: googleRedirectUri(),
+      grant_type: 'authorization_code',
+    });
+    const r = await fetch(GOOGLE_TOKEN_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body,
+    });
+    tok = await r.json().catch(() => ({}));
+    if (!r.ok || !tok.id_token) return fail(`token exchange (${tok.error || r.status})`);
+  } catch (e) { return fail(`token exchange error: ${e.message}`); }
+
+  // The id_token came directly from Google over TLS in exchange for our client
+  // secret — its payload is trusted without re-verifying the signature.
+  let claims;
+  try { claims = JSON.parse(Buffer.from(tok.id_token.split('.')[1], 'base64url').toString()); }
+  catch { return fail('id_token decode'); }
+  if (!claims.email || !claims.email_verified) return fail('email not verified');
+
+  let user;
+  try { user = await User.getOrCreateByEmail({ email: claims.email, name: claims.name, provider: 'google' }); }
+  catch (e) { return fail(`user upsert: ${e.message}`); }
+
+  // Mint a one-shot login token and bridge to the page that stores the session.
+  const flt = crypto.randomBytes(32).toString('hex');
+  await User.updateUser(user.phone, {
+    firstLoginToken: flt, firstLoginExpiresAt: Date.now() + 10 * 60 * 1000, firstLoginConsumedAt: null,
+  });
+  log.info('GOOGLE', `sign-in for ${maskEmail(claims.email)} → bridge`);
+  return res.redirect(`/lookmax/oauth-complete?flt=${flt}&next=${encodeURIComponent(parsed.next)}`);
+});
+
 module.exports = router;
+module.exports.googleConfigured = googleConfigured;
+module.exports._signState = signState;
+module.exports._verifyState = verifyState;
+module.exports._safeNext = safeNext;
 module.exports.publicUser = publicUser;
 module.exports.otpAvailable = otpAvailable;
 // Export maps for testing (allows in-test inspection / reset)

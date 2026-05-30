@@ -204,6 +204,7 @@ const lookmaxPage = (file) => (req, res) =>
 app.get('/lookmax', lookmaxPage('index.html'));
 app.get('/lookmax/', lookmaxPage('index.html'));
 app.get('/lookmax/login', lookmaxPage('login.html'));
+app.get('/lookmax/oauth-complete', lookmaxPage('oauth-complete.html'));
 app.get('/lookmax/admin-login', lookmaxPage('admin-login.html'));
 app.get('/lookmax/mirror', lookmaxPage('mirror.html'));
 app.get('/lookmax/protocol', lookmaxPage('protocol.html'));

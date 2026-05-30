@@ -57,6 +57,11 @@
     }
     @media (min-width: 768px) { .lm-fork__cards { grid-template-columns: 1fr 1fr; } }
 
+    /* Single sign-in card: keep it one centred column on every breakpoint so it
+       sits under the centred header rather than floating in a 2-col grid. */
+    .lm-fork__cards--single { max-width: 420px; margin-left: auto; margin-right: auto; }
+    @media (min-width: 768px) { .lm-fork__cards--single { grid-template-columns: 1fr; } }
+
     .lm-fork-card {
       display: flex;
       flex-direction: column;
@@ -123,6 +128,21 @@
       color: var(--mc-silver-faint);
       max-width: 52ch;
     }
+
+    /* Terms / Privacy / 18+ consent line under the sign-in buttons */
+    .lm-fork-card__legal {
+      margin: var(--mc-sp-4) 0 0;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--mc-silver-faint);
+      text-align: center;
+    }
+    .lm-fork-card__legal a {
+      color: var(--mc-silver-mid);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .lm-fork-card__legal a:hover { color: var(--mc-silver-bright); }
 
     .lm-magic-sent {
       font-family: var(--mc-font-serif);
@@ -238,6 +258,11 @@
         <div id="magic-sent-msg" class="lm-magic-sent" hidden aria-live="polite">
           Check your inbox. A link is waiting. ◆
         </div>
+
+        <p class="lm-fork-card__legal">
+          By continuing you confirm you are 18 or older and agree to the
+          <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.
+        </p>
       </div>
     </div>
   </div>

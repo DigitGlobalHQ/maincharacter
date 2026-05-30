@@ -169,6 +169,14 @@ app.get('/payment-confirmed', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'payment-confirmed.html'));
 });
 
+// Legal — Terms & Privacy (clean URLs; linked from the sign-in consent line).
+app.get('/terms', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'terms.html'));
+});
+app.get('/privacy', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'privacy.html'));
+});
+
 // Audit result magic-link target (audit-confirmation email). Serves the audit
 // SPA; deep result rehydration from the link is a V4 item (BACKLOG).
 app.get('/audit/result/:token', (req, res) => {

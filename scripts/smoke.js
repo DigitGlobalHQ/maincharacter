@@ -93,6 +93,14 @@ async function run() {
     check('GET /audit → 200', audit.status === 200);
     check('/audit serves the Aesthetic Audit funnel', /The Aesthetic Audit/.test(auditBody));
 
+    // legal pages (Phase 2 — sign-in consent line links here)
+    const terms = await fetch(`${BASE}/terms`);
+    const termsBody = await terms.text();
+    check('GET /terms → 200', terms.status === 200);
+    check('/terms states 18+ and not-medical', /18 years/.test(termsBody) && /not a medical service/i.test(termsBody));
+    const privacy = await fetch(`${BASE}/privacy`);
+    check('GET /privacy → 200', privacy.status === 200);
+
     // paywall safety gate (Night-4 P0.3): PAYWALL_PUBLIC unset → waitlist page.
     check('/health paywall gate is off by default', healthJson.paywall && healthJson.paywall.public === false);
     check('/health reports lookmaxxing configured', healthJson.lookmaxxing && healthJson.lookmaxxing.configured === true);

@@ -181,4 +181,25 @@ waitlist modal; all hero/nav/bottom CTAs route to `/lookmaxing`.
 **P3 STATUS: ✅ core shipped** (homepage re-skinned, logo everywhere, Orator Coming-Soon).
 Theme direction is the one open founder decision (two samples live for comparison).
 
-## P4 — Quiz visuals — _not started_ (polish, last per the brief)
+## P4 — Quiz visuals ✅
+
+Each of the 5 calibration questions now carries a thin white line-art glyph in the brand's
+light-line language (presence/aura · skin droplet · hair · crescent moon · timer dial), with
+a soft fade-in on the active screen (`quiz.html`, commit `7c39127`). The selected-state
+already used a light-point fill+glow (not a bare dot) plus the gradient progress bar — kept.
+Mobile-first; verified in the 360px layout. 1134 tests passing, smoke 39/39.
+
+---
+
+## Summary — all five items
+
+| | Outcome |
+|---|---|
+| P0 photo→Gemini | ✅ fixed + verified live (8/8 real readings; route + photo-delivery + Gemini hardening) |
+| P2 sign-in | ✅ Google OAuth built + config-verified live; email works + funnel sign-up wired. Final click-through pending founder |
+| P1 remove guest | ✅ shipped + verified live (sign-in-first; `/merge` & `/guest` 404) |
+| P3 homepage/logo/Orator | ✅ homepage re-skinned black/silver, logo in every nav, Orator Coming-Soon; two theme samples live for founder pick |
+| P4 quiz visuals | ✅ 5 line-glyphs + refined states |
+
+**Open founder items:** (1) one Google sign-in click to confirm P2+P1 end-to-end; (2) pick a
+theme direction (or keep current); (3) rotate the leaked `.env` Gemini key (security).

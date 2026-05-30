@@ -109,10 +109,12 @@ the Phase 1 validator. Full mapping in `briefs/phase3-daily-mirror-status.md`.
   Model + `POST/GET /night-log` + `nightContext` in the mirror read + on-theme
   "Last night" card + 6 tests. _Design: on-brand (obsidian + gold, stepper +
   toggle). QA: 1174 suite green + live verify below._
-- **3.3 Trigger engine (streak targets + report-back)** — ⏸ specced (ready-to-build,
-  `briefs/phase3-daily-mirror-status.md`). The protocol already weights tasks to the
-  two weakest axes; the gap is the explicit per-trigger streak target + report-back.
-  Staged rather than half-shipped.
+- **3.3 Trigger engine (streak targets + report-back)** — ✅ **SHIPPED THIS RUN**
+  (commit 16bf930). `services/trigger-engine.js` (weak-axis → safe task → streak
+  target → report-back; tasks pulled from SAFE_TASK_LIBRARY so they are
+  validator-safe by construction, with a load-time invariant) + `GET
+  /protocol/triggers` + an on-theme "Your focus this week" card on protocol.html.
+  Context-only axes get no trigger. 9 tests; full suite 1183 green.
 - **3.4 Weekly weigh-in → Trajectory** — ✅ exists (`routes/reaudit.js`, `regenerateWeekly`).
 - **3.5 Time-lapse / streaks** — ✅ exists (`services/video.js` + `/reveal/*`, `streak`).
 - **3.6 Day-7 trial → paid (TEST mode)** — ✅ exists (`/lookmaxing/fork` → Razorpay test).
@@ -163,6 +165,6 @@ analyse wait, the audit-page arrival) are both covered.
 | Admin users table + 401 | ✅ PASS (tests) |
 | Night Log end-to-end | ✅ PASS (tests + live deploy) |
 | Razorpay stays TEST / paywall NOT flipped | ✅ HELD (founder-only) |
+| Trigger engine (3.3) end-to-end | ✅ PASS (tests + live deploy) |
 | Theme unification across PWA | ⏸ STAGED (founder theme pick) |
-| Trigger engine (3.3) | ⏸ SPECCED |
 | 3 real photos through live Gemini | ⏸ NEEDS FOUNDER photos |

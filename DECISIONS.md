@@ -893,3 +893,13 @@ Safety is enforced in the prompt itself, not only in app logic — per spec §7 
 
 ### Forbidden medical terms appear only in the [HARD PROHIBITIONS] section of the prompt
 Words such as "retinoid", "medication", "supplement", "fasting", and "procedure" are enumerated explicitly as refusal triggers inside the [HARD PROHIBITIONS] section header block. They do not appear in any instructional context elsewhere in the prompt. The test suite asserts this structurally by finding each occurrence and confirming it falls within the prohibition section bounds.
+
+---
+
+## 2026-05-29 — Funnel-repair P2: Google sign-in + email/Google account model
+
+### Google sign-in uses the OAuth 2.0 Authorization Code flow (server-side), not GIS
+Keeps the founder's existing styled silver Google button (a plain link) instead of Google's own rendered GIS button, which would violate the locked design tokens. The code↔token exchange runs server-side via Node's global `fetch` (no new dependency, no `google-auth-library`). The `id_token` returned directly from Google's token endpoint over TLS — in exchange for our client secret — is trusted without re-verifying its JWKS signature (standard for the code flow). CSRF is covered by an HMAC-signed `state` bound to an httpOnly nonce cookie; `next` is whitelisted to our own funnel paths (no open redirect). The session is delivered via the existing one-shot `firstLoginToken` + `/auth/exchange-first-login` bridge, so no JWT ever appears in a URL.
+
+### Email/Google sign-ups are keyed by a synthetic phone id (`getOrCreateByEmail`)
+The User model is phone-keyed (`phone TEXT NOT NULL UNIQUE`) and the Orator pillar is WhatsApp/phone-native, but Lookmaxing sign-in (Google or email) precedes any phone capture. Rather than re-key the whole model, email/OAuth accounts get a synthetic phone id (`e` + 18 hex chars) — non-numeric, never collides with a real 10/12-digit number, survives phone-normalisation unchanged — with `email` as the real identity (`authProvider` records the origin). A real phone can be attached later if the user takes up Orator. Reversible; avoids a model rewrite (CLAUDE.md §6 no-rewrites). Lives in `models/User.js` and works under both JSON and Postgres backends via the existing `_adapt` dispatch.

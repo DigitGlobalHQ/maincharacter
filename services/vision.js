@@ -20,6 +20,8 @@ const {
   hasForbiddenToken,
 } = require('../data/lookmax-prompts');
 
+const { validateProse } = require('../lib/safety-validator');
+
 const log = createLogger('VISION');
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 // gemini-2.0-flash shuts down 2026-06-01. Default to 2.5-flash; share env with services/gemini.js.
@@ -97,12 +99,20 @@ async function scoreAesthetic({ photos = [], quizAnswers = {}, hairFocus = false
     const parsed = JSON.parse(jsonMatch[0]);
     const scores = normaliseScores(parsed.scores || {});
     const hr = parsed.hairReceding || {};
+    // Safety tripwire: if the model emitted any medical/pharmacological content
+    // in the diagnosis prose, discard it and use the safe fallback (Phase 1).
+    let diagnosis = String(parsed.diagnosis || '').trim();
+    const proseCheck = validateProse(diagnosis);
+    if (!proseCheck.safe) {
+      log.error('SAFETY', `diagnosis tripped ${proseCheck.violations.join('/')} — using safe fallback`);
+      diagnosis = '';
+    }
     return {
       scores,
       weakestAxis: AESTHETIC_AXES.includes(parsed.weakestAxis)
         ? parsed.weakestAxis
         : weakestOf(scores),
-      diagnosis: String(parsed.diagnosis || '').trim() || fallbackDiagnosis(weakestOf(scores)),
+      diagnosis: diagnosis || fallbackDiagnosis(weakestOf(scores)),
       hairReceding: {
         detected: !!hr.detected,
         norwoodEstimate: clamp(hr.norwoodEstimate, 1, 7),

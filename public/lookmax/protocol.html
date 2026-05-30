@@ -128,7 +128,6 @@
 
   <script src="/lookmax/app.js"></script>
   <script>
-    const TIER = { 1: 'RCT-supported', 2: 'Mechanism-supported', 3: 'Observational' };
     let state = null;
 
     // ── KPI: page view ────────────────────────────────────────────────────────
@@ -179,7 +178,6 @@
           <div class="body" data-expand="${it.itemId}" role="button" aria-expanded="${it.itemId === (state._openId || '') ? 'true' : 'false'}" tabindex="0">
             <div class="title-row">
               <span class="title">${LM.escapeHtml(it.title)}</span>
-              <span class="tier-chip">${TIER[it.evidenceTier] || 'Observational'}</span>
             </div>
             <div class="instruction">${LM.escapeHtml(it.instruction || '')}</div>
             ${it.error ? `<div class="check-err">${LM.escapeHtml(it.error)}</div>` : ''}

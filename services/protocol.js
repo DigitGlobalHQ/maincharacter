@@ -11,6 +11,7 @@
 const { PROTOCOL_LIBRARY, AXIS_TO_BUCKET } = require('../data/lookmax-content');
 const { AESTHETIC_AXES } = require('../data/lookmax-prompts');
 const { createLogger } = require('../lib/log');
+const { sanitizeProtocolDay } = require('../lib/safety-validator');
 
 const log = createLogger('PROTOCOL');
 
@@ -84,17 +85,31 @@ function generateProtocol(user, audit) {
     dontsOf(b).forEach((d) => { if (!seenDn.has(d.id)) { seenDn.add(d.id); doNots.push(d); } })
   );
 
+  // Server-side safety backstop: every item passes the validator before it is
+  // surfaced. The static library is already safe-only, but this guarantees that
+  // nothing forbidden (drug names, dosages, RCT framing, prescriptive diet)
+  // can ever reach a user even if a row regresses (Phase 1, 2026-05-30).
+  const rawItems = finalItems.map((i) => ({
+    itemId: i.id,
+    id: i.id,
+    axis: i.axis,
+    title: i.title,
+    instruction: i.instruction,
+    checked: false,
+  }));
+  const rawDoNots = doNots
+    .slice(0, 3)
+    .map((d) => ({ itemId: d.id, id: d.id, axis: d.axis, title: d.title, instruction: d.instruction }));
+
+  const { day: clean, report } = sanitizeProtocolDay({ items: rawItems, doNot: rawDoNots });
+  if (report.length) {
+    log.error('SAFETY', `replaced ${report.length} unsafe protocol item(s): ${report.map((r) => r.violations.join('/')).join(', ')}`);
+  }
+
   return {
     generatedFrom: weakAxis,
-    items: finalItems.map((i) => ({
-      itemId: i.id,
-      axis: i.axis,
-      title: i.title,
-      instruction: i.instruction,
-      evidenceTier: i.evidenceTier,
-      checked: false,
-    })),
-    doNots: doNots.slice(0, 3).map((d) => ({ itemId: d.id, title: d.title, instruction: d.instruction })),
+    items: clean.items.map(({ id, ...rest }) => rest),
+    doNots: clean.doNot.map((d) => ({ itemId: d.itemId, title: d.title, instruction: d.instruction })),
   };
 }
 

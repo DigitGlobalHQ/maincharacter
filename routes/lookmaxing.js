@@ -45,8 +45,44 @@ const events   = require('../services/events');
 const User     = require('../models/User');
 const { verifyLookmaxToken } = require('../lib/lookmax-auth');
 const { createLogger }       = require('../lib/log');
+const { validateProse, QUALIFIED_PROFESSIONAL } = require('../lib/safety-validator');
 
 const log = createLogger('LOOKMAXING');
+
+/**
+ * Safety backstop (Phase 1): deep-walk an audit report and replace ANY string
+ * field that trips the safety validator (drug names, dosages, RCT framing,
+ * prescriptive diet, procedures) with the canonical "qualified professional"
+ * fallback. The audit prompt already forbids this content at generation time;
+ * this guarantees nothing forbidden survives to a user even on a prompt
+ * regression or a partial model failure. Mutates and returns the report.
+ * @param {object} report
+ * @param {string} auditId for logging
+ */
+function _sanitizeReport(report, auditId = '') {
+  let replaced = 0;
+  const walk = (node) => {
+    if (Array.isArray(node)) {
+      for (let i = 0; i < node.length; i += 1) {
+        if (typeof node[i] === 'string') {
+          if (!validateProse(node[i]).safe) { node[i] = QUALIFIED_PROFESSIONAL; replaced += 1; }
+        } else walk(node[i]);
+      }
+      return;
+    }
+    if (node && typeof node === 'object') {
+      for (const k of Object.keys(node)) {
+        const v = node[k];
+        if (typeof v === 'string') {
+          if (!validateProse(v).safe) { node[k] = QUALIFIED_PROFESSIONAL; replaced += 1; }
+        } else walk(v);
+      }
+    }
+  };
+  try { walk(report); } catch (err) { log.error('SAFETY', `sanitize walk failed: ${err.message}`); }
+  if (replaced) log.error('SAFETY', `audit ${String(auditId).slice(0, 8)}: replaced ${replaced} unsafe field(s) with safe fallback`);
+  return report;
+}
 
 const router = express.Router();
 
@@ -319,7 +355,7 @@ async function _callGemini(quizAnswers, photoBuffer) {
       if (typeof parsed.auraScore !== 'number' || !Array.isArray(parsed.freeSignals)) {
         throw new Error('Gemini response missing required fields (auraScore/freeSignals)');
       }
-      return parsed;
+      return _sanitizeReport(parsed);
     } catch (err) {
       lastErr = err;
       log.warn('GEMINI-CALL', `attempt ${attempt} failed: ${err.message}`);
@@ -914,3 +950,4 @@ module.exports._setAuditPaidForTest  = _setAuditPaidForTest;
 module.exports._getSession           = _getSession;   // for merge test assertions
 module.exports._putSession           = _putSession;
 module.exports.applyResolutionGate   = applyResolutionGate;
+module.exports._sanitizeReport       = _sanitizeReport; // Phase 1 safety backstop

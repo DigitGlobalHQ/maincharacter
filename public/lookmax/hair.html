@@ -166,7 +166,6 @@
 
   <script src="/lookmax/app.js"></script>
   <script>
-    const TIER = { 1: 'RCT-supported', 2: 'Mechanism-supported', 3: 'Observational' };
     const files = { front: null, crown: null };
 
     (async function () {
@@ -311,7 +310,7 @@
         <div class="card">
           <h3 style="font-size:18px">Do</h3>
           <ul class="reclist">
-            ${(rec.do || []).map((d) => `<li>${LM.escapeHtml(typeof d === 'string' ? d : d.title)}${d.evidenceTier ? ` <span class="tier">${TIER[d.evidenceTier] || ''}</span>` : ''}</li>`).join('')}
+            ${(rec.do || []).map((d) => { const t = typeof d === 'string' ? d : d.title; const note = (typeof d === 'object' && d.instruction) ? `<span class="rec-note">${LM.escapeHtml(d.instruction)}</span>` : ''; return `<li>${LM.escapeHtml(t)}${note}</li>`; }).join('')}
           </ul>
         </div>
         <div class="card card--look">

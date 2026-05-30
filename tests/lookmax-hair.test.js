@@ -29,35 +29,53 @@ app.use('/api/lookmax', lookmaxRoutes);
 
 afterAll(() => { vision._setModel(null); fs.rmSync(tmpDir, { recursive: true, force: true }); });
 
-describe('Norwood recommendation routing', () => {
-  it('Norwood 1: no minoxidil yet, explicit do-not', () => {
+describe('Norwood recommendation routing (SAFE-ONLY — Phase 1)', () => {
+  const V = require('../lib/safety-validator');
+  const allText = (r) =>
+    [...r.do, ...r.doNot].map((d) => `${d.title}\n${d.instruction || ''}`).join('\n');
+
+  it('every stage emits ZERO medical/pharmacological content', () => {
+    for (let n = 1; n <= 7; n++) {
+      const r = hair.recommendationsForNorwood(n);
+      expect(V.isSafe(allText(r)), `Norwood ${n} tripped: ${V.findViolations(allText(r))}`).toBe(true);
+      // explicit: none of the previously-shipped drug/procedure names survive
+      expect(/minoxidil|finasteride|ketoconazole|microneedling|transplant|fue|biotin/i.test(allText(r))).toBe(false);
+    }
+  });
+
+  it('mild reading: style + care guidance, no treatments', () => {
     const r = hair.recommendationsForNorwood(1);
-    expect(r.do.some((d) => /minoxidil/i.test(d.title))).toBe(false);
-    expect(r.doNot.some((d) => /DO NOT start minoxidil/i.test(d.title))).toBe(true);
+    expect(r.do.length).toBeGreaterThan(0);
+    expect(r.do.some((d) => /cut|length|scalp|sleep/i.test(d.title))).toBe(true);
   });
 
-  it('Norwood 2-3: minoxidil + ketoconazole + microneedling, laser-comb do-not', () => {
+  it('moderate reading: cut/scalp/sun guidance', () => {
     const r = hair.recommendationsForNorwood(3);
-    expect(r.do.some((d) => /minoxidil/i.test(d.title))).toBe(true);
-    expect(r.do.some((d) => /microneedling/i.test(d.title))).toBe(true);
-    expect(r.doNot.some((d) => /laser comb/i.test(d.title))).toBe(true);
+    expect(r.do.some((d) => /cut|scalp|sun|sleep|stress/i.test(d.title))).toBe(true);
   });
 
-  it('Norwood 4-5: adds the finasteride/derm conversation', () => {
+  it('concerned reading: offers a qualified-professional referral, not a prescription', () => {
     const r = hair.recommendationsForNorwood(5);
-    expect(r.do.some((d) => /finasteride/i.test(d.title))).toBe(true);
-    expect(r.doNot.some((d) => /dermatologist consult/i.test(d.title))).toBe(true);
+    expect(r.do.some((d) => /professional/i.test(d.title))).toBe(true);
+    expect(V.isSafe(allText(r))).toBe(true);
   });
 
-  it('Norwood 6-7: transplant framing', () => {
+  it('heavier reading: own-the-look + frame guidance, honest referral', () => {
     const r = hair.recommendationsForNorwood(7);
-    expect(r.do.some((d) => /FUE|transplant|hair surgeon/i.test(d.title))).toBe(true);
-    expect(r.doNot.some((d) => /topicals alone/i.test(d.title))).toBe(true);
+    expect(r.do.some((d) => /short|beard|frame|professional/i.test(d.title))).toBe(true);
+    expect(V.isSafe(allText(r))).toBe(true);
   });
 
   it('DO NOT list is always present for every stage', () => {
     for (let n = 1; n <= 7; n++) {
       expect(hair.recommendationsForNorwood(n).doNot.length).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('source copy is natively safe — nothing gets auto-replaced (no false positives)', () => {
+    for (let n = 1; n <= 7; n++) {
+      const r = hair.recommendationsForNorwood(n);
+      expect([...r.do, ...r.doNot].some((d) => d.replacedForSafety)).toBe(false);
     }
   });
 

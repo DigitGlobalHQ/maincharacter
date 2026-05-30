@@ -258,7 +258,7 @@ router.get('/reaudit/status', (req, res) => {
  *   completedAt: string,
  * }
  */
-router.post('/reaudit/submit', (req, res) => {
+router.post('/reaudit/submit', async (req, res) => {
   const user = req.lookmaxUser;
   const { scores } = req.body || {};
 
@@ -288,7 +288,7 @@ router.post('/reaudit/submit', (req, res) => {
 
   // Persist (idempotent — re-runs overwrite)
   const result = { scores, deltas, overallDelta, mirrorLevel: level, completedAt };
-  User.updateUser(user.phone, {
+  await User.updateUser(user.phone, {
     reAuditResult: result,
     reAuditCompletedThisCycle: true,
     mirrorLevel: level,

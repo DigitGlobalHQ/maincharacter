@@ -27,7 +27,7 @@ function log(tag, msg) {
 }
 
 // ─── Login → JWT (P1.4) ───
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const { password } = req.body || {};
   if (!auth.checkPassword(password)) {
     log('LOGIN', 'Failed admin login attempt');
@@ -105,8 +105,8 @@ router.get('/stats', requireAuth, async (req, res) => {
 });
 
 // ─── User detail ───
-router.get('/user/:phone', requireAuth, (req, res) => {
-  const user = User.getUserByPhone(req.params.phone);
+router.get('/user/:phone', requireAuth, async (req, res) => {
+  const user = await User.getUserByPhone(req.params.phone);
   if (!user) return res.status(404).json({ error: 'User not found' });
   res.json(user);
 });
@@ -180,12 +180,12 @@ router.post('/broadcast', requireAuth, async (req, res) => {
 });
 
 // ─── Promote rank ───
-router.post('/promote', requireAuth, (req, res) => {
+router.post('/promote', requireAuth, async (req, res) => {
   const { phone, rank } = req.body;
   const validRanks = ['unawakened', 'seeker', 'ascendant', 'luminary', 'sovereign'];
   if (!validRanks.includes(rank)) return res.status(400).json({ error: 'Invalid rank' });
 
-  const user = User.updateUser(phone, { rank });
+  const user = await User.updateUser(phone, { rank });
   if (!user) return res.status(404).json({ error: 'User not found' });
 
   log('PROMOTE', `${user.name} → ${rank}`);
@@ -196,7 +196,7 @@ router.post('/promote', requireAuth, (req, res) => {
 // Skips Razorpay entirely: upserts a fully-activated user (Orator + Lookmaxxing
 // → Aura++ computes true) with a pre-completed synthetic audit and today's
 // protocol, then returns the admin-login deep link. Idempotent by phone.
-router.post('/seed-test-user', requireAuth, (req, res) => {
+router.post('/seed-test-user', requireAuth, async (req, res) => {
   const { phone, name, weakestAxis } = req.body || {};
   const cleanPhone = String(phone || '').replace(/\D/g, '');
   if (!/^\d{10,13}$/.test(cleanPhone)) {
@@ -225,11 +225,11 @@ router.post('/seed-test-user', requireAuth, (req, res) => {
   });
 
   // Upsert the user (phone-primary). Existing → update, don't duplicate.
-  let user = User.getUserByPhone(cleanPhone);
+  let user = await User.getUserByPhone(cleanPhone);
   if (!user) {
-    user = User.createUser({ name: (name || 'Founder').trim(), phone: cleanPhone, pillar: 'aesthetic' });
+    user = await User.createUser({ name: (name || 'Founder').trim(), phone: cleanPhone, pillar: 'aesthetic' });
   }
-  user = User.updateUser(cleanPhone, {
+  user = await User.updateUser(cleanPhone, {
     name: (name || user.name || 'Founder').trim(),
     oratorActive: true,
     lookmaxxingActive: true,
@@ -534,7 +534,7 @@ router.post('/push/test', requireAuth, async (req, res) => {
   }
   const { userToken } = req.body || {};
   if (!userToken) return res.status(400).json({ error: 'userToken required' });
-  const user = User.getUserByToken(userToken);
+  const user = await User.getUserByToken(userToken);
   if (!user) return res.status(404).json({ error: 'user not found' });
 
   const push = require('../services/push');
@@ -645,7 +645,7 @@ function filterCompEvents(eventList, compTokens) {
 // Production safety block: if NODE_ENV=production AND the admin password is
 // still the default 'maincharacter2026', the endpoint refuses with 403 to
 // force the founder to rotate the password before granting comp access.
-router.post('/grant', requireAuth, (req, res) => {
+router.post('/grant', requireAuth, async (req, res) => {
   const { email, plans, reason } = req.body || {};
 
   // ── Production safety: block if default password ──
@@ -675,12 +675,12 @@ router.post('/grant', requireAuth, (req, res) => {
   const normalEmail = email.trim().toLowerCase();
 
   // ── Find or create the user ──
-  let user = User.getUserByEmail(normalEmail);
+  let user = await User.getUserByEmail(normalEmail);
   if (!user) {
     // Create a comp placeholder user with a synthetic phone
     // (Phone is the primary key; placeholder so the user record can be created)
     const placeholderPhone = `9100000${crypto.randomBytes(3).toString('hex').slice(0, 7)}`;
-    user = User.createUser({
+    user = await User.createUser({
       name: 'Founder',
       phone: placeholderPhone,
       pillar: 'aesthetic',
@@ -705,12 +705,12 @@ router.post('/grant', requireAuth, (req, res) => {
     updates.lookmaxxingStartedAt = now;
   }
 
-  user = User.updateUser(user.phone, updates);
+  user = await User.updateUser(user.phone, updates);
 
   // ── Issue a fresh session token (magic-link exchange token) ──
   const sessionToken = crypto.randomBytes(32).toString('hex');
   const expiresAt = Date.now() + 15 * 60 * 1000; // 15 min
-  User.updateUser(user.phone, {
+  await User.updateUser(user.phone, {
     magicLinkToken: sessionToken,
     magicLinkExpiresAt: expiresAt,
     magicLinkConsumedAt: null,
@@ -758,7 +758,7 @@ router.post('/grant', requireAuth, (req, res) => {
 // ─── POST /api/admin/timewarp — adjust lookmaxxingStartedAt ───────────────
 // Updates the user's lookmaxxingStartedAt to a given ISO timestamp or
 // computes now - daysAgo * 86400000. Idempotent. Audit-logged.
-router.post('/timewarp', requireAuth, (req, res) => {
+router.post('/timewarp', requireAuth, async (req, res) => {
   const { email, lookmaxxingStartedAt, daysAgo } = req.body || {};
 
   if (!email || !isValidEmail(email)) {
@@ -787,12 +787,12 @@ router.post('/timewarp', requireAuth, (req, res) => {
   }
 
   const normalEmail = email.trim().toLowerCase();
-  const user = User.getUserByEmail(normalEmail);
+  const user = await User.getUserByEmail(normalEmail);
   if (!user) {
     return res.status(404).json({ error: `No user found with email ${normalEmail}.` });
   }
 
-  User.updateUser(user.phone, { lookmaxxingStartedAt: targetTs });
+  await User.updateUser(user.phone, { lookmaxxingStartedAt: targetTs });
 
   appendAuditLog(timewarpLogPath(), {
     email: normalEmail,
@@ -821,7 +821,7 @@ router.post('/timewarp', requireAuth, (req, res) => {
 //
 // For the 'down' variant the overall score is always < (baseline - 3) so
 // classifyDelta() returns 'down'.
-router.post('/simulate-reaudit', requireAuth, (req, res) => {
+router.post('/simulate-reaudit', requireAuth, async (req, res) => {
   const { email, variant, heldCount } = req.body || {};
 
   if (!email || !isValidEmail(email)) {
@@ -834,7 +834,7 @@ router.post('/simulate-reaudit', requireAuth, (req, res) => {
   }
 
   const normalEmail = email.trim().toLowerCase();
-  const user = User.getUserByEmail(normalEmail);
+  const user = await User.getUserByEmail(normalEmail);
   if (!user) {
     return res.status(404).json({ error: `No user found with email ${normalEmail}.` });
   }
@@ -929,7 +929,7 @@ router.post('/simulate-reaudit', requireAuth, (req, res) => {
   const completedAt  = new Date().toISOString();
 
   // Persist
-  User.updateUser(user.phone, {
+  await User.updateUser(user.phone, {
     reAuditResult: { scores: syntheticScores, deltas, overallDelta, completedAt },
     reAuditCompletedThisCycle: true,
   });

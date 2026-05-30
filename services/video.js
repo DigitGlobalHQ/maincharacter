@@ -151,7 +151,7 @@ async function _processJob(jobId) {
     try {
       // Fetch mirror photos for this user
       const User = require('../models/User');
-      const user = User.getUserByToken(job.userToken);
+      const user = await User.getUserByToken(job.userToken);
       if (!user) throw new Error('user not found');
 
       const Lookmax = require('../models/Lookmax');

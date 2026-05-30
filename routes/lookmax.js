@@ -108,7 +108,7 @@ router.post('/mirror', upload.single('photo'), async (req, res) => {
     const streak = nextStreak(prev, user.lookmaxStreak || 0);
 
     Lookmax.addMirror(user.token, { photoPath, axes, overallScore: overall, mirrorLevel: level });
-    User.updateUser(user.phone, { mirrorLevel: level, lastMirrorAt: new Date().toISOString(), lookmaxStreak: streak });
+    await User.updateUser(user.phone, { mirrorLevel: level, lastMirrorAt: new Date().toISOString(), lookmaxStreak: streak });
 
     // Task 2b — retention pruner: enforce last-7-mirror window.
     // Collect all r2: mirror keys for this user (including the one just added)
@@ -199,7 +199,7 @@ router.post('/protocol/check', (req, res) => {
   res.json({ ok: true, completedCount: day.items.filter((i) => i.checked).length });
 });
 
-router.post('/protocol/complete-day', (req, res) => {
+router.post('/protocol/complete-day', async (req, res) => {
   const user = req.lookmaxUser;
   const day = ensureProtocolToday(user);
   if (day.isLocked) return res.json({ streak: user.lookmaxProtocolStreak || 0, streakIncremented: false });
@@ -210,7 +210,7 @@ router.post('/protocol/complete-day', (req, res) => {
   let streak = user.lookmaxProtocolStreak || 0;
   const incremented = ratio >= 0.8;
   streak = incremented ? streak + 1 : 0;
-  User.updateUser(user.phone, { lookmaxProtocolStreak: streak });
+  await User.updateUser(user.phone, { lookmaxProtocolStreak: streak });
   res.json({ streak, streakIncremented: incremented });
 });
 
@@ -443,7 +443,7 @@ router.get('/push/vapid-key', (req, res) => {
  * Requires auth. Never returns push_subscriptions in any response.
  * DPDPA: push subscriptions are PII-adjacent; stored only behind session token.
  */
-router.post('/push/subscribe', (req, res) => {
+router.post('/push/subscribe', async (req, res) => {
   const user = req.lookmaxUser;
   const { subscription } = req.body || {};
 
@@ -464,7 +464,7 @@ router.post('/push/subscribe', (req, res) => {
       ua: req.headers['user-agent'] ? req.headers['user-agent'].slice(0, 120) : '',
       subscribedAt: new Date().toISOString(),
     };
-    User.updateUser(user.phone, {
+    await User.updateUser(user.phone, {
       push_subscriptions: [...existing, record],
     });
     log.info('PUSH-SUB', `new subscription stored for user ${user.token}`);
@@ -777,7 +777,7 @@ router.delete('/me/data', async (req, res) => {
     }
 
     // ── 2. Soft-delete the user (set deletedAt) ───────────────────
-    User.updateUser(user.phone, { deletedAt });
+    await User.updateUser(user.phone, { deletedAt });
 
     log.info('DPDPA-DELETE', `user ${user.token} soft-deleted; ${r2Keys.length} R2 objects removed`);
     res.json({ ok: true, deletedAt });

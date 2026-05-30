@@ -61,7 +61,7 @@ async function sendToUser(userToken, payload) {
   }
 
   const User = require('../models/User');
-  const user = User.getUserByToken(userToken);
+  const user = await User.getUserByToken(userToken);
   if (!user) {
     log.warn('PUSH', `user not found for token ${userToken}`);
     return { result: 'not-found', sent: 0, failed: 0 };
@@ -119,7 +119,7 @@ async function sendToUser(userToken, payload) {
   // Prune stale subscriptions atomically
   if (staleSubs.length > 0) {
     const fresh = subs.filter((s) => !staleSubs.includes(s.endpoint));
-    User.updateUser(user.phone, { push_subscriptions: fresh });
+    await User.updateUser(user.phone, { push_subscriptions: fresh });
   }
 
   return { result: 'ok', sent, failed };

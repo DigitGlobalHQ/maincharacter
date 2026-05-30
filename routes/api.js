@@ -68,7 +68,7 @@ function eventsRateLimit(req, res, next) {
   next();
 }
 
-router.post('/events', eventsRateLimit, (req, res) => {
+router.post('/events', eventsRateLimit, async (req, res) => {
   const { name, props, anonId } = req.body || {};
   // Unknown event names are silently dropped (204) — never reveal the allowlist
   if (!name || !events.ALLOWED_EVENTS.has(name)) {
@@ -109,7 +109,7 @@ router.post('/enroll', enrollValidators, async (req, res) => {
 
     // ── Idempotency (P1.6): if this phone already enrolled, return success
     // WITHOUT re-sending the welcome message (prevents duplicate WhatsApps). ──
-    const existing = User.getUserByPhone(phone.trim());
+    const existing = await User.getUserByPhone(phone.trim());
     if (existing) {
       log('ENROLL', `Idempotent: ${existing.phone} already enrolled (no re-send)`);
       return res.json({
@@ -121,7 +121,7 @@ router.post('/enroll', enrollValidators, async (req, res) => {
     }
 
     // Create user
-    const user = User.createUser({
+    const user = await User.createUser({
       name: name.trim(),
       phone: phone.trim(),
       pillar: pillar || 'orator',
@@ -156,7 +156,7 @@ router.post('/enroll', enrollValidators, async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════
 
 // GET — Meta's verification handshake performed when the webhook is attached.
-router.get('/webhook/whatsapp', (req, res) => {
+router.get('/webhook/whatsapp', async (req, res) => {
   const challenge = whatsapp.verifyWebhookChallenge(
     req.query['hub.mode'],
     req.query['hub.verify_token'],
@@ -171,7 +171,7 @@ router.get('/webhook/whatsapp', (req, res) => {
 });
 
 // POST — incoming user messages. Meta signs the raw body with x-hub-signature-256.
-router.post('/webhook/whatsapp', (req, res) => {
+router.post('/webhook/whatsapp', async (req, res) => {
   const v = whatsapp.verifyWebhookSignature(req.rawBody, req.headers['x-hub-signature-256']);
   if (!v.ok) {
     log('WEBHOOK', `Rejected (${v.mode}): ${v.reason}`);
@@ -186,7 +186,7 @@ router.post('/webhook/whatsapp', (req, res) => {
 // Legacy Wati endpoint → 308 permanent redirect for 30 days so any cached Wati
 // webhook config does not 404 (DECISIONS.md Night-3 #6; deletion tracked in
 // BACKLOG). 308 preserves the method + body.
-router.all('/webhook/wati', (req, res) => res.redirect(308, '/api/webhook/whatsapp'));
+router.all('/webhook/wati', async (req, res) => res.redirect(308, '/api/webhook/whatsapp'));
 
 /**
  * Extract the salient fields from an incoming webhook body. Handles Meta's
@@ -266,7 +266,7 @@ async function processWhatsAppWebhook(body) {
 
     log('WEBHOOK', `← ${phone} (${senderName}): "${text.substring(0, 100)}"`);
 
-    const user = User.getUserByPhone(phone);
+    const user = await User.getUserByPhone(phone);
 
     // Unknown user — notify admin only
     if (!user) {
@@ -330,7 +330,7 @@ async function handleStartNow(user) {
   }
 
   // Advance to Day 1
-  User.updateUser(user.phone, {
+  await User.updateUser(user.phone, {
     day: 1,
     awaitingResponse: true,
     status: 'active',
@@ -341,7 +341,7 @@ async function handleStartNow(user) {
   // stays empty until Day 2 (Night-1 bug). Source of truth: words are forged
   // when a day's morning message is sent.
   if (DAYS[1]) {
-    User.addWordsLearned(user.phone, DAYS[1].words, 1);
+    await User.addWordsLearned(user.phone, DAYS[1].words, 1);
   }
 
   // Send Day 1 morning message
@@ -373,7 +373,7 @@ async function handleDailyResponse(user, text, msgType) {
   );
 
   // Save score
-  User.addScore(user.phone, {
+  await User.addScore(user.phone, {
     day,
     fluency: result.scores.fluency,
     confidenceTone: result.scores.confidenceTone,
@@ -383,7 +383,7 @@ async function handleDailyResponse(user, text, msgType) {
   });
 
   // Save chronicle
-  User.addChronicle(user.phone, {
+  await User.addChronicle(user.phone, {
     day,
     prompt: dayContent.prompt,
     userResponse: text,
@@ -392,18 +392,18 @@ async function handleDailyResponse(user, text, msgType) {
 
   // Mark words used
   if (result.wordsUsed && result.wordsUsed.length > 0) {
-    result.wordsUsed.forEach(word => {
-      User.masterWord(user.phone, word);
-    });
+    for (const word of result.wordsUsed) {
+      await User.masterWord(user.phone, word);
+    }
   }
 
   // Update user state
-  User.updateUser(user.phone, {
+  await User.updateUser(user.phone, {
     awaitingResponse: false,
   });
 
   // Build and send evening message
-  const updatedUser = User.getUserByPhone(user.phone);
+  const updatedUser = await User.getUserByPhone(user.phone);
   const eveningMsg = buildEveningMessage(day, user.name, result.scores, result.consultantMessage, previousScores);
   await whatsapp.sendMessageSafe(user.phone, eveningMsg);
 
@@ -411,12 +411,12 @@ async function handleDailyResponse(user, text, msgType) {
   if (day === 7) {
     setTimeout(async () => {
       try {
-        const finalUser = User.getUserByPhone(user.phone);
+        const finalUser = await User.getUserByPhone(user.phone);
         const assessment = await gemini.generateEvolutionAssessment(finalUser);
         const report = buildEvolutionReport(finalUser, assessment);
         await whatsapp.sendMessageSafe(user.phone, report);
 
-        User.updateUser(user.phone, {
+        await User.updateUser(user.phone, {
           trialComplete: true,
           status: 'completed',
           rank: 'seeker',
@@ -465,7 +465,7 @@ async function handleContinue(user) {
 async function handleStop(user) {
   log('CMD', `STOP from ${user.name}`);
 
-  User.updateUser(user.phone, { status: 'paused' });
+  await User.updateUser(user.phone, { status: 'paused' });
 
   const msg = `◆ Noted, ${user.name}.\n\nThe Seeker returns when the Seeker is ready.\nYour dashboard stays live. Your lexicon stays yours.\nYour rank holds.\n\nWhen you're ready — reply RETURN and the protocol resumes.\n\n◆ MainCharacter`;
   
@@ -478,7 +478,7 @@ async function handleStop(user) {
 async function handleReturn(user) {
   log('CMD', `RETURN from ${user.name}`);
 
-  User.updateUser(user.phone, { status: 'active' });
+  await User.updateUser(user.phone, { status: 'active' });
 
   const msg = `◆ Welcome back, ${user.name}.\n\nYour protocol resumes. The Consultant remembers where you left off.\n\nYour next message arrives tomorrow at ${user.preferredTime}.\n\n◆ MainCharacter`;
   
@@ -496,7 +496,7 @@ async function handlePayment(user) {
 // POST /api/waitlist — Coming Soon waitlist
 // ═══════════════════════════════════════════════════════════════════
 
-router.post('/waitlist', (req, res) => {
+router.post('/waitlist', async (req, res) => {
   const { phone, pillar } = req.body;
   if (!phone || !pillar) {
     return res.status(400).json({ error: 'Phone and pillar are required.' });
@@ -514,7 +514,7 @@ router.post('/waitlist', (req, res) => {
 // charge can fire during the dogfood window. Deduplicated by phone.
 // ═══════════════════════════════════════════════════════════════════
 
-router.post('/waitlist/early-access', (req, res) => {
+router.post('/waitlist/early-access', async (req, res) => {
   const { phone, name, auditSessionToken } = req.body || {};
   const cleanPhone = String(phone || '').replace(/\D/g, '');
   if (!/^\d{10,13}$/.test(cleanPhone)) {
@@ -538,8 +538,8 @@ router.post('/waitlist/early-access', (req, res) => {
 // GET /api/user/:token — User data for dashboard
 // ═══════════════════════════════════════════════════════════════════
 
-router.get('/user/:token', (req, res) => {
-  const user = User.getUserByToken(req.params.token);
+router.get('/user/:token', async (req, res) => {
+  const user = await User.getUserByToken(req.params.token);
   if (!user) return res.status(404).json({ error: 'User not found.' });
 
   // Strip sensitive data
@@ -561,7 +561,7 @@ router.post('/payment/create-order', async (req, res) => {
   }
 });
 
-router.post('/payment/verify', (req, res) => {
+router.post('/payment/verify', async (req, res) => {
   const { orderId, paymentId, signature } = req.body;
   const valid = razorpay.verifyPayment(orderId, paymentId, signature);
   
@@ -574,7 +574,7 @@ router.post('/payment/verify', (req, res) => {
   }
 });
 
-router.get('/payment/plans', (req, res) => {
+router.get('/payment/plans', async (req, res) => {
   res.json(razorpay.PLANS);
 });
 
@@ -598,10 +598,10 @@ router.post('/payment/subscribe', async (req, res) => {
     const planPillars = razorpay.pillarsForPlan(resolvedPlan);
 
     // Find or create the user (phone-primary, email optional — Night-2 #2).
-    let user = User.getUserByPhone(cleanPhone);
+    let user = await User.getUserByPhone(cleanPhone);
     if (!user) {
       const primaryPillar = planPillars.includes('orator') ? 'orator' : 'aesthetic';
-      user = User.createUser({ name: (name || 'Seeker').trim(), phone: cleanPhone, pillar: primaryPillar });
+      user = await User.createUser({ name: (name || 'Seeker').trim(), phone: cleanPhone, pillar: primaryPillar });
     }
     // Upsert details (phone-primary). For an existing user, refresh name/email/
     // audit link rather than creating a duplicate (P5.3).
@@ -609,7 +609,7 @@ router.post('/payment/subscribe', async (req, res) => {
     if (name && name.trim()) updates.name = name.trim();
     if (email) updates.email = email;
     if (auditSessionToken) updates.auditSessionId = auditSessionToken;
-    User.updateUser(cleanPhone, updates);
+    await User.updateUser(cleanPhone, updates);
 
     const sub = await razorpay.createSubscription(resolvedPlan, {
       phone: cleanPhone,
@@ -618,7 +618,7 @@ router.post('/payment/subscribe', async (req, res) => {
     });
 
     // Persist the subscription id so the post-payment page can look the user up.
-    if (sub && sub.id) User.updateUser(cleanPhone, { razorpaySubscriptionId: sub.id });
+    if (sub && sub.id) await User.updateUser(cleanPhone, { razorpaySubscriptionId: sub.id });
 
     log('PAYMENT', `subscribe ${cleanPhone} → ${resolvedPlan} [${planPillars.join(',')}]${sub.mock ? ' (mock)' : ''}`);
     res.json({
@@ -638,11 +638,11 @@ router.post('/payment/subscribe', async (req, res) => {
 // Query: subscriptionId (required) [+ paymentId, signature from Razorpay's
 // callback for verification]. Looks the user up by subscription id and reports
 // their live activation flags. Never leaks phone/PII beyond name.
-router.get('/payment/status', (req, res) => {
+router.get('/payment/status', async (req, res) => {
   const { subscriptionId, paymentId, signature } = req.query || {};
   if (!subscriptionId) return res.status(400).json({ error: 'subscriptionId required' });
 
-  const user = User.getUserBySubscriptionId(String(subscriptionId));
+  const user = await User.getUserBySubscriptionId(String(subscriptionId));
   if (!user) {
     // Webhook may not have landed yet, or unknown id. Page shows a graceful
     // "being verified" message and offers a refresh.
@@ -726,7 +726,7 @@ async function processPaymentEvent(event) {
     log('PAYMENT', `No phone in notes for event ${evt}`);
     return { handled: false };
   }
-  const user = User.getUserByPhone(phone);
+  const user = await User.getUserByPhone(phone);
   if (!user) {
     log('PAYMENT', `Unknown user ${phone} for event ${evt}`);
     return { handled: false };
@@ -804,7 +804,7 @@ async function processPaymentEvent(event) {
     const evtSubId =
       (event.payload && event.payload.subscription && event.payload.subscription.entity && event.payload.subscription.entity.id) || '';
     if (evtSubId && !user.razorpaySubscriptionId) updates.razorpaySubscriptionId = evtSubId;
-    User.updateUser(phone, updates);
+    await User.updateUser(phone, updates);
     const updatedUser = { ...user, ...updates };
     const status = User.computeAuraStatus(updatedUser);
     log('PAYMENT', `${user.name} (${phone}) → active via ${evt} [${pillars.join(',') || 'orator'}]${status.auraPlusPlus ? ' AURA++' : ''}`);
@@ -839,7 +839,7 @@ async function processPaymentEvent(event) {
     if (pillars.length === 0) updates.subscriptionStatus = 'cancelled';
     const after = { ...user, ...updates };
     if (!after.oratorActive && !after.lookmaxxingActive) updates.subscriptionStatus = 'cancelled';
-    User.updateUser(phone, updates);
+    await User.updateUser(phone, updates);
     log('PAYMENT', `${user.name} (${phone}) → cancelled via ${evt} [${pillars.join(',') || 'all'}]`);
     await whatsapp.sendMessageSafe(
       phone,
@@ -852,7 +852,7 @@ async function processPaymentEvent(event) {
   return { handled: false };
 }
 
-router.post('/payment/webhook', (req, res) => {
+router.post('/payment/webhook', async (req, res) => {
   const signature = req.headers['x-razorpay-signature'];
   const raw = req.rawBody || Buffer.from(JSON.stringify(req.body || {}));
   if (!razorpay.verifyWebhookSignature(raw, signature)) {

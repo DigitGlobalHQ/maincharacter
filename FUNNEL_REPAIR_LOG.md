@@ -119,6 +119,34 @@ the actual task language end-to-end.
 **2. Email magic-link delivery** (config): under `messaging.mode = allowlist`, add your test email to `EMAIL_ALLOWLIST` (or test with `ADMIN_EMAIL`). Flipping `WHATSAPP_SEND_MODE=all` is a separate founder checkpoint — not required just to test.
 
 **P2 STATUS: 🟡 Google built (awaiting your OAuth client to verify live); email login verified for existing users; funnel sign-up + quiz-routing folded into P1.**
-## P1 — Remove guest flow — _not started_
+## P1 — Remove guest flow; sign-in required first
+
+Shipped across 3 commits (`1755390` backend, `5d4394d` frontend+email) + the test
+migration. 1134 tests passing, smoke 39/39.
+
+**Backend** — `resolveActor`/`canAccess` are Bearer(JWT)-only; the guest_id cookie,
+cookie middleware, `POST /guest`, and `POST /merge` are removed. `/quiz` always
+creates a user-owned session and returns the auditId; capture/analyze require it in
+the body. `lookmax_baseline` (the Day-30 anchor) is written directly at payment now
+(same compat shim that `reaudit.js` reads), replacing the merge step.
+
+**Frontend** — `start.html` is a single sign-in path (Google + email), guest card/JS
+removed, founder copy "The reading saves to your account." Quiz/capture/audit pages
+require a `lookmax.token` (else → `/lookmaxing/start`), send `Authorization: Bearer`
+on every call, and carry the auditId quiz→capture→analyze via localStorage.
+
+**Email sign-up** — `request-link` find-or-creates the account when a funnel `next`
+is present (dashboard login keeps login-only semantics); `sendMagicLink` + `login.html`
+honor `next`, so an email sign-up lands in the quiz, not the dashboard.
+
+**Account model** — email/Google accounts use a synthetic phone id (`User.getOrCreateByEmail`)
+since the model is phone-keyed and these sign-ups have no phone yet. See DECISIONS.md.
+
+**Live verification (structural):** no guest button on `/lookmaxing/start`; `/quiz`
+401 without sign-in; `/merge` and `/guest` both 404.
+
+**P1 STATUS: ✅ shipped + structurally verified.** The full signed-in walk
+(sign in → quiz → photo → reading, tied to the account) is confirmed by the same
+founder sign-in click that closes P2 — one action verifies both.
 ## P3 — Homepage / logo / Orator / theme proposal — _not started_
 ## P4 — Quiz visuals — _not started_

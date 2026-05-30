@@ -273,6 +273,36 @@
 
     .lm-analyze-btn { width: 100%; }
 
+    /* ── Analysing overlay — full-screen "reading in progress" (no blank screen
+       during the photo upload + Gemini call, ~5-15s). Brand pulse + rotating
+       Consultant-voice lines. ─────────────────────────────────────────────── */
+    .lm-analyzing {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--mc-black);
+      display: flex; align-items: center; justify-content: center;
+      text-align: center; padding: var(--mc-sp-5);
+      animation: lm-analyzing-fade var(--mc-dur-base) var(--mc-ease);
+    }
+    .lm-analyzing[hidden] { display: none; }
+    .lm-analyzing__inner { max-width: 32ch; }
+    .lm-analyzing__diamond {
+      font-size: 40px; line-height: 1; color: var(--mc-silver-bright);
+      text-shadow: 0 0 18px var(--mc-light-point-glow-mid);
+      animation: lm-analyzing-pulse 1.8s var(--mc-ease) infinite;
+    }
+    .lm-analyzing__line {
+      font-family: var(--mc-font-serif); font-style: italic;
+      font-size: 22px; color: var(--mc-silver-bright);
+      margin: var(--mc-sp-5) 0 var(--mc-sp-2);
+      transition: opacity var(--mc-dur-base) var(--mc-ease);
+    }
+    .lm-analyzing__sub { font-size: 13px; color: var(--mc-silver-faint); margin: 0; letter-spacing: .02em; }
+    @keyframes lm-analyzing-pulse { 0%,100% { opacity:.5; transform:scale(.94); } 50% { opacity:1; transform:scale(1.06); } }
+    @keyframes lm-analyzing-fade { from { opacity:0; } to { opacity:1; } }
+    @media (prefers-reduced-motion: reduce) {
+      .lm-analyzing, .lm-analyzing__diamond { animation: none; }
+    }
+
     .lm-status {
       font-family: var(--mc-font-mono);
       font-size: var(--mc-fs-mono);
@@ -590,6 +620,39 @@
     img.src = url;
   });
 
+  // ── Analysing overlay (no blank screen during the reading) ──
+  var analyzingOverlay = document.getElementById('analyzing-overlay');
+  var analyzingLine = document.getElementById('analyzing-line');
+  var ANALYZING_LINES = [
+    'Reading the photograph.',
+    'Mapping the structure.',
+    'Weighing the signals.',
+    'Separating what you can change from what you cannot.',
+    'Composing the reading.',
+  ];
+  var _analyzingTimer = null, _analyzingIdx = 0;
+  function showAnalyzing() {
+    _analyzingIdx = 0;
+    analyzingLine.textContent = ANALYZING_LINES[0];
+    analyzingLine.style.opacity = '1';
+    analyzingOverlay.hidden = false;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (_analyzingTimer) clearInterval(_analyzingTimer);
+    _analyzingTimer = setInterval(function () {
+      _analyzingIdx = (_analyzingIdx + 1) % ANALYZING_LINES.length;
+      if (reduce) { analyzingLine.textContent = ANALYZING_LINES[_analyzingIdx]; return; }
+      analyzingLine.style.opacity = '0';
+      setTimeout(function () {
+        analyzingLine.textContent = ANALYZING_LINES[_analyzingIdx];
+        analyzingLine.style.opacity = '1';
+      }, 280);
+    }, 2400);
+  }
+  function hideAnalyzing() {
+    if (_analyzingTimer) { clearInterval(_analyzingTimer); _analyzingTimer = null; }
+    analyzingOverlay.hidden = true;
+  }
+
   // ── Analyze ──
   analyzeBtn.addEventListener('click', function () {
     if (!capturedBlob || !consentChecked) return;
@@ -599,6 +662,7 @@
     analyzeBtn.textContent = '· · ·';
     statusEl.hidden = false;
     errorEl.hidden = true;
+    showAnalyzing();
 
     var formData = new FormData();
     formData.append('photo', capturedBlob, 'face.jpg');
@@ -642,6 +706,7 @@
         window.location.href = '/lookmaxing/audit/' + data.auditId;
       })
       .catch(function (err) {
+        hideAnalyzing();
         analyzeBtn.setAttribute('aria-busy', 'false');
         analyzeBtn.disabled = false;
         analyzeBtn.textContent = 'Upload and analyze →';
@@ -652,5 +717,14 @@
   });
 }());
 </script>
+
+<!-- Analysing overlay (Phase 2 — no blank screen during the reading) -->
+<div class="lm-analyzing" id="analyzing-overlay" hidden role="status" aria-live="polite" aria-label="Your reading is in progress">
+  <div class="lm-analyzing__inner">
+    <div class="lm-analyzing__diamond" aria-hidden="true">&#9670;</div>
+    <p class="lm-analyzing__line" id="analyzing-line">Reading the photograph.</p>
+    <p class="lm-analyzing__sub">This takes a moment. Hold.</p>
+  </div>
+</div>
 </body>
 </html>

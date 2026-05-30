@@ -953,6 +953,56 @@ router.post('/simulate-reaudit', requireAuth, async (req, res) => {
   });
 });
 
+// ─── Signed-up users table (funnel-repair Item 3) ───────────────────────────
+// Founder-only (requireAuth): every signed-up user with email, signup date,
+// whether they paid the ₹99 audit unlock, and their funnel stage.
+router.get('/lookmax-users', requireAuth, async (req, res) => {
+  const fs = require('fs');            // eslint-disable-line global-require
+  const path = require('path');        // eslint-disable-line global-require
+
+  // Audit sessions live in the JSON store; index the latest per user.
+  let sessions = {};
+  try {
+    const storePath = process.env.AUDIT_V2_STORE_PATH ||
+      path.join(__dirname, '..', 'data', 'audit-sessions-v2.json');
+    sessions = JSON.parse(fs.readFileSync(storePath, 'utf8'));
+  } catch { sessions = {}; }
+
+  const byUser = {};
+  for (const s of Object.values(sessions)) {
+    if (!s || !s.userId) continue;
+    const prev = byUser[s.userId];
+    if (!prev || String(s.updatedAt || '') > String(prev.updatedAt || '')) byUser[s.userId] = s;
+  }
+
+  function stageOf(s) {
+    if (s && s.paid) return 'paid';
+    if (s && s.geminiReport) return 'reading';
+    if (s && s.photoKey) return 'photo';
+    if (s && s.quizAnswers) return 'quiz';
+    return 'signed_up';
+  }
+
+  const all = Object.values(await User.getAllUsers());
+  const rows = all.map((u) => {
+    const s = byUser[u.token];
+    const paid99 = !!(s && s.paid) ||
+      (typeof u.paywallCredits === 'number' && u.paywallCredits > 0) ||
+      !!u.lookmaxxingActive;
+    return {
+      email: u.email || null,
+      name: u.name || null,
+      signupAt: u.enrolledAt || null,
+      provider: u.authProvider || (u.email ? 'email' : 'phone'),
+      paid99,
+      stage: stageOf(s),
+      comp: !!u.comp,
+    };
+  }).sort((a, b) => String(b.signupAt || '').localeCompare(String(a.signupAt || '')));
+
+  res.json({ count: rows.length, paidCount: rows.filter((r) => r.paid99).length, users: rows });
+});
+
 // ─── Exported helpers — used by tests and funnel tile computation ────────────
 module.exports = router;
 module.exports.isCompUser      = isCompUser;

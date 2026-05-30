@@ -502,6 +502,19 @@
     </div>
   </div>
 
+  <!-- Signed-up users (funnel-repair Item 3) -->
+  <div class="funnel-section">
+    <h2>◆ Signed-up Users <span id="lmx-users-count" style="color:var(--ink-dim);font-weight:400;"></span></h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Email</th><th>Name</th><th>Signed up</th><th>Via</th><th>Paid ₹99</th><th>Stage</th></tr>
+        </thead>
+        <tbody id="lmx-users-table"><tr><td colspan="6" style="color:var(--ink-dim)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- Detail Panel -->
   <div id="detail-panel">
     <div class="detail-header">
@@ -629,6 +642,7 @@ function doLogin() {
       document.getElementById('admin-dashboard').style.display = 'block';
       loadData();
       loadFunnel();
+      loadLookmaxUsers();
       // Poll funnel tiles every 60 seconds (no websocket needed)
       if (funnelInterval) clearInterval(funnelInterval);
       funnelInterval = setInterval(loadFunnel, 60000);
@@ -642,6 +656,34 @@ function loadData() {
   fetch('/api/admin/stats', { headers: authHeaders() })
     .then(r => r.json())
     .then(renderData)
+    .catch(console.error);
+}
+
+// ── Signed-up users table (funnel-repair Item 3) ──
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
+function loadLookmaxUsers() {
+  fetch('/api/admin/lookmax-users', { headers: authHeaders() })
+    .then(r => r.json())
+    .then(d => {
+      const rows = d.users || [];
+      document.getElementById('lmx-users-count').textContent =
+        `— ${d.count} total · ${d.paidCount} paid`;
+      const tbody = document.getElementById('lmx-users-table');
+      if (!rows.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--ink-dim)">No sign-ups yet.</td></tr>'; return; }
+      tbody.innerHTML = rows.map(u => {
+        const signed = u.signupAt ? new Date(u.signupAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+        const paid = u.paid99 ? '◆ Yes' : '—';
+        const comp = u.comp ? ' <span style="color:var(--ink-faint)">(comp)</span>' : '';
+        return `<tr>
+          <td>${esc(u.email) || '<span style="color:var(--ink-faint)">—</span>'}${comp}</td>
+          <td>${esc(u.name)}</td>
+          <td>${signed}</td>
+          <td>${esc(u.provider)}</td>
+          <td>${paid}</td>
+          <td>${esc(u.stage)}</td>
+        </tr>`;
+      }).join('');
+    })
     .catch(console.error);
 }
 

@@ -6,6 +6,7 @@ import fs from 'node:fs';
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-admin-'));
 process.env.USERS_FILE_PATH = path.join(tmpDir, 'users.json');
 process.env.WAITLIST_FILE_PATH = path.join(tmpDir, 'waitlist.json');
+process.env.AUDIT_V2_STORE_PATH = path.join(tmpDir, 'audit-v2.json');
 process.env.ADMIN_PASSWORD = 'secret123';
 delete process.env.ADMIN_PASSWORD_HASH;
 process.env.WHATSAPP_SEND_MODE = 'off';
@@ -51,5 +52,29 @@ describe('admin route auth', () => {
   it('accepts the legacy header only while no hash is configured', async () => {
     const res = await request(app).get('/api/admin/stats').set('x-admin-password', 'secret123');
     expect(res.status).toBe(200);
+  });
+});
+
+describe('GET /api/admin/lookmax-users (funnel-repair Item 3)', () => {
+  it('401 without auth', async () => {
+    const res = await request(app).get('/api/admin/lookmax-users');
+    expect(res.status).toBe(401);
+  });
+
+  it('lists signed-up users with email, signup date, paid flag, and stage', async () => {
+    const User = require('../models/User');
+    await User.getOrCreateByEmail({ email: 'admin-list@example.com', name: 'Lister' });
+    const login = await request(app).post('/api/admin/login').send({ password: 'secret123' });
+    const res = await request(app)
+      .get('/api/admin/lookmax-users')
+      .set('Authorization', `Bearer ${login.body.token}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('count');
+    expect(res.body).toHaveProperty('paidCount');
+    const row = (res.body.users || []).find((u) => u.email === 'admin-list@example.com');
+    expect(row).toBeTruthy();
+    expect(row.stage).toBe('signed_up');
+    expect(row.paid99).toBe(false);
+    expect(row).toHaveProperty('signupAt');
   });
 });

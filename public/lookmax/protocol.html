@@ -94,6 +94,12 @@
     <h1 style="margin-bottom:4px">The work for today.</h1>
     <p class="muted" id="progressLine" aria-live="polite" style="margin-bottom:18px">—</p>
 
+    <!-- Active focus (Phase 3.3 trigger engine) — populated by JS when present -->
+    <div id="focusCard" class="card card--gold" style="display:none;margin-bottom:18px">
+      <div class="muted" style="font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Your focus this week</div>
+      <div id="focusList"></div>
+    </div>
+
     <!-- Loading placeholder -->
     <div id="loadingPlaceholder" class="center muted" style="padding:24px 0">◆</div>
 
@@ -137,7 +143,29 @@
       if (!user) return;
       LM.renderNav('protocol');
       await refresh();
+      loadFocus();
     })();
+
+    // Active focus — the trigger engine (Phase 3.3). Best-effort; never blocks.
+    async function loadFocus() {
+      try {
+        var res = await LM.api('/api/lookmax/protocol/triggers');
+        var triggers = (res && res.triggers) || [];
+        if (!triggers.length) return;
+        var html = triggers.map(function (tr) {
+          var p = tr.progress || {};
+          var line = p.answered && p.reportBack
+            ? '<div class="consultant" style="font-size:14px;margin-top:6px">' + LM.escapeHtml(p.reportBack) + '</div>'
+            : '<div class="muted" style="font-size:13px;margin-top:6px">Streak ' + (p.streak || 0) + ' / ' + tr.streakTargetDays + ' days · ' + LM.escapeHtml(tr.signal) + '</div>';
+          return '<div style="margin-bottom:12px">'
+            + '<div style="color:var(--ink);font-size:15px">' + LM.escapeHtml(tr.task.title) + '</div>'
+            + '<div class="muted" style="font-size:13px">' + LM.escapeHtml(tr.task.instruction) + '</div>'
+            + line + '</div>';
+        }).join('');
+        document.getElementById('focusList').innerHTML = html;
+        document.getElementById('focusCard').style.display = '';
+      } catch (_) { /* offline / unauth — leave focus hidden */ }
+    }
 
     async function refresh() {
       document.getElementById('loadingPlaceholder').style.display = '';

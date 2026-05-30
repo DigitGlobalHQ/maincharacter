@@ -246,6 +246,20 @@ router.post('/protocol/check', (req, res) => {
   res.json({ ok: true, completedCount: day.items.filter((i) => i.checked).length });
 });
 
+// Active triggers + streak progress for the user's weakest changeable axes
+// (Phase 3.3). Tasks are validator-safe by construction (services/trigger-engine).
+router.get('/protocol/triggers', (req, res) => {
+  const user = req.lookmaxUser;
+  const triggerEngine = require('../services/trigger-engine');
+  const protocolSvc = require('../services/protocol');
+  const audit = protocolSvc.weeklyAuditFromMirrors(user);
+  const scores = audit.scores || {};
+  // Weakest-first ordering across the changeable axes we actually score.
+  const weakAxes = AESTHETIC_AXES.slice().sort((a, b) => (scores[a] ?? 50) - (scores[b] ?? 50));
+  const mirrors = Lookmax.getMirrors(user.token);
+  res.json({ triggers: triggerEngine.triggersWithProgress(weakAxes, mirrors, 2) });
+});
+
 router.post('/protocol/complete-day', async (req, res) => {
   const user = req.lookmaxUser;
   const day = ensureProtocolToday(user);

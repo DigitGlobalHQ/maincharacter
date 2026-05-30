@@ -147,8 +147,8 @@ app.get('/audit-legacy', (req, res) => {
 });
 
 // User Dashboard
-app.get('/dashboard/:token', (req, res) => {
-  const user = User.getUserByToken(req.params.token);
+app.get('/dashboard/:token', async (req, res) => {
+  const user = await User.getUserByToken(req.params.token);
   if (!user) return res.status(404).send('Dashboard not found.');
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
@@ -352,7 +352,7 @@ app.use((err, req, res, _next) => {
 // START SERVER + SCHEDULER
 // ═══════════════════════════════════════════════════════════════════
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log('');
   console.log('═'.repeat(62));
   console.log('  MAINCHARACTER v2.0 — The Orator Protocol');
@@ -395,7 +395,7 @@ app.listen(PORT, () => {
   // dogfood window. Surface it loudly so the founder notices before a user pays.
   const liveKeys = String(process.env.RAZORPAY_KEY_ID || '').startsWith('rzp_live_');
   const paywallPublic = process.env.PAYWALL_PUBLIC === 'true';
-  const everPaid = Object.values(User.getAllUsers()).some(
+  const everPaid = Object.values(await User.getAllUsers()).some(
     (u) => u.oratorActive || u.lookmaxxingActive || u.subscriptionStatus === 'active'
   );
   if (liveKeys && paywallPublic && !everPaid) {

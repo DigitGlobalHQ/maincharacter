@@ -135,8 +135,10 @@ describe('isCompUser helper (exported from admin route)', () => {
 });
 
 describe('filterCompEvents helper (exported from admin route)', () => {
-  it('removes events attributed to comp users', () => {
-    const { filterCompEvents } = require('../routes/admin');
+  it('removes events attributed to comp users', async () => {
+    // New contract (funnel-repair): the comp-token set is fetched once (async,
+    // PG-safe) and passed in, instead of filterCompEvents fetching it internally.
+    const { filterCompEvents, getCompTokens } = require('../routes/admin');
 
     const compToken = compUserToken;
     const realToken = realUserToken;
@@ -147,7 +149,8 @@ describe('filterCompEvents helper (exported from admin route)', () => {
       { userToken: null, name: 'audit_started', ts: new Date().toISOString() },
     ];
 
-    const filtered = filterCompEvents(allEvents);
+    const compTokens = await getCompTokens();
+    const filtered = filterCompEvents(allEvents, compTokens);
     // Comp user event should be removed, real user and anonymous events kept
     expect(filtered.length).toBe(2);
     expect(filtered.find(e => e.userToken === compToken)).toBeUndefined();

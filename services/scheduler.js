@@ -115,10 +115,10 @@ async function sendMirrorNudges() {
  * Sunday 00:05 IST: regenerate each active Lookmaxxing user's protocol from the
  * past week's mirror trends (P5.2). Cheap no-op the rest of the week.
  */
-function maybeRegenerateWeeklyProtocols() {
+async function maybeRegenerateWeeklyProtocols() {
   const ist = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
   if (ist.getUTCDay() === 0 && getCurrentIST() === '00:05') {
-    require('./protocol').regenerateWeekly();
+    await require('./protocol').regenerateWeekly();
   }
 }
 
@@ -213,7 +213,7 @@ function start() {
     try {
       await sendMorningMessages();
       await sendMirrorNudges();
-      maybeRegenerateWeeklyProtocols();
+      await maybeRegenerateWeeklyProtocols();
     } catch (err) {
       log('ERROR', `Scheduler error: ${err.message}`);
     }

@@ -124,12 +124,12 @@ function weeklyAuditFromMirrors(user) {
  * Sunday regeneration (P5.2): rebuild today's ProtocolDay for every active
  * Lookmaxxing user from their past-week mirror trends. Returns the count.
  */
-function regenerateWeekly() {
+async function regenerateWeekly() {
   let count = 0;
   try {
     const User = require('../models/User');
     const Lookmax = require('../models/Lookmax');
-    const users = Object.values(User.getAllUsers()).filter((u) => u.lookmaxxingActive);
+    const users = Object.values(await User.getAllUsers()).filter((u) => u.lookmaxxingActive);
     for (const u of users) {
       const audit = weeklyAuditFromMirrors(u);
       Lookmax.setProtocolDay(u.token, generateProtocol(u, audit));

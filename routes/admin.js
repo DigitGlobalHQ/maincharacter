@@ -56,8 +56,8 @@ function requireAuth(req, res, next) {
 }
 
 // ─── Stats ───
-router.get('/stats', requireAuth, (req, res) => {
-  const users = User.getAllUsers();
+router.get('/stats', requireAuth, async (req, res) => {
+  const users = await User.getAllUsers();
   const userList = Object.values(users);
 
   const today = new Date().toDateString();
@@ -153,7 +153,7 @@ router.post('/broadcast', requireAuth, async (req, res) => {
   const { message, filter } = req.body;
   if (!message) return res.status(400).json({ error: 'Message required' });
 
-  const users = Object.values(User.getAllUsers());
+  const users = Object.values(await User.getAllUsers());
   let targets = users;
 
   // Apply filter
@@ -341,7 +341,10 @@ router.get('/funnel', requireAuth, async (req, res) => {
     // comp users are excluded so their activity doesn't inflate conversion /
     // retention numbers. Anonymous events (no userToken) are kept as-is.
     // See DECISIONS.md — dogfood access layer.
-    const _fc = filterCompEvents; // local alias
+    // Compute the comp-token set once (await — PG returns a Promise), then a sync
+    // closure keeps all the _fc(...) call sites below unchanged. (funnel-repair)
+    const _compTokens = await getCompTokens();
+    const _fc = (list) => filterCompEvents(list, _compTokens);
     const auditStarted24hClean       = _fc(auditStarted24h);
     const auditResultViewed7dClean   = _fc(auditResultViewed7d);
     const paywallViewed7dClean       = _fc(paywallViewed7d);
@@ -445,7 +448,7 @@ router.get('/funnel', requireAuth, async (req, res) => {
 
     // ── Tile 11: Mirrors taken yesterday across active users ──
     // Exclude comp users from the active-user denominator as well.
-    const activeUsers = Object.values(require('../models/User').getAllUsers())
+    const activeUsers = Object.values(await require('../models/User').getAllUsers())
       .filter((u) => u.lookmaxxingActive && !u.comp);
     const mirrorYesterdayCount = new Set(mirrorYesterdayClean.map((e) => e.userToken).filter(Boolean)).size;
     const t11 = activeUsers.length > 0 ? Math.round((mirrorYesterdayCount / activeUsers.length) * 100) / 100 : 0;
@@ -546,8 +549,8 @@ router.post('/push/test', requireAuth, async (req, res) => {
 });
 
 // ─── Export CSV ───
-router.get('/export', requireAuth, (req, res) => {
-  const users = Object.values(User.getAllUsers());
+router.get('/export', requireAuth, async (req, res) => {
+  const users = Object.values(await User.getAllUsers());
 
   const headers = 'Name,Phone,Pillar,Day,Streak,Status,Rank,Enrolled,Last Active,Trial Complete,Subscription\n';
   const rows = users.map(u =>
@@ -614,8 +617,8 @@ function isCompUser(user) {
  * Called once per funnel request to exclude their events.
  * @returns {Set<string>}
  */
-function getCompTokens() {
-  const allUsers = User.getAllUsers();
+async function getCompTokens() {
+  const allUsers = await User.getAllUsers();
   const tokens = new Set();
   for (const u of Object.values(allUsers)) {
     if (u.comp === true && u.token) tokens.add(u.token);
@@ -629,9 +632,9 @@ function getCompTokens() {
  * @param {Array} eventList
  * @returns {Array}
  */
-function filterCompEvents(eventList) {
-  const compTokens = getCompTokens();
-  return eventList.filter(e => !e.userToken || !compTokens.has(e.userToken));
+function filterCompEvents(eventList, compTokens) {
+  const tokens = compTokens || new Set();
+  return eventList.filter(e => !e.userToken || !tokens.has(e.userToken));
 }
 
 // ─── POST /api/admin/grant — comp access without payment ───────────────────

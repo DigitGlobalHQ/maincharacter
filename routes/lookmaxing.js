@@ -218,7 +218,7 @@ getAuditPrompts();
 
 // ─── Gemini vision call ───────────────────────────────────────────────────────
 
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require('@google/generative-ai');
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const GEMINI_MODEL   = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
@@ -226,7 +226,28 @@ let _geminiModel = null;
 if (GEMINI_API_KEY) {
   try {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    _geminiModel = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+    _geminiModel = genAI.getGenerativeModel({
+      model: GEMINI_MODEL,
+      // JSON mode → clean parseable output (no markdown fences / prose preamble).
+      // A generous output budget prevents the large 8-block report from being
+      // truncated mid-JSON (2.5-flash spends part of its budget on hidden
+      // reasoning) — truncation was the cause of intermittent analyze failures.
+      generationConfig: {
+        responseMimeType: 'application/json',
+        maxOutputTokens: 16384,
+        temperature: 0.7,
+      },
+      // Aesthetic face analysis legitimately trips the default MEDIUM thresholds.
+      // Relax to BLOCK_ONLY_HIGH so genuine readings are not silently blocked
+      // (which surfaced as empty responses → parse failure). Prompt-level safety
+      // (safe-task library, context-vs-quest rule) is unchanged and authoritative.
+      safetySettings: [
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT,        threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,       threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+      ],
+    });
     log.info('GEMINI', `Audit model initialised: ${GEMINI_MODEL}`);
   } catch (err) {
     log.warn('GEMINI', `Failed to init audit model: ${err.message}`);
@@ -306,25 +327,34 @@ async function _callGemini(quizAnswers, photoBuffer) {
   }
 
   // The model IS configured here. A failure now is a genuine outage (bad key,
-  // network, malformed response) — throw so the caller can surface it honestly
-  // rather than silently fabricating a reading for a real user.
-  _rpm.push(Date.now());
+  // network, safety-block, truncated/malformed response). Retry once for
+  // transient blips, then throw so the caller surfaces it honestly rather than
+  // silently fabricating a reading for a real user.
   const promptText = prompts.buildAuditPrompt(quizAnswers, !!photoBuffer);
   const parts = [{ text: promptText }];
   if (photoBuffer) {
     parts.push({ inlineData: { data: photoBuffer.toString('base64'), mimeType: 'image/jpeg' } });
   }
-  const result = await _geminiModel.generateContent(parts);
-  const text = result.response.text();
-  // Extract JSON from potential markdown code fence.
-  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, text];
-  const parsed = JSON.parse(jsonMatch[1].trim());
 
-  // Basic schema validation — must have auraScore and freeSignals.
-  if (typeof parsed.auraScore !== 'number' || !Array.isArray(parsed.freeSignals)) {
-    throw new Error('Gemini response missing required fields (auraScore/freeSignals)');
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      _rpm.push(Date.now());
+      const result = await _geminiModel.generateContent(parts);
+      const text = result.response.text(); // throws if the candidate was safety-blocked
+      // JSON mode returns clean JSON; tolerate a stray code-fence just in case.
+      const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, text];
+      const parsed = JSON.parse(jsonMatch[1].trim());
+      if (typeof parsed.auraScore !== 'number' || !Array.isArray(parsed.freeSignals)) {
+        throw new Error('Gemini response missing required fields (auraScore/freeSignals)');
+      }
+      return parsed;
+    } catch (err) {
+      lastErr = err;
+      log.warn('GEMINI-CALL', `attempt ${attempt} failed: ${err.message}`);
+    }
   }
-  return parsed;
+  throw lastErr || new Error('Gemini call failed');
 }
 
 // ─── PDF generation ──────────────────────────────────────────────────────────

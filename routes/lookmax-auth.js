@@ -133,15 +133,20 @@ function tokenExpiredOrUsed(res) {
   return res.status(401).json({ error: 'link expired or already used' });
 }
 
+// NOTE: User.getAllUsers() is backend-adapted — synchronous under the JSON store
+// but a Promise under Postgres. These helpers MUST await it; without the await,
+// `Object.values(<Promise>)` is [] on live PG and the token is never found
+// (the one-shot bridge then 401s with "token not found"). (funnel-repair)
+
 /** Find a user by their magicLinkToken (linear scan — acceptable at JSON-store scale). */
-function getUserByMagicLinkToken(token) {
-  const users = User.getAllUsers();
+async function getUserByMagicLinkToken(token) {
+  const users = await User.getAllUsers();
   return Object.values(users).find((u) => u.magicLinkToken === token) || null;
 }
 
 /** Find a user by their firstLoginToken (linear scan). */
-function getUserByFirstLoginToken(token) {
-  const users = User.getAllUsers();
+async function getUserByFirstLoginToken(token) {
+  const users = await User.getAllUsers();
   return Object.values(users).find((u) => u.firstLoginToken === token) || null;
 }
 
@@ -241,7 +246,7 @@ router.post('/auth/consume-link', async (req, res) => {
     return tokenExpiredOrUsed(res);
   }
 
-  const user = getUserByMagicLinkToken(token);
+  const user = await getUserByMagicLinkToken(token);
 
   if (!user) {
     ipRecordFailure(ip);
@@ -293,7 +298,7 @@ router.post('/auth/exchange-first-login', async (req, res) => {
     return tokenExpiredOrUsed(res);
   }
 
-  const user = getUserByFirstLoginToken(token);
+  const user = await getUserByFirstLoginToken(token);
 
   if (!user) {
     ipRecordFailure(ip);

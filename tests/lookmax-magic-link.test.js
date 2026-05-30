@@ -291,6 +291,32 @@ describe('POST /api/lookmax/auth/exchange-first-login — flag ON', () => {
     expect(u.firstLoginConsumedAt).toBeTruthy();
   });
 
+  it('finds the token when getAllUsers is async (Postgres-style) — regression for the one-shot bridge', async () => {
+    // On live (Postgres) User.getAllUsers() returns a Promise; the lookup helper
+    // must await it. Before the fix, the Google-sign-in bridge 401'd here with
+    // "token not found". Simulate the async backend and assert it resolves.
+    const phone = '919200000031';
+    seedUser(phone, 'asyncbridge@example.com');
+    const token = 'a'.repeat(64);
+    User.updateUser(phone, {
+      firstLoginToken: token,
+      firstLoginExpiresAt: Date.now() + 15 * 60 * 1000,
+      firstLoginConsumedAt: null,
+    });
+    const snapshot = User.getAllUsers(); // JSON store → sync object
+    const spy = vi.spyOn(User, 'getAllUsers').mockImplementation(() => Promise.resolve(snapshot));
+    try {
+      const res = await request(app)
+        .post('/api/lookmax/auth/exchange-first-login')
+        .send({ firstLoginToken: token });
+      expect(res.status).toBe(200);
+      expect(res.body.token).toBeTruthy();
+      expect(res.body.user.phone).toBe(phone);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it('same firstLoginToken a second time → 401 generic', async () => {
     const res = await request(app)
       .post('/api/lookmax/auth/exchange-first-login')

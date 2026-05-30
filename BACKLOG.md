@@ -173,3 +173,58 @@ longer apply; kept for history.
 - (Night 3, P5) Paywall page (`public/paywall.html`) card copy follows the brief
   bullets verbatim; the Aura++ "Founder access to The Consultant chat" bullet is
   flagged TODO copy review (not yet a shipped feature).
+
+## Legal pages — drafts awaiting founder approval (2026-05-28)
+
+Three legal-page drafts authored by `legal-finance-agent` (not a lawyer; starting
+points only). These exist to repair the broken `/#` footer links on `landing.html`
+and to meet Razorpay's published merchant requirements (Privacy + Terms + Refund +
+Contact with physical address) before live KYC posture is clean and before any
+real customer signs up.
+
+- [ ] `product/draft-privacy-policy.md` — DPDPA-2023 / DPDP Rules-2025 compliant
+      Privacy Policy. Covers data collection, retention (incl. 180-day photo
+      window), third-party processors with URLs, DPDPA data-principal rights,
+      grievance officer, children's-data position (self-declaration 18+).
+      Contains 7 `Founder decision needed` blocks. **Awaiting founder approval
+      + a lawyer review before publish.**
+- [ ] `product/draft-terms-of-service.md` — Terms covering service description,
+      pricing/GST, cancellation, refund policy, acceptable use, IP, limitation
+      of liability, governing law (India, city TBD). Contains 6 `Founder
+      decision needed` blocks — notably GST registration timing (threshold
+      ₹20 lakh services), the WhatsApp CANCEL command wiring, and the
+      jurisdiction city. **Awaiting founder approval + a lawyer review before
+      publish.**
+- [ ] `product/draft-contact-page.md` — Three-block Contact page (email,
+      WhatsApp, postal address). Contains 2 `Founder decision needed` blocks +
+      1 minor — the two real blockers are (a) setting up `support@` and
+      `grievance@` aliases on the maincharacter.digitglobalservices.com domain,
+      and (b) **providing a postal address** (currently missing from CLAUDE.md
+      and the handoff brief; required by Razorpay merchant rules and the
+      Consumer Protection (E-Commerce) Rules, 2020 Rule 5). **Cannot ship
+      until the postal address exists.**
+- [ ] Follow-up after founder approves the three drafts:
+      `frontend-agent` ticket to render the three pages (with the existing
+      obsidian + gold ◆ + Cormorant + Sora tokens) and repair the three
+      `/#` footer links on `landing.html` in a single commit. Out of scope
+      for this drafting pass.
+- [ ] Recommended pro-spend: INR 15,000 – 40,000 for a competent solo Indian
+      privacy/commercial lawyer to review the Privacy + Terms together;
+      INR 80,000 – 1,50,000 for a Tier-1 firm. Razorpay live KYC + first
+      paying customer should not happen before this review lands.
+
+
+## Dogfood 2026-05-28 — P2/P3 (logged, not fixed)
+
+- [ ] **P2** Landing: nav "BEGIN YOUR ARC →" button clipped at right edge at viewport 1440px. Add right padding to nav container or constrain button max-width. (`landing.html`)
+- [ ] **P2** Paywall: Aura++ card right edge clipped at viewport 1440px — bullets cut mid-word ("Daily WhatsApp Protocol + Da[ily]"). Reduce card max-width, or breakpoint earlier to 2-col + 1-row, or constrain `.cards` container. (`public/paywall.html`)
+- [ ] **P3** Landing: quest pcards are `<div onclick="window.location.href=...">` not semantic `<a>`. Convert "Accept the Quest" → `<a href="/start">` and "Get Your Aura Reading" → `<a href="/audit">` for keyboard nav, right-click open-in-tab, screen reader, SEO.
+- [ ] **P3** Paywall: validation hint "Your name, first." does not clear reactively while typing — only refreshes on next plan-click or submit.
+- [ ] **P3** Paywall: bottom hint "Choose a path above to begin." persists even after a Begin button is clicked and a plan is selected.
+
+Source: `qa/dogfood-browser-live-2026-05-28.md`
+
+
+## Funnel-repair 2026-05-29 (logged during P0)
+
+- [ ] **P1** Lookmaxing audit `storage.putPhoto → readImage` round-trip is broken on live: R2 is configured (`storage.configured: true`, bucket `maincharacter-lookmax`) yet `/analyze` could not read back the photo `/capture` stored, so readings ran photo-blind. P0 sidestepped this by carrying the photo bytes through the session, but the R2 path must be fixed/confirmed before relying on it for the Day-30 **baseline photo** persistence (`users.lookmax_baseline`). Likely a key/return-shape mismatch between `putPhoto`'s result and what `readImage` expects. (`services/storage.js`, `routes/lookmaxing.js` capture/analyze)

@@ -25,7 +25,9 @@ Walked the full live funnel through the *working* `/capture` route (guest → qu
 > *"No photograph was provided for this audit. All metric scores are inferred from self-reported quiz answers…"*
 > context block: *"Cannot assess … without a photograph."* (canthalTilt, nasalStructure, symmetry, etc.)
 
-Root cause: R2 object storage is **not configured on live**, so `storage.put()` returns `{dryRun:true}` without writing anywhere. `/capture` then stamps `photoKey = "local:audit/{id}/photo.jpg"` (`routes/lookmaxing.js:614`), and `/analyze` only reads the photo when the key does **not** start with `local:` (`routes/lookmaxing.js:651`). Result: the uploaded photo is dropped on the floor and Gemini is called with no image, every time. The product *appears* to work (it returns a reading) while never actually looking at the face.
+Root cause: the uploaded photo never survives the round-trip into `/analyze`, so Gemini is called with no image every time. The product *appears* to work (it returns a reading) while never actually looking at the face.
+
+> **Correction (post-fix):** `/health` reports `storage.configured: true` (R2 bucket `maincharacter-lookmax`), so my first hypothesis ("R2 in dry-run → `local:` key") was wrong. R2 **is** configured; the photo-blind symptom is real but its cause sits in the `storage.putPhoto → readImage` round-trip (a key/return-shape mismatch that left `/analyze` unable to read back what `/capture` stored). The fix below sidesteps that path entirely by carrying the photo bytes through the session, which is why it works regardless. The latent R2 round-trip bug is logged in BACKLOG.md — it must be confirmed before relying on R2 for Day-30 baseline-photo persistence.
 
 **Fault 3 (security, NOT a P0 blocker) — committed `.env` Gemini key is leaked & revoked.**
 Standalone call with the repo's `.env` key:

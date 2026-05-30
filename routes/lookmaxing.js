@@ -292,7 +292,9 @@ function _fallbackReport(quizAnswers) {
 
 /**
  * Call Gemini Vision with the audit photo + quiz answers.
- * Falls back to _fallbackReport on any error.
+ * Returns _fallbackReport ONLY when the engine is not configured (no prompts
+ * module, no API key, or rate-limited). When the model IS configured, a genuine
+ * call/parse failure throws — the caller surfaces it as an honest 502.
  */
 async function _callGemini(quizAnswers, photoBuffer) {
   const prompts = getAuditPrompts();
@@ -303,29 +305,26 @@ async function _callGemini(quizAnswers, photoBuffer) {
     return _fallbackReport(quizAnswers);
   }
 
-  try {
-    _rpm.push(Date.now());
-    const promptText = prompts.buildAuditPrompt(quizAnswers, !!photoBuffer);
-    const parts = [{ text: promptText }];
-    if (photoBuffer) {
-      parts.push({ inlineData: { data: photoBuffer.toString('base64'), mimeType: 'image/jpeg' } });
-    }
-    const result = await _geminiModel.generateContent(parts);
-    const text = result.response.text();
-    // Extract JSON from potential markdown code fence
-    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, text];
-    const parsed = JSON.parse(jsonMatch[1].trim());
-
-    // Basic schema validation — must have auraScore and freeSignals.
-    if (typeof parsed.auraScore !== 'number' || !Array.isArray(parsed.freeSignals)) {
-      log.warn('GEMINI-PARSE', 'Response missing required fields — using fallback');
-      return _fallbackReport(quizAnswers);
-    }
-    return parsed;
-  } catch (err) {
-    log.warn('GEMINI-CALL', `Gemini failed: ${err.message} — using fallback`);
-    return _fallbackReport(quizAnswers);
+  // The model IS configured here. A failure now is a genuine outage (bad key,
+  // network, malformed response) — throw so the caller can surface it honestly
+  // rather than silently fabricating a reading for a real user.
+  _rpm.push(Date.now());
+  const promptText = prompts.buildAuditPrompt(quizAnswers, !!photoBuffer);
+  const parts = [{ text: promptText }];
+  if (photoBuffer) {
+    parts.push({ inlineData: { data: photoBuffer.toString('base64'), mimeType: 'image/jpeg' } });
   }
+  const result = await _geminiModel.generateContent(parts);
+  const text = result.response.text();
+  // Extract JSON from potential markdown code fence.
+  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, text];
+  const parsed = JSON.parse(jsonMatch[1].trim());
+
+  // Basic schema validation — must have auraScore and freeSignals.
+  if (typeof parsed.auraScore !== 'number' || !Array.isArray(parsed.freeSignals)) {
+    throw new Error('Gemini response missing required fields (auraScore/freeSignals)');
+  }
+  return parsed;
 }
 
 // ─── PDF generation ──────────────────────────────────────────────────────────
@@ -587,11 +586,18 @@ router.post('/quiz', (req, res) => {
 
 // ─── POST /capture ────────────────────────────────────────────────────────────
 
-router.post('/capture', upload.single('photo'), async (req, res) => {
+// Mounted at BOTH `/capture` and `/photo`: the frontend (capture.html) posts to
+// `/photo` and expects the server to resolve the auditId from the guest session,
+// while existing tests post to `/capture` with an explicit auditId. Both work.
+router.post(['/capture', '/photo'], upload.single('photo'), async (req, res) => {
   const actor = resolveActor(req);
   if (!actor) return res.status(401).json({ error: 'unauthorized' });
 
-  const auditId     = String(req.body.auditId || '').trim();
+  // auditId may be supplied in the body; if omitted, resolve it from the actor.
+  // For a guest, the session id IS the guestId (one audit per guest at a time).
+  let auditId = String(req.body.auditId || '').trim();
+  if (!auditId && actor.guestId) auditId = actor.guestId;
+
   const consentRaw  = String(req.body.consent_18plus || '').trim().toLowerCase();
   const consentGiven = consentRaw === 'true' || consentRaw === '1';
 
@@ -606,18 +612,36 @@ router.post('/capture', upload.single('photo'), async (req, res) => {
   // Persist consent flag (even when false — the analyze step gates on this).
   _updateSession(auditId, { consentGiven });
 
-  // Store the photo. Key convention: audit/{auditId}/photo.jpg
+  // Normalise the photo: EXIF auto-orient (phone selfies arrive rotated) and
+  // downscale so the Gemini inline payload + session stash stay bounded.
+  // sharp may be unavailable or the buffer may not be a real image (tests use a
+  // 4-byte stub) — fall back to the raw bytes rather than failing the upload.
+  let photoBuffer = req.file.buffer;
+  try {
+    const sharp = require('sharp'); // eslint-disable-line global-require
+    photoBuffer = await sharp(req.file.buffer)
+      .rotate()
+      .resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 82 })
+      .toBuffer();
+  } catch (err) {
+    log.warn('CAPTURE', `photo normalise skipped for ${auditId}: ${err.message}`);
+  }
+
+  // Attempt durable storage (R2). When R2 is unconfigured this is a no-op dryRun.
   const key = `audit/${auditId}/photo.jpg`;
   let photoKey = null;
   try {
-    const result = await storage.putPhoto(key, req.file.buffer, 'image/jpeg');
+    const result = await storage.putPhoto(key, photoBuffer, 'image/jpeg');
     photoKey = result.dryRun ? `local:${key}` : result.key;
   } catch (err) {
     log.warn('CAPTURE', `photo store failed for ${auditId}: ${err.message}`);
     photoKey = `local:${key}`;
   }
 
-  _updateSession(auditId, { photoKey });
+  // Stash the bytes on the session so /analyze can always reach Gemini with the
+  // photo, regardless of whether R2 is configured. Cleared after analyze.
+  _updateSession(auditId, { photoKey, photoB64: photoBuffer.toString('base64') });
 
   events.trackAnonymous('lookmaxing_photo_uploaded', { auditId }, actor.guestId || actor.userId).catch(() => {});
   return res.json({ ok: true, auditId });
@@ -646,9 +670,13 @@ router.post('/analyze', async (req, res) => {
     return res.status(412).json({ error: 'consent_required' });
   }
 
-  // Call Gemini (or fallback).
+  // Recover the photo bytes. Prefer the session stash (always present after
+  // /capture, independent of R2); fall back to durable storage for non-local keys.
   let photoBuffer = null;
-  if (session.photoKey && !session.photoKey.startsWith('local:')) {
+  if (session.photoB64) {
+    try { photoBuffer = Buffer.from(session.photoB64, 'base64'); } catch { /* ignore */ }
+  }
+  if (!photoBuffer && session.photoKey && !session.photoKey.startsWith('local:')) {
     try {
       photoBuffer = await storage.readImage(session.photoKey);
     } catch {
@@ -660,11 +688,14 @@ router.post('/analyze', async (req, res) => {
   try {
     report = await _callGemini(session.quizAnswers || [], photoBuffer);
   } catch (err) {
-    log.error('ANALYZE', `Gemini call failed: ${err.message}`);
-    report = _fallbackReport(session.quizAnswers || []);
+    // A genuine Gemini failure (key present but the call/parse failed). Surface it
+    // honestly rather than fabricating a reading — the founder reads this signal.
+    log.error('ANALYZE', `Gemini unavailable for ${auditId}: ${err.message}`);
+    return res.status(502).json({ error: 'analysis_unavailable' });
   }
 
-  _updateSession(auditId, { geminiReport: report, analyzedAt: new Date().toISOString() });
+  // Drop the raw photo bytes from the session now that the reading is generated.
+  _updateSession(auditId, { geminiReport: report, analyzedAt: new Date().toISOString(), photoB64: null });
 
   events.trackAnonymous('lookmaxing_audit_generated', { auditId }, actor.guestId || actor.userId).catch(() => {});
 

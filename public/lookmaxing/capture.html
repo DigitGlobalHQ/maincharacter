@@ -591,12 +591,20 @@
     formData.append('photo', capturedBlob, 'face.jpg');
     formData.append('consent_18plus', 'true');
 
+    // Honest error mapping: a photo problem reads differently from a service outage.
+    function messageForStatus(status) {
+      if (status === 413 || status === 400) return 'That photo could not be read. Try another — front-facing, neutral light.';
+      if (status === 401 || status === 403) return 'Your session expired. Return to the start and begin again.';
+      if (status >= 500) return 'The reading could not be generated just now. Try again in a moment.';
+      return 'Something went wrong. Try again.';
+    }
+
     fetch('/api/lookmaxing/photo', {
       method: 'POST',
       body: formData,
     })
       .then(function (res) {
-        if (!res.ok) throw new Error('photo upload failed');
+        if (!res.ok) { var e = new Error('photo upload failed'); e.status = res.status; throw e; }
         return res.json();
       })
       .then(function (data) {
@@ -611,7 +619,7 @@
         });
       })
       .then(function (res) {
-        if (!res.ok) throw new Error('analyze failed');
+        if (!res.ok) { var e = new Error('analyze failed'); e.status = res.status; throw e; }
         return res.json();
       })
       .then(function (data) {
@@ -622,7 +630,7 @@
         analyzeBtn.disabled = false;
         analyzeBtn.textContent = 'Upload and analyze →';
         statusEl.hidden = true;
-        errorEl.textContent = 'Something went wrong. Try again.';
+        errorEl.textContent = messageForStatus(err && err.status);
         errorEl.hidden = false;
       });
   });

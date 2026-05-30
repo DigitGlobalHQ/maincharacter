@@ -95,4 +95,74 @@ from the actual engine code paths — validator sweep over all text = `violation
 - **2.9 Admin signed-up users table + 401** — ✅ shipped earlier (commit 196ce17),
   `admin-funnel` tests green (table fields + 401-without-auth).
 
-_Phases 3–4 below as they ship._
+---
+
+## PHASE 3 — THE FULL DAILY MIRROR 🟢 core live + safe; one gap shipped, one specced
+
+The Daily Mirror loop already existed and now runs every surfaced task through
+the Phase 1 validator. Full mapping in `briefs/phase3-daily-mirror-status.md`.
+
+- **3.1 Daily scan → score (state) + "why it moved" + ONE safe task** — ✅ exists
+  (`POST /mirror` → state axes + deltaVsYesterday + consultantLine; task from the
+  validator-gated protocol). State-only; never bone structure.
+- **3.2 Night log → powers tomorrow's delta** — ✅ **SHIPPED THIS RUN** (commit 7b3fbfd).
+  Model + `POST/GET /night-log` + `nightContext` in the mirror read + on-theme
+  "Last night" card + 6 tests. _Design: on-brand (obsidian + gold, stepper +
+  toggle). QA: 1174 suite green + live verify below._
+- **3.3 Trigger engine (streak targets + report-back)** — ⏸ specced (ready-to-build,
+  `briefs/phase3-daily-mirror-status.md`). The protocol already weights tasks to the
+  two weakest axes; the gap is the explicit per-trigger streak target + report-back.
+  Staged rather than half-shipped.
+- **3.4 Weekly weigh-in → Trajectory** — ✅ exists (`routes/reaudit.js`, `regenerateWeekly`).
+- **3.5 Time-lapse / streaks** — ✅ exists (`services/video.js` + `/reveal/*`, `streak`).
+- **3.6 Day-7 trial → paid (TEST mode)** — ✅ exists (`/lookmaxing/fork` → Razorpay test).
+- **3.7 Safety: state-only scan, safe tasks, validator** — ✅ done (Phase 1).
+
+---
+
+## PHASE 4 — VALIDATION, QA & BROWSER TESTING 🟢 on live, with proof
+
+**Live deploy gate:** every commit deployed to production and verified by the
+`/health.lookmaxxing.version` git-sha (Render). Confirmed shas live this run:
+`d4d1657` (Phase 1), `7227dac` (Phase 2), `7b3fbfd` (Night Log).
+
+**Automated gate (every commit):** full Vitest suite **1174 passed / 0 failed**,
+`npm run smoke` **42/42**.
+
+**Live HTTP verification (production):**
+- Phase 1 safety: `/lookmax/protocol` + `/lookmax/hair` serve **0** RCT/tier-chip/
+  drug-name references. `/health` healthy, `scheduler.lastError = null`.
+- `/terms` → 200 (carries 18+ + "not a medical service"), `/privacy` → 200.
+- `/lookmaxing/start`: centred single sign-in card + 18+/Terms/Privacy consent line.
+- `/lookmaxing/capture`: full-screen analysing overlay markup present.
+- `/lookmaxing/fork`: "Start your free 7-day trial" CTA present.
+
+**Live browser verification (Chrome, desktop 1280×900):**
+- `/lookmaxing/start` → already-signed-in session redirected to the quiz (the
+  founder's browser holds a token); the quiz renders clean and on-brand. Sign-in
+  centring verified via served HTML rather than disrupting the live session.
+- `/terms` rendered: obsidian bg, gold ◆ eyebrow, Cormorant headline, and a
+  prominent section 3 **"This is not medical, dermatological, or nutritional
+  advice"** — visually reinforcing the Phase 1 fix.
+
+**Conversion read (funnel logic):** entry → centred sign-in (Google + email, with
+consent) → quiz → capture (no blank screen; analysing overlay) → reading (loading
+skeleton at destination) → ₹99 unlock → fork (trial vs premium, "Start your free
+7-day trial") → Daily Mirror (scan + night log) → Day-7 conversion. Each step now
+hands to the next without a dead end; the two pre-existing blank-gap risks (the
+analyse wait, the audit-page arrival) are both covered.
+
+### Final PASS/FAIL checklist
+| Item | Status |
+|---|---|
+| No medical content anywhere (validator + content rewrite) | ✅ PASS (live) |
+| Full test suite 1174 / smoke 42 | ✅ PASS |
+| Sign-in card centred + 18+/Terms/Privacy | ✅ PASS (live) |
+| No blank screens (analysing overlay + audit skeleton) | ✅ PASS (live) |
+| Trial CTA copy | ✅ PASS (live) |
+| Admin users table + 401 | ✅ PASS (tests) |
+| Night Log end-to-end | ✅ PASS (tests + live deploy) |
+| Razorpay stays TEST / paywall NOT flipped | ✅ HELD (founder-only) |
+| Theme unification across PWA | ⏸ STAGED (founder theme pick) |
+| Trigger engine (3.3) | ⏸ SPECCED |
+| 3 real photos through live Gemini | ⏸ NEEDS FOUNDER photos |

@@ -80,8 +80,8 @@ describe('KPI data-event attributes', () => {
   it('index: has orator_waitlist_joined', () => {
     expect(SURFACES.index).toContain('data-event="orator_waitlist_joined"');
   });
-  it('start: has lookmaxing_fork_guest', () => {
-    expect(SURFACES.start).toContain('data-event="lookmaxing_fork_guest"');
+  it('start: guest flow removed (no lookmaxing_fork_guest)', () => {
+    expect(SURFACES.start).not.toContain('lookmaxing_fork_guest');
   });
   it('start: has lookmaxing_fork_signin', () => {
     expect(SURFACES.start).toContain('data-event="lookmaxing_fork_signin"');
@@ -325,16 +325,15 @@ describe('Surface 3 — quiz.html', () => {
 
 // ── §N: Surface 2 — start.html ───────────────────────────────────────────────
 describe('Surface 2 — start.html', () => {
-  it('has guest path button', () => {
-    expect(SURFACES.start).toContain('id="guest-btn"');
+  it('guest path removed (sign-in required — funnel-repair P1)', () => {
+    expect(SURFACES.start).not.toContain('id="guest-btn"');
+    expect(SURFACES.start).not.toContain('/api/lookmaxing/guest');
   });
-  it('has Google sign-in', () => {
+  it('has Google sign-in (to OAuth start)', () => {
     expect(SURFACES.start).toContain('Sign in with Google');
+    expect(SURFACES.start).toContain('/api/lookmax/auth/google/start');
   });
   it('has email sign-in', () => {
     expect(SURFACES.start).toContain('Sign in with email');
-  });
-  it('posts to /api/lookmaxing/guest', () => {
-    expect(SURFACES.start).toContain('/api/lookmaxing/guest');
   });
 });

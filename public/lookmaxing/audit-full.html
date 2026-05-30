@@ -380,6 +380,16 @@
 (function () {
   'use strict';
 
+  // Sign-in required (funnel-repair P1).
+  function lmToken() { return localStorage.getItem('lookmax.token') || ''; }
+  function authHeaders(extra) {
+    var h = extra || {};
+    var t = lmToken();
+    if (t) h['Authorization'] = 'Bearer ' + t;
+    return h;
+  }
+  if (!lmToken()) { window.location.replace('/lookmaxing/start'); return; }
+
   var pathParts = window.location.pathname.split('/').filter(Boolean);
   // URL: /lookmaxing/audit/:id/full
   var auditId = pathParts[pathParts.length - 2] || '';
@@ -394,7 +404,7 @@
   }
 
   function loadFull() {
-    fetch('/api/lookmaxing/audit/' + auditId)
+    fetch('/api/lookmaxing/audit/' + auditId, { headers: authHeaders() })
       .then(function (res) {
         if (!res.ok) throw new Error('failed ' + res.status);
         return res.json();
@@ -593,7 +603,7 @@
     btn.disabled = true;
     btn.textContent = 'Building the PDF. Hold.';
 
-    fetch('/api/lookmaxing/audit/' + auditId + '/pdf')
+    fetch('/api/lookmaxing/audit/' + auditId + '/pdf', { headers: authHeaders() })
       .then(function (res) {
         if (!res.ok) throw new Error('pdf failed');
         return res.json();

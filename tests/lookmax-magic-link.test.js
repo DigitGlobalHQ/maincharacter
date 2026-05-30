@@ -76,6 +76,21 @@ describe('POST /api/lookmax/auth/request-link — flag ON', () => {
     expect(sendMock).not.toHaveBeenCalled();
   });
 
+  it('funnel sign-up: unknown email WITH funnel next creates the account + sends', async () => {
+    const newEmail = 'brandnew-funnel@example.com';
+    expect(User.getUserByEmail(newEmail)).toBeNull();
+    const res = await request(app)
+      .post('/api/lookmax/auth/request-link')
+      .send({ email: newEmail, next: '/lookmaxing/quiz' });
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('sent');
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    // The account now exists (synthetic-phone, email identity).
+    const u = User.getUserByEmail(newEmail);
+    expect(u).toBeTruthy();
+    expect(u.email).toBe(newEmail);
+  });
+
   it('returns {status:sent} AND calls sendMagicLink for a known email', async () => {
     seedUser('919200000001', 'known@example.com');
     const res = await request(app)

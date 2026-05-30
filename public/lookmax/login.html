@@ -273,7 +273,9 @@
         var data = await res.json().catch(function() { return {}; });
         if (res.ok && data.token) {
           LM.setToken(data.token);
-          location.href = '/lookmax/';
+          // Honor ?next= into our own funnel (e.g. a new sign-up → the quiz).
+          var nx = new URLSearchParams(location.search).get('next');
+          location.href = (nx && /^\/(lookmaxing|lookmax)(\/|$|\?)/.test(nx)) ? nx : '/lookmax/';
         } else {
           // Show consume-error state and strip token from URL
           history.replaceState(null, '', location.pathname);

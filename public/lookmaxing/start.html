@@ -185,32 +185,13 @@
 <main class="lm-fork">
   <header class="lm-fork__header">
     <p class="mc-eyebrow lm-fork__eyebrow">BEFORE THE READING</p>
-    <h1 class="mc-serif mc-serif--italic lm-fork__heading">Two ways in. Both lead to the same reading.</h1>
+    <h1 class="mc-serif mc-serif--italic lm-fork__heading">The reading saves to your account.</h1>
+    <p class="lm-fork-card__body" style="max-width:34ch;margin:var(--mc-sp-3) auto 0;text-align:center;">Sign in once. Your reading, your protocol, your progress — all in one place.</p>
   </header>
 
-  <div class="lm-fork__cards">
-    <!-- Guest path -->
+  <div class="lm-fork__cards lm-fork__cards--single">
+    <!-- Sign in is the single path (guest flow removed — funnel-repair P1) -->
     <div class="mc-card lm-fork-card">
-      <h2 class="lm-fork-card__title">Continue as guest</h2>
-      <div class="lm-fork-card__divider"></div>
-      <p class="lm-fork-card__body">The reading is yours either way. Sign in later if you want to keep it.</p>
-      <div class="lm-fork-card__actions">
-        <button
-          class="mc-btn-primary lm-fork-card__btn"
-          id="guest-btn"
-          data-event="lookmaxing_fork_guest"
-          aria-label="Continue without an account"
-        >
-          Continue without an account
-        </button>
-      </div>
-    </div>
-
-    <!-- Sign in path -->
-    <div class="mc-card lm-fork-card">
-      <h2 class="lm-fork-card__title">Sign in</h2>
-      <div class="lm-fork-card__divider"></div>
-      <p class="lm-fork-card__body">The reading saves to your account. Pick up where you left off, on any device.</p>
       <div class="lm-fork-card__actions" id="signin-actions">
         <!-- Google -->
         <a
@@ -272,7 +253,6 @@
 (function () {
   'use strict';
 
-  var guestBtn = document.getElementById('guest-btn');
   var emailToggleBtn = document.getElementById('email-toggle-btn');
   var emailExpand = document.getElementById('email-expand');
   var magicEmail = document.getElementById('magic-email');
@@ -280,25 +260,11 @@
   var magicSentMsg = document.getElementById('magic-sent-msg');
   var signinActions = document.getElementById('signin-actions');
 
-  // Guest path — POST to mint guest_id cookie, then redirect
-  guestBtn.addEventListener('click', function () {
-    guestBtn.setAttribute('aria-busy', 'true');
-    guestBtn.disabled = true;
-    guestBtn.innerHTML = '<span class="lm-spinner"><span></span><span></span><span></span></span>';
-
-    fetch('/api/lookmaxing/guest', { method: 'POST' })
-      .then(function (res) {
-        if (!res.ok) throw new Error('guest mint failed');
-        return res.json();
-      })
-      .then(function () {
-        window.location.href = '/lookmaxing/quiz';
-      })
-      .catch(function () {
-        // Fallback: navigate anyway (cookie may still be set)
-        window.location.href = '/lookmaxing/quiz';
-      });
-  });
+  // Already signed in? Skip straight to the reading.
+  if (localStorage.getItem('lookmax.token')) {
+    window.location.replace('/lookmaxing/quiz');
+    return;
+  }
 
   // Email toggle
   emailToggleBtn.addEventListener('click', function () {

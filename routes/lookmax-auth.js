@@ -181,22 +181,40 @@ router.post('/auth/request-link', async (req, res) => {
     return res.json({ status: 'sent' });
   }
 
-  const user = User.getUserByEmail(normalised);
-  if (!user) {
-    log.info('REQUEST-LINK', `no-match for ${maskEmail(normalised)}`);
-    return res.json({ status: 'sent' });
+  // The Lookmaxing funnel is sign-in-first, so a `next` into the funnel marks a
+  // NEW sign-up — find-or-create the account (funnel-repair P1). Dashboard login
+  // (no funnel `next`) keeps its login-only, no-op-for-unknown behaviour. Either
+  // way the response is {sent} — enumeration-safe, no account state leaks.
+  const rawNext = (req.body && req.body.next) || null;
+  const funnelSignup = typeof rawNext === 'string' && /^\/(lookmaxing|lookmax)(\/|$|\?)/.test(rawNext);
+
+  let user;
+  if (funnelSignup) {
+    try {
+      user = await User.getOrCreateByEmail({ email: normalised, name: 'Seeker' });
+    } catch (err) {
+      log.info('REQUEST-LINK', `invalid email — no-op: ${err.message}`);
+      return res.json({ status: 'sent' });
+    }
+  } else {
+    user = await User.getUserByEmail(normalised);
+    if (!user) {
+      log.info('REQUEST-LINK', `no-match for ${maskEmail(normalised)}`);
+      return res.json({ status: 'sent' });
+    }
   }
 
   // Mint a magic link token (32-byte random hex, 15-min TTL, single-use).
   const magicLinkToken = crypto.randomBytes(32).toString('hex');
-  User.updateUser(user.phone, {
+  await User.updateUser(user.phone, {
     magicLinkToken,
     magicLinkExpiresAt: Date.now() + 15 * 60 * 1000,
     magicLinkConsumedAt: null,
   });
 
-  // Send the email — DRY-RUN-safe when RESEND_API_KEY unset.
-  email.sendMagicLink({ user, token: magicLinkToken }).catch((err) => {
+  // Send the email — DRY-RUN-safe when RESEND_API_KEY unset. `next` routes the
+  // user into the funnel after consume (whitelisted in sendMagicLink).
+  email.sendMagicLink({ user, token: magicLinkToken, next: rawNext }).catch((err) => {
     log.error('REQUEST-LINK', `sendMagicLink failed for ${maskEmail(normalised)}: ${err.message}`);
   });
 

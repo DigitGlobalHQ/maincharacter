@@ -151,12 +151,16 @@ function formatDate(d) {
  * Send an email magic-link for Lookmaxxing login (Login Gate P0-1).
  * DRY-RUN when RESEND_API_KEY is unset. Returns {result:'no-recipient'} when
  * the user has no email. The token is embedded into the URL only — never logged.
- * @param {{user:object, token:string, label?:string}} args
+ * `next` (optional) routes the user onward after consume — whitelisted to our
+ * own funnel paths, so the magic link can drop a new sign-up straight into the quiz.
+ * @param {{user:object, token:string, label?:string, next?:string}} args
  */
-async function sendMagicLink({ user, token, label } = {}) {
+async function sendMagicLink({ user, token, label, next } = {}) {
   if (!user || !user.email) return { result: 'no-recipient' };
   const subject = label || '◆ Your Lookmaxxing entry link'; // [copy-consultant TBD] email.magic.subject
-  const url = `${baseUrl()}/lookmax/login?token=${encodeURIComponent(token)}`;
+  const safeNext = (typeof next === 'string' && /^\/(lookmaxing|lookmax)(\/|$|\?)/.test(next)) ? next : '';
+  const url = `${baseUrl()}/lookmax/login?token=${encodeURIComponent(token)}`
+    + (safeNext ? `&next=${encodeURIComponent(safeNext)}` : '');
   const html = renderTemplate('magic-link.html', {
     name: user.name || 'Seeker',
     magicLinkUrl: url,

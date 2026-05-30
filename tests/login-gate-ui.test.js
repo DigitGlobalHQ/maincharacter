@@ -292,8 +292,9 @@ describe('login.html — Token consume on load', () => {
     expect(loginHtml).toContain('LM.setToken');
   });
 
-  it('redirects to /lookmax/ after successful consume', () => {
-    expect(loginHtml).toContain("location.href = '/lookmax/'");
+  it('redirects after successful consume (honors funnel ?next=, defaults to /lookmax/)', () => {
+    expect(loginHtml).toContain("'/lookmax/'");        // default destination
+    expect(loginHtml).toContain("get('next')");         // honors funnel next
   });
 
   it('uses history.replaceState to strip ?token= after consume attempt', () => {

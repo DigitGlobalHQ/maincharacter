@@ -417,6 +417,18 @@
 (function () {
   'use strict';
 
+  // Sign-in required + a quiz session must exist (funnel-repair P1).
+  function lmToken() { return localStorage.getItem('lookmax.token') || ''; }
+  function authHeaders(extra) {
+    var h = extra || {};
+    var t = lmToken();
+    if (t) h['Authorization'] = 'Bearer ' + t;
+    return h;
+  }
+  if (!lmToken()) { window.location.replace('/lookmaxing/start'); return; }
+  var AUDIT_ID = localStorage.getItem('lookmax.auditId') || '';
+  if (!AUDIT_ID) { window.location.replace('/lookmaxing/quiz'); return; }
+
   var videoEl = document.getElementById('camera-video');
   var previewImg = document.getElementById('preview-img');
   var captureCanvas = document.getElementById('capture-canvas');
@@ -590,6 +602,7 @@
     var formData = new FormData();
     formData.append('photo', capturedBlob, 'face.jpg');
     formData.append('consent_18plus', 'true');
+    formData.append('auditId', AUDIT_ID);
 
     // Honest error mapping: a photo problem reads differently from a service outage.
     function messageForStatus(status) {
@@ -601,9 +614,11 @@
 
     fetch('/api/lookmaxing/photo', {
       method: 'POST',
+      headers: authHeaders(),
       body: formData,
     })
       .then(function (res) {
+        if (res.status === 401) { window.location.href = '/lookmaxing/start'; var s = new Error('signin'); s.status = 401; throw s; }
         if (!res.ok) { var e = new Error('photo upload failed'); e.status = res.status; throw e; }
         return res.json();
       })
@@ -614,7 +629,7 @@
         statusEl.textContent = 'Analysing. Hold.';
         return fetch('/api/lookmaxing/analyze', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ auditId: data.auditId }),
         });
       })

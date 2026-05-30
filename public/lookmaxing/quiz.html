@@ -414,6 +414,16 @@
 (function () {
   'use strict';
 
+  // Sign-in required (funnel-repair P1). No session → back to the sign-in step.
+  function lmToken() { return localStorage.getItem('lookmax.token') || ''; }
+  function authHeaders(extra) {
+    var h = extra || {};
+    var t = lmToken();
+    if (t) h['Authorization'] = 'Bearer ' + t;
+    return h;
+  }
+  if (!lmToken()) { window.location.replace('/lookmaxing/start'); return; }
+
   var QUESTIONS = [
     { id: 'q1', label: 'q1', nextId: 'q2', screen: 'q1-screen', options: 'q1-options', next: 'next-1', err: 'err-1' },
     { id: 'q2', label: 'q2', nextId: 'q3', screen: 'q2-screen', options: 'q2-options', next: 'next-2', err: 'err-2' },
@@ -487,14 +497,17 @@
 
     fetch('/api/lookmaxing/quiz', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ answers: answers }),
     })
       .then(function (res) {
+        if (res.status === 401) { window.location.href = '/lookmaxing/start'; throw new Error('signin'); }
         if (!res.ok) throw new Error('quiz submit failed');
         return res.json();
       })
-      .then(function () {
+      .then(function (data) {
+        // Carry the auditId forward through capture → analyze.
+        if (data && data.auditId) localStorage.setItem('lookmax.auditId', data.auditId);
         window.location.href = '/lookmaxing/capture';
       })
       .catch(function () {

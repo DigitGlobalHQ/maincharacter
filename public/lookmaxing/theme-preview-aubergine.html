@@ -1,0 +1,75 @@
+<!-- THEME PROPOSAL (funnel-repair P3) — NOT wired into the funnel. For founder approval only.
+     Direction A: aubergine-purple + a single metallic/white light-point accent. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Theme A · Aubergine — MainCharacter</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Sora:wght@200;300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c0710; --bg-2:#140a18; --surface:#1b0f22; --surface-2:#241430;
+    --line:rgba(200,160,230,0.12); --line-2:rgba(200,160,230,0.22);
+    --ink:#f2ecf4; --silver:#c9c2d2; --silver-dim:#8f86a0; --silver-faint:#615a72;
+    --aubergine:#7b3f9d; --aubergine-soft:rgba(138,79,168,0.30);
+    --point:#ffffff; --point-glow:rgba(255,255,255,0.85);
+    --serif:'Cormorant Garamond',serif; --sans:'Sora',sans-serif; --mono:'JetBrains Mono',monospace;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--sans);font-weight:300;background:
+      radial-gradient(120% 80% at 50% -10%, var(--aubergine-soft), transparent 55%),
+      linear-gradient(180deg,var(--bg-2),var(--bg));
+    color:var(--ink);min-height:100vh;letter-spacing:.03em;-webkit-font-smoothing:antialiased;}
+  .nav{display:flex;align-items:center;gap:9px;height:60px;padding:0 26px;border-bottom:1px solid var(--line);}
+  .nav img{width:24px;height:24px;object-fit:cover;object-position:center 34%;border-radius:3px;}
+  .nav span{font-size:.7rem;font-weight:500;letter-spacing:.28em;text-transform:uppercase;color:var(--silver);}
+  .wrap{max-width:640px;margin:0 auto;padding:64px 24px 80px;text-align:center;}
+  .eyebrow{font-family:var(--mono);font-size:.66rem;letter-spacing:.34em;text-transform:uppercase;color:var(--silver-faint);margin-bottom:22px;}
+  .score{font-family:var(--serif);font-size:8rem;line-height:.9;font-weight:500;
+    background:linear-gradient(160deg,#fff,var(--silver) 45%,var(--aubergine) 130%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;}
+  .rank{font-family:var(--mono);font-size:.72rem;letter-spacing:.3em;text-transform:uppercase;color:var(--silver-dim);margin-top:14px;}
+  .label{display:flex;align-items:center;gap:14px;margin:54px 0 22px;}
+  .label::before,.label::after{content:'';flex:1;height:1px;background:var(--line);}
+  .label span{font-family:var(--mono);font-size:.64rem;letter-spacing:.32em;text-transform:uppercase;color:var(--silver-faint);}
+  .impression{font-family:var(--serif);font-style:italic;font-size:1.6rem;line-height:1.4;color:var(--ink);max-width:30ch;margin:0 auto;}
+  .signals{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;margin-top:8px;}
+  .signals b{font-family:var(--mono);font-weight:400;font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;color:var(--silver);}
+  .signals i{color:var(--silver-faint);font-style:normal;}
+  .card{text-align:left;border:1px solid var(--line);border-radius:10px;background:linear-gradient(180deg,var(--surface),var(--surface-2));padding:22px 24px;margin-top:14px;}
+  .card .k{font-family:var(--mono);font-size:.62rem;letter-spacing:.24em;text-transform:uppercase;color:var(--aubergine);margin-bottom:8px;}
+  .card .v{font-size:.95rem;color:var(--silver);line-height:1.6;}
+  .cta{display:inline-flex;align-items:center;gap:10px;margin-top:48px;padding:15px 34px;border-radius:8px;
+    background:var(--point);color:#1a0f20;font-size:.74rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+    box-shadow:0 0 0 1px rgba(255,255,255,.4),0 0 36px var(--point-glow);}
+  .footnote{margin-top:34px;font-family:var(--mono);font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--silver-faint);}
+</style>
+</head>
+<body>
+  <nav class="nav"><img src="/maincharacter-logo.jpeg" alt=""><span>MAINCHARACTER</span></nav>
+  <div class="wrap">
+    <p class="eyebrow">Your Aura Score</p>
+    <div class="score">71</div>
+    <p class="rank">Ascendant · Square</p>
+
+    <div class="label"><span>First Impression</span></div>
+    <p class="impression">A strong facial structure is present. Refinements in skin hydration and grooming will elevate the overall presentation.</p>
+
+    <div class="label"><span>The Four Signals</span></div>
+    <div class="signals">
+      <b>Strong Jawline</b><i>·</i><b>Thick Hair</b><i>·</i><b>Intent Gaze</b><i>·</i><b>Clear Skin</b>
+    </div>
+
+    <div class="label"><span>Your Biggest Lever</span></div>
+    <div class="card">
+      <div class="k">Under-eye · 38 / 100</div>
+      <div class="v">Morning puffiness is compressing the eye area and reading as fatigue. The fix is sleep posture and cold exposure — not concealment.</div>
+    </div>
+
+    <a class="cta" href="#">Resolve the reading ◆</a>
+    <p class="footnote">Theme A — Aubergine + light-point · proposal only</p>
+  </div>
+</body>
+</html>

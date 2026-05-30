@@ -327,6 +327,8 @@
   <a href="/lookmaxing" class="lm-nav__brand" aria-label="MainCharacter Lookmaxing">
     <img class="lm-nav__logo" src="/maincharacter-logo.jpeg" alt="" aria-hidden="true"><span class="lm-nav__wordmark">MAINCHARACTER</span>
   </a>
+  <!-- funnel-repair Item 2(b): auth-aware. Swapped to "My Reading" by the script below. -->
+  <a href="/lookmaxing/start" id="lm-nav-auth" class="mc-mono" style="margin-left:auto;font-size:var(--mc-fs-eyebrow);letter-spacing:var(--mc-ls-wide);text-transform:uppercase;color:var(--mc-silver-dim);">Sign In</a>
 </nav>
 
 <!-- ── Hero ── -->
@@ -341,7 +343,7 @@
   <div class="lm-hero__cta-wrap lm-anim lm-anim--4">
     <a
       href="/lookmaxing/start"
-      class="mc-btn-primary mc-light-point-glow lm-hero__cta"
+      class="mc-btn-primary mc-light-point-glow lm-hero__cta js-cta-main"
       data-event="lookmaxing_cta_clicked"
       data-event-props='{"position":"hero"}'
       aria-label="Get Your Aura Reading"
@@ -495,6 +497,18 @@
 <script>
 (function () {
   'use strict';
+
+  // ── funnel-repair Item 2(b/c): auth-aware nav + CTAs ──
+  // Signed-in returning user: nav shows "My Reading", and the funnel CTAs go
+  // straight to the dashboard (skip the sign-in step).
+  if (localStorage.getItem('lookmax.token')) {
+    var navAuth = document.getElementById('lm-nav-auth');
+    if (navAuth) { navAuth.textContent = 'My Reading'; navAuth.setAttribute('href', '/lookmax/'); }
+    var ctas = document.querySelectorAll('a[href="/lookmaxing/start"]');
+    for (var i = 0; i < ctas.length; i++) {
+      if (ctas[i].id !== 'lm-nav-auth') ctas[i].setAttribute('href', '/lookmax/');
+    }
+  }
 
   // ── KPI: landing viewed (trackOnce) ──
   document.addEventListener('DOMContentLoaded', function () {

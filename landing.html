@@ -235,6 +235,17 @@ h1, h2, h3, h4 {
   border-radius: 3px;
 }
 
+.nav__right { display: inline-flex; align-items: center; gap: clamp(0.9rem, 2.5vw, 1.6rem); }
+.nav__auth-link {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  transition: color 0.4s var(--ease);
+}
+.nav__auth-link:hover { color: var(--ink); }
 .nav__cta {
   font-family: var(--font-sans);
   font-weight: 500;
@@ -1126,8 +1137,13 @@ button:focus-visible {
     <img class="nav__logo" src="/maincharacter-logo.jpeg" alt="" aria-hidden="true">
     <span>MAINCHARACTER</span>
   </a>
-  <!-- stage-1-audit-spec.md §1 Wave 2C: /start → /lookmaxing (Orator cordon-off) -->
-  <a href="/lookmaxing" class="nav__cta">Begin Your Arc →</a>
+  <!-- funnel-repair Item 2(b): auth-aware nav. Default logged-out; the script
+       at page end swaps to "My Reading" when a session is present. -->
+  <span class="nav__right">
+    <a href="/lookmaxing/start" id="nav-auth-link" class="nav__auth-link">Sign In</a>
+    <!-- stage-1-audit-spec.md §1 Wave 2C: /start → /lookmaxing (Orator cordon-off) -->
+    <a href="/lookmaxing" class="nav__cta js-cta-main">Begin Your Arc →</a>
+  </span>
 </nav>
 
 <!-- ═══════════════════════════════════════════
@@ -1139,7 +1155,7 @@ button:focus-visible {
   <p class="hero__sub">Most people know who they want to be. They just can't see the gap clearly enough to close it. MainCharacter makes the gap visible, measurable, and closable — one deliberate ritual at a time.</p>
   <div class="hero__ctas">
     <!-- stage-1-audit-spec.md §1 Wave 2C: /start → /lookmaxing (Orator cordon-off) -->
-    <a href="/lookmaxing" class="btn--primary">Begin Your Arc →</a>
+    <a href="/lookmaxing" class="btn--primary js-cta-main">Begin Your Arc →</a>
     <a href="#gap" class="btn--ghost">See How It Works ↓</a>
   </div>
   <div class="hero__scroll" aria-hidden="true">↓</div>
@@ -1460,7 +1476,7 @@ button:focus-visible {
       <h2>Your arc begins with one question.</h2>
       <p class="cta-close__question">"In a room full of your peers, do you feel like the protagonist — or a spectator?"</p>
       <!-- stage-1-audit-spec.md §1 Wave 2C: /start → /lookmaxing (Orator cordon-off) -->
-      <a href="/lookmaxing" class="btn--primary">Answer It →</a>
+      <a href="/lookmaxing" class="btn--primary js-cta-main">Answer It →</a>
     </div>
   </div>
 </section>
@@ -1590,6 +1606,21 @@ button:focus-visible {
   });
 
 })();
+</script>
+
+<!-- funnel-repair Item 2(b/c): auth-aware nav + CTAs. If a session token is
+     present, the nav shows "My Reading" and the main CTAs go straight to the
+     dashboard (skip sign-in). Logged-out shows "Sign In" + the funnel CTA. -->
+<script>
+(function () {
+  var signedIn = !!localStorage.getItem('lookmax.token');
+  var authLink = document.getElementById('nav-auth-link');
+  if (signedIn) {
+    if (authLink) { authLink.textContent = 'My Reading'; authLink.setAttribute('href', '/lookmax/'); }
+    var ctas = document.querySelectorAll('.js-cta-main');
+    for (var i = 0; i < ctas.length; i++) ctas[i].setAttribute('href', '/lookmax/');
+  }
+}());
 </script>
 
 <!-- COMING SOON MODAL -->

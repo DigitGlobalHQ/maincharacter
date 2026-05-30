@@ -211,3 +211,42 @@ Mobile-first; verified in the 360px layout. 1134 tests passing, smoke 39/39.
 
 **Open founder items:** (1) one Google sign-in click to confirm P2+P1 end-to-end; (2) pick a
 theme direction (or keep current); (3) rotate the leaked `.env` Gemini key (security).
+
+---
+
+# Batch 2 — Scheduler + Items 1–3 (founder, 2026-05-30)
+
+**First — un-awaited getAllUsers, codebase-wide.** The "SCHED ERROR: users is not
+iterable" was the same Promise-not-awaited bug in the scheduler. Swept EVERY adapted
+`User.*` call (getAllUsers/getUsersForTime AND per-record getUserBy*/updateUser/…) across
+scheduler, protocol, server, admin, api, lookmax, reaudit, push, video, and the
+`requireLookmaxAuth` middleware. Final scan: zero un-awaited adapted calls. Made it
+verifiable on live without log access: `/health.scheduler` now reports
+`{ startedAt, lastTickAt, ticks, lastError }`. **Live (f0da17f): ticks incrementing,
+lastError null** — the crash is gone. (commits through `f0da17f`)
+
+**Item 1 — Maybe Later saves the reading → dashboard.** The ₹99 paywall "Maybe later"
+now routes to `/lookmax/` (was a dead-end modal close). The reading is already persisted
+server-side (user-owned session); the dashboard fetches it and shows an "Your Aura Reading"
+card (score + rank + four signals) with a "Resolve the reading ◆" CTA. (commit `568b120`)
+
+**Item 2 — Persistent session + auth-aware nav.** (a) JWT TTL 24h → 45d; token lives in
+localStorage so a returning user stays signed in 30+ days across browser restarts.
+(b) Homepage + `/lookmaxing/` nav: signed-in → "My Reading" → `/lookmax/`; signed-out →
+"Sign In". (c) Signed-in main CTAs skip sign-in → dashboard. (commit `42fdb46`)
+Live: logged-out "Sign In" present on both landings (verified).
+
+**Item 3 — Protected admin users table.** `admin.html` previously showed only aggregate
+funnel tiles. New founder-only `GET /api/admin/lookmax-users` (requireAuth) joins users +
+audit sessions → email, signup date, auth provider, ₹99-paid flag, funnel stage
+(signed_up → quiz → photo → reading → paid). Rendered as a "Signed-up Users" table on
+`/admin`. (commit `196ce17`) Live: `/api/admin/lookmax-users` returns 401 without auth.
+
+**Admin access:** `https://maincharacter.digitglobalservices.com/admin` → enter the admin
+password (the `ADMIN_PASSWORD` you set in Render). The "Signed-up Users" table renders
+below "Funnel Pulse".
+
+**Live verification needing the founder (signed-in / password):**
+- Item 1 end-to-end: sign in → reading → Maybe later → dashboard shows the reading.
+- Item 2 persistence: sign in → close browser → reopen → still signed in + nav shows "My Reading".
+- Item 3 data: log into `/admin` and confirm the user table populates.

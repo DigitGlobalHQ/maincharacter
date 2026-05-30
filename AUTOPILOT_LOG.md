@@ -168,3 +168,21 @@ analyse wait, the audit-page arrival) are both covered.
 | Trigger engine (3.3) end-to-end | ✅ PASS (tests + live deploy) |
 | Theme unification across PWA | ⏸ STAGED (founder theme pick) |
 | 3 real photos through live Gemini | ⏸ NEEDS FOUNDER photos |
+
+---
+
+## POST-COMPLETION HARDENING (continuous, until you return)
+
+- **Validator evasion-resistance** (live, commit b8c5177): catches brand drug
+  names (Rogaine, Propecia, Nizoral, Mintop/Tugain, Retino-A, Differin…),
+  supplement products (fish oil, omega-3, zinc, vitamin A–E, gummies), procedure
+  brands (derma pen, GFC, QR678), and whitespace-obfuscated dosages ("5  %",
+  "2.5  mg") — the substitutions a vision model might emit instead of the generic
+  terms. +13 evasion tests; the real-engine persona sweep stays false-positive-free.
+- **Whole-library safety invariant** (commit 512e3d6): a permanent guard proving
+  every protocol-library item, every Norwood-stage hair recommendation, every
+  safe-task entry, every trigger task, and a generated daily protocol for each
+  weakest axis passes the validator. A future medical-content regression fails CI
+  before it can ship.
+- **Suite total after hardening: 1202 passed / 0 failed; smoke 42/42.** All deploys
+  verified live and healthy (scheduler.lastError null).

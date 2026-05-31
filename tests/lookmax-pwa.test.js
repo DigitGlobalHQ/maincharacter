@@ -30,6 +30,13 @@ describe('service worker', () => {
     expect(sw).toContain('/lookmax/mirror.html');
     expect(sw).toContain('/api/lookmax/'); // network-first branch
   });
+  it('serves HTML navigations network-first so the auth shell never staleboxes', () => {
+    // Regression: a cache-first shell trapped the requireSession login redirect,
+    // leaving returning users on a blank dashboard. Navigations must hit network.
+    expect(sw).toMatch(/request\.mode === 'navigate'/);
+    expect(sw).toContain("includes('text/html')");
+    expect(sw).toMatch(/isNavigation/);
+  });
 });
 
 describe('PWA icons', () => {

@@ -12,7 +12,10 @@
  * Bump CACHE_VERSION on any shell change to invalidate old caches.
  */
 
-const CACHE_VERSION = 'lookmax-v2';
+// Bump on every shell/logic change. v3: navigations are now network-first
+// (see fetch handler) so an updated app shell — e.g. the requireSession login
+// redirect — can never be trapped behind a stale cache again. funnel-repair.
+const CACHE_VERSION = 'lookmax-v3';
 const SHELL = [
   '/lookmax/',
   '/lookmax/index.html',
@@ -123,7 +126,29 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for the shell + icons + manifest.
+  // HTML navigations are NETWORK-FIRST (fall back to cache offline). The app
+  // shell carries auth/redirect logic (requireSession → /lookmax/login), so it
+  // must NOT be pinned to a stale cache — that caused the blank-dashboard
+  // dead-end for returning users. funnel-repair.
+  const isNavigation =
+    request.mode === 'navigate' ||
+    (request.headers.get('accept') || '').includes('text/html');
+  if (isNavigation && url.pathname.startsWith('/lookmax/')) {
+    event.respondWith(
+      fetch(request)
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE_VERSION).then((c) => c.put(request, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(request).then((c) => c || caches.match('/lookmax/')))
+    );
+    return;
+  }
+
+  // Cache-first for static assets (icons, manifest, css, js) + uploads.
   if (url.pathname.startsWith('/lookmax/') || url.pathname.startsWith('/uploads/')) {
     event.respondWith(
       caches.match(request).then((cached) => {

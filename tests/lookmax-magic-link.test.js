@@ -366,6 +366,28 @@ describe('GET /api/lookmax/auth/method', () => {
     // Restore for remaining tests
     process.env.LOOKMAX_EMAIL_LOGIN = 'true';
   });
+
+  it('reports google:false when OAuth is not configured (frontend hides the button)', async () => {
+    const prevId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+    const prevSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+    delete process.env.GOOGLE_OAUTH_CLIENT_ID;
+    delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+    const res = await request(app).get('/api/lookmax/auth/method');
+    expect(res.body.google).toBe(false);
+    if (prevId !== undefined) process.env.GOOGLE_OAUTH_CLIENT_ID = prevId;
+    if (prevSecret !== undefined) process.env.GOOGLE_OAUTH_CLIENT_SECRET = prevSecret;
+  });
+
+  it('reports google:true when OAuth client id + secret are present', async () => {
+    const prevId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+    const prevSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+    process.env.GOOGLE_OAUTH_CLIENT_ID = 'test-client-id';
+    process.env.GOOGLE_OAUTH_CLIENT_SECRET = 'test-secret';
+    const res = await request(app).get('/api/lookmax/auth/method');
+    expect(res.body.google).toBe(true);
+    if (prevId === undefined) delete process.env.GOOGLE_OAUTH_CLIENT_ID; else process.env.GOOGLE_OAUTH_CLIENT_ID = prevId;
+    if (prevSecret === undefined) delete process.env.GOOGLE_OAUTH_CLIENT_SECRET; else process.env.GOOGLE_OAUTH_CLIENT_SECRET = prevSecret;
+  });
 });
 
 // ─── Feature flag OFF behaviour ───

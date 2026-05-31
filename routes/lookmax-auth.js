@@ -153,9 +153,12 @@ async function getUserByFirstLoginToken(token) {
 // ─── GET /auth/method — discovery endpoint for the frontend ───
 
 router.get('/auth/method', (req, res) => {
-  if (emailLoginEnabled()) return res.json({ method: 'email' });
-  if (otpAvailable()) return res.json({ method: 'otp' });
-  return res.json({ method: 'admin-only' });
+  // `google` lets the frontend hide the Google button when OAuth isn't
+  // configured, so clicking it can never silently dead-end. funnel-repair.
+  const google = googleConfigured();
+  if (emailLoginEnabled()) return res.json({ method: 'email', google });
+  if (otpAvailable()) return res.json({ method: 'otp', google });
+  return res.json({ method: 'admin-only', google });
 });
 
 // ─── POST /auth/request-link — send a magic-link email ───

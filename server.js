@@ -201,7 +201,21 @@ app.get('/lookmaxing/quiz',          lookmaxingPage('quiz.html'));
 app.get('/lookmaxing/capture',       lookmaxingPage('capture.html'));
 app.get('/lookmaxing/audit/:id',     lookmaxingPage('audit.html'));
 app.get('/lookmaxing/audit/:id/full',lookmaxingPage('audit-full.html'));
-app.get('/lookmaxing/fork',          lookmaxingPage('fork.html'));
+// Fork page injects the trial-live flag. The Daily Mirror is live, so the
+// "Start your free 7-day trial" CTA is enabled unless LOOKMAX_TRIAL_LIVE=false.
+// Without this the button was permanently disabled (dead stage-10 CTA). funnel-repair.
+app.get('/lookmaxing/fork', (req, res) => {
+  const p = path.join(__dirname, 'public', 'lookmaxing', 'fork.html');
+  let html;
+  try {
+    html = fs.readFileSync(p, 'utf8');
+  } catch {
+    return res.sendFile(path.join(__dirname, 'public', 'lookmaxing', 'index.html'));
+  }
+  const trialLive = process.env.LOOKMAX_TRIAL_LIVE !== 'false';
+  html = html.replace('</head>', `<script>window.LOOKMAX_TRIAL_LIVE=${trialLive};</script></head>`);
+  res.type('html').send(html);
+});
 
 // ─── Lookmaxxing PWA (Night-4, P2.6) ───
 // Static assets (manifest, sw.js, app.css/js, icons, *.html) + pretty-URL routes

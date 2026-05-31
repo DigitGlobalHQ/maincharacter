@@ -168,6 +168,9 @@ async function run() {
     check('GET /lookmaxing/capture → 200', lmxCapture.status === 200);
     const lmxFork = await fetch(`${BASE}/lookmaxing/fork`);
     check('GET /lookmaxing/fork → 200', lmxFork.status === 200);
+    const lmxForkBody = await lmxFork.text();
+    check('GET /lookmaxing/fork injects LOOKMAX_TRIAL_LIVE (trial CTA enabled)',
+      /window\.LOOKMAX_TRIAL_LIVE\s*=\s*true/.test(lmxForkBody));
     // Guest flow removed (funnel-repair P1): /guest is gone, sign-in is required.
     const lmxGuest = await fetch(`${BASE}/api/lookmaxing/guest`, { method: 'POST' });
     check('POST /api/lookmaxing/guest → 404 (guest flow removed)', lmxGuest.status === 404);

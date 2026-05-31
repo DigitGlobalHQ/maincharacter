@@ -355,8 +355,10 @@
 </section>
 
 <!-- ── Video ── -->
-<section class="lm-video-section" aria-label="Introduction video">
-  <div class="lm-video-container">
+<!-- Intro video. Hidden until a real video id is set (INTRO_VIDEO_ID in the
+     script below) so users never see an empty box / perpetual "loading". -->
+<section class="lm-video-section" id="intro-video-section" aria-label="Introduction video" hidden>
+  <div class="lm-video-container" id="intro-video-container">
     <!-- REPLACE WITH YOUTUBE EMBED — autoplay-muted, loop, minimal controls -->
     <div class="lm-video-placeholder" aria-hidden="true">Video loading.</div>
   </div>
@@ -583,10 +585,23 @@
       });
   });
 
-  // ── Video placeholder — YouTube IFrame API hook ──
-  // When the founder pastes a YouTube URL, replace the placeholder with an iframe.
-  // The KPI events fire via the YT API onStateChange callback.
-  // Placeholder is always the safe fallback.
+  // ── Intro video — reveal only when configured ──
+  // Set INTRO_VIDEO_ID to a YouTube id to show the intro film; left empty the
+  // whole section stays hidden so there is no empty box / "Video loading" dead
+  // state on the landing. funnel-repair.
+  var INTRO_VIDEO_ID = ''; // e.g. 'dQw4w9WgXcQ'
+  (function initIntroVideo() {
+    var section = document.getElementById('intro-video-section');
+    if (!section) return;
+    if (!INTRO_VIDEO_ID) { section.hidden = true; return; }
+    var container = document.getElementById('intro-video-container');
+    container.innerHTML =
+      '<iframe width="100%" height="100%" style="border:0;position:absolute;inset:0;width:100%;height:100%" ' +
+      'src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(INTRO_VIDEO_ID) +
+      '?rel=0&modestbranding=1&playsinline=1" title="Introduction" ' +
+      'allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
+    section.hidden = false;
+  }());
 }());
 </script>
 </body>

@@ -83,13 +83,62 @@
 
 ---
 
-## PART 2 — FIX PLAN (status tracked below as I land each)
-- [ ] #2 Service worker self-heal (bump version + network-first HTML) — *I can fix + verify live.*
-- [ ] #3 Hide Google button when unconfigured (no silent dead-end) — *I can fix + verify live.*
-- [ ] #1 Make `/health` report Gemini **validity** (cached probe), so leaked-key is visible — *I can fix + verify live; rotation itself is founder action.*
-- [ ] #6 Legacy `/audit` async `await` fix — *I can fix.*
-- [ ] #4 Re-point hero CTA to the audit (or make the audit the primary path) — *pending founder nod on funnel intent.*
-- [ ] #5 Theme unification onto aubergine+gold — *large; delegate to design + frontend agents.*
-- [ ] Sweep every transition for blank/dead states; back/refresh/expired-session handling.
+## PART 2 — FIX LOG (all shipped to `main` → Render → verified LIVE)
 
-_Proof-of-fix (live screenshots + curl) appended per item below as each ships._
+| Fix | Commit | Live proof |
+|-----|--------|-----------|
+| **Service worker self-heal** — navigations network-first, `lookmax-v2`→`v3`. Kills the blank-dashboard dead-end (#2) permanently. | `f09063d` | `GET /lookmax/sw.js` → `CACHE_VERSION='lookmax-v3'` + `isNavigation` network-first branch. Logged-out `/lookmax/` now redirects to `/lookmax/login`. |
+| **Gemini key validity probe** — `/health.config.geminiKey` = `ok\|leaked\|invalid_key\|rate_limited`. | `0f25f5c` | Live `/health` → `geminiKey:"ok"` → **live key is valid; real readings generate.** |
+| **Google sign-in: hide when unconfigured** — `/auth/method` now returns `{google}`; `start.html` shows the button only when true (defensive; live `google:true`). | `0e2cdca` | `auth/method` → `{"method":"email","google":true}`; clicking Google reaches Google's account chooser. |
+| **AuditSession `await` (Postgres adapter)** — legacy `/audit` + lookmaxBaseline snapshot on payment/export were silently no-op'ing. | `0c5be2f` | `POST /api/audit/session` → returns a real `sessionToken` (was `{}`). |
+| **Theme unification** — black + aubergine radial glow (background-only) + gold-outline/glow CTAs (glow-not-fill), gold sparingly. Applied to funnel (`tokens.css`), app (`app.css`), landing. | `6044f62` | Live screenshots: `/lookmaxing` + `/lookmax/login` both show aubergine glow + gold-glow CTAs. |
+| **Intro-video empty box** — hidden until `INTRO_VIDEO_ID` is set (no perpetual "Video loading"). | `60d07ca` | Live `/lookmaxing` → `id="intro-video-section" … hidden`. |
+| **7-day trial CTA enabled** — `window.LOOKMAX_TRIAL_LIVE` was never set → button permanently disabled (dead stage-10). Now injected server-side (default on, `LOOKMAX_TRIAL_LIVE=false` to disable). | `54425d1` | Live `/lookmaxing/fork` → `window.LOOKMAX_TRIAL_LIVE=true`. |
+
+**Tests:** 1214 passing / 20 skipped. **Smoke:** 44/44. All conventional commits, pushed to `main`.
+
+### Corrected findings (my first-pass errors, now fixed/verified)
+- Live Gemini is **OK** (not leaked — that was only the local `.env` key). #1.
+- Google sign-in **works** on live (reaches Google). #3.
+- Hero CTA routing is **adaptive & correct**. #4.
+
+### Transition / back-button / expired-session sweep
+- Deep-link to a gated page with no session → clean redirect to sign-in. **Verified live:** `/lookmaxing/quiz` (no token) → `/lookmaxing/start` (no blank/crash).
+- Analyse failure path (`capture.html`) → overlay hides, button re-enables, error shown, retry available. No infinite spinner. (code-verified)
+- Dead/expired token → dashboard `requireSession` 401 → `clearToken()` → `/lookmax/login`. (code-verified; the SW fix makes this reachable again.)
+
+---
+
+## DAILY MIRROR LOOP — implementation status (stage 11)
+All endpoints exist in `routes/lookmax.js` and are unit-tested (all `tests/lookmax-*.test.js` green):
+- **Daily scan** `POST /mirror` → 8-axis Sharpness score (count-up + 14-day trend canvas in `mirror.html`), `deltaVsYesterday`, `deltaVsBaseline`, `streak++`, `consultantLine` ("why it moved"). ✅ built
+- **Night log** `POST /night-log` + `GET /night-log/today` → saved; the next-day "why it may have moved" line reads **last night's** log → feeds tomorrow's delta narrative. ✅ built
+- **Weekly weigh-in / Trajectory** → `reveal.html` Trajectory canvas (`#traj`, `#day30Traj`), `weeklyAuditFromMirrors`. ✅ built
+- **Streaks** `complete-day` increments `lookmaxProtocolStreak`; mirror streak via `nextStreak`. ✅ built
+- **Time-lapse** → `reveal.html` photo stage. ✅ built
+- **Day-7 conversion** → cross-sell + upgrade CTAs; Razorpay in **test** mode (`razorpay:true`, public paywall untouched). ✅ built
+> Could not walk this loop end-to-end on live (auth-gated + needs daily photos). Per your choice, verified by code + tests; see checklist below to self-verify.
+
+---
+
+## ✅ YOUR CLICK-BY-CLICK CHECKLIST (to verify gated stages 3–11 on live)
+Do this once on your phone (most users are mobile). Each step lists what "correct" looks like.
+
+1. Open **maincharacter.digitglobalservices.com** → tap **Begin Your Arc** → you land on `/lookmaxing` (the audit). *(If you're already signed in it goes to `/lookmax/` — sign out first to test the new-user path.)*
+2. Tap **Get Your Aura Reading** → `/lookmaxing/start`. Tap **Sign in with email** → enter your email → **Send the link**. ✓ "Check your inbox."
+3. Open the email, tap the link → you should land on **`/lookmaxing/quiz`** already signed in (no second login). ✓ session persists.
+4. **Quiz:** answer the **5 questions** → each advances; the last → `/lookmaxing/capture`. ✓ no blank between questions.
+5. **Capture:** tick the 18+ consent, take/upload a **front photo** → **Upload and analyze**. ✓ the **analysing overlay** ("Reading the photograph. Hold.") shows — no blank screen.
+6. **Reading:** you land on `/lookmaxing/audit/<id>` with a **real, specific reading** (headline + single-word signals + blurred premium metrics). ✓ It must NOT say the generic "Your reading is recorded. The structure is here to build on" — if it does, tell me (Gemini RPM/transient) — live key is `ok`, so it should be specific.
+7. **₹99 unlock (TEST):** tap unlock → Razorpay **test** checkout → pay with test card `4111 1111 1111 1111`, any future expiry/CVV. ✓ returns to the **full report** unblurred.
+8. **Full report** `/lookmaxing/audit/<id>/full` → all 8 blocks visible. ✓
+9. **Maybe Later:** from the reading, tap **Maybe later** → you land on the **dashboard** `/lookmax/` (NOT a blank page, NOT bounced to sign-in). ✓ *(this was the stale-SW dead-end — now fixed.)*
+10. **Fork / Trial:** at `/lookmaxing/fork`, **"Start your free 7-day trial →"** must be **tappable** (not greyed "seat held"). Tap it → `/lookmax/mirror`. ✓
+11. **Daily Mirror loop:** take a mirror selfie → **Sharpness Score** + "why it moved" + a safe task. Add a **night log**; next day's delta should reflect it. After ~7 entries, the **Day-7 / reveal** + conversion CTA appears.
+
+**If anything blanks, spins forever, or dead-ends at any step, screenshot the URL + tell me** — I'll fix it the same way.
+
+### Still on your plate (env — I can't set these)
+- *(Optional)* Replace the intro video: set `INTRO_VIDEO_ID` in `public/lookmaxing/index.html` to a YouTube id to show the film.
+- *(Optional)* `/lookmax/login` ("Enter the room") only offers email — add a Google button there for symmetry if you want.
+- Internal **admin** dashboard (`admin.html`) is not on the aubergine theme yet (internal-only, deprioritised) — say the word and I'll theme it.

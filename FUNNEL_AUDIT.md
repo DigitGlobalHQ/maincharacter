@@ -11,43 +11,45 @@
 
 ## PART 1 — PER-STAGE STATUS
 
+> **Table updated after fixes + live re-verification (see "FIX LOG" at bottom). Several first-pass 🟥s were my own misreads — corrected and noted.**
+
 | # | Stage | Status | One-line verdict |
 |---|-------|--------|------------------|
-| 1 | Landing (`/`) | ⚠️ **PASS w/ caveat** | Loads, themed, adaptive nav. But the **primary hero CTA "Begin Your Arc" → `/lookmax/` (app), NOT the audit** — new users skip the whole audit funnel. |
-| 2 | Sign-in / sign-up | 🟥 **BROKEN (Google) / PASS (email)** | Email magic-link works on live (`{"status":"sent"}`). **Google is shown but unconfigured → silent dead bounce.** Two sign-in surfaces with different themes. |
-| 3 | 5 calibration questions (`/lookmaxing/quiz`) | 🟨 **INCOMPLETE** | Auth-gated. Clean redirect to `/lookmaxing/start` when logged-out (no dead-end). Not traversable live without login. |
-| 4 | Photo capture (`/lookmaxing/capture`) | 🟨 **INCOMPLETE** | Auth-gated, clean redirects. Not traversable without login. |
-| 5 | Analysing state | 🟨 **INCOMPLETE (overlay verified in code)** | Overlay exists ("Reading the photograph… Hold."), error path is graceful (no blank/spinner-forever). Not seen live. |
-| 6 | Free reading (`/lookmaxing/audit/:id`) | 🟥 **AT-RISK** | Gated + ownership-enforced. **Real Gemini reading is at risk — committed API key is leaked/403 (see Cross-Cutting #1).** |
-| 7 | ₹99 unlock (test mode) | 🟨 **INCOMPLETE** | Gated. Razorpay test wired (`razorpay:true`). Resolution gate + `/pay/order` present. Not traversed (needs login + test card). |
-| 8 | Full report (`/lookmaxing/audit/:id/full`) | 🟨 **INCOMPLETE** | Gated. Not traversed. |
-| 9 | Maybe Later → dashboard (`/lookmax/`) | 🟥 **BROKEN** | **CONFIRMED dead-end: returning users get a blank dashboard shell** (empty "THIS WEEK", no buttons, no way forward) due to a **stale service worker**. After clearing SW it correctly redirects to login. |
-| 10 | Start 7-day trial | 🟨 **INCOMPLETE** | Fork page exists. Trial-CTA prominence not yet verified live (gated). |
-| 11 | Daily Mirror loop | 🟥 **AT-RISK / INCOMPLETE** | Gated. Mirror scoring uses Gemini; **its fallback is the exact generic text the founder reported** ("Your reading is recorded. The structure is here to build on.") → confirms Gemini is failing on live. Full loop not traversed without login. |
+| 1 | Landing (`/`) | 🟩 **PASS** | Loads, themed, adaptive nav. Hero CTA routing is **adaptive & correct** (logged-out → audit, signed-in → app). Earlier "bypass" was my stale token. |
+| 2 | Sign-in / sign-up | 🟩 **PASS (live)** | **Both work on live:** email magic-link (`{"status":"sent"}`) AND Google (`/auth/google/start` → real Google account chooser). |
+| 3 | 5 calibration questions (`/lookmaxing/quiz`) | 🟨 **INCOMPLETE** | Auth-gated. Clean redirect to `/lookmaxing/start` when logged-out (no dead-end). Needs your login to traverse live. |
+| 4 | Photo capture (`/lookmaxing/capture`) | 🟨 **INCOMPLETE** | Auth-gated, clean redirects (401 → start). Needs login + a photo to traverse. |
+| 5 | Analysing state | 🟨 **INCOMPLETE (overlay + error path verified in code)** | Overlay exists ("Reading the photograph… Hold."), error path is graceful (re-enable + retry, no blank/spinner-forever). Not seen live. |
+| 6 | Free reading (`/lookmaxing/audit/:id`) | 🟨 **INCOMPLETE (Gemini now confirmed OK)** | Gated + ownership-enforced. **Live `geminiKey:"ok"`** → real readings can generate. Need login to see one. |
+| 7 | ₹99 unlock (test mode) | 🟨 **INCOMPLETE** | Gated. Razorpay test wired (`razorpay:true`). Resolution gate + `/pay/order` present. Needs login + test card. |
+| 8 | Full report (`/lookmaxing/audit/:id/full`) | 🟨 **INCOMPLETE** | Gated. Needs login. |
+| 9 | Maybe Later → dashboard (`/lookmax/`) | 🟩 **FIXED (was BROKEN)** | Confirmed blank-shell dead-end from a **stale service worker** → fixed (network-first nav, `lookmax-v3` live). |
+| 10 | Start 7-day trial | 🟨 **INCOMPLETE** | Fork page renders. Trial-CTA prominence to be verified live (gated). |
+| 11 | Daily Mirror loop | 🟨 **INCOMPLETE (Gemini OK)** | Gated. Mirror uses Gemini (live key valid). Generic fallback only fires on RPM-cap/transient failure. Full loop needs login to walk. |
 
-**Legend:** 🟩 PASS · 🟨 INCOMPLETE (could not fully verify — usually auth-gated) · 🟥 BROKEN / AT-RISK.
+**Legend:** 🟩 PASS/FIXED · 🟨 INCOMPLETE (auth-gated — needs your login to finish) · 🟥 BROKEN.
 
 ---
 
 ## CROSS-CUTTING FINDINGS (root causes)
 
-### #1 — 🟥 CRITICAL: Live Gemini key is leaked → real readings fail (founder action required)
-- The committed `.env` `GEMINI_API_KEY` returns **`403 — "Your API key was reported as leaked"`** on a direct test against `gemini-2.5-flash`.
-- `/health` reports `gemini:true` — but that only checks **key presence, not validity**. It is green while being broken.
-- The founder's reported symptom ("Your reading is recorded. The structure is here to build on…") is the **exact fallback string in `services/vision.js:157`** (`fallbackDiagnosis`), used by the **Daily Mirror** (`routes/lookmax.js`) and the **legacy `/audit`** (`routes/audit.js`). It only renders when the Gemini call fails. **This is direct evidence the live key is failing.**
-- The `/lookmaxing` audit path (`routes/lookmaxing.js:_callGemini`) instead **throws** on a configured-but-failing key → `/analyze` returns 500 → the user sees a graceful retry error but **never a real reading**.
-- **Founder must rotate `GEMINI_API_KEY` in the Render dashboard** with a fresh, unleaked key. I cannot set Render env vars or enter API keys (security policy). See "WHAT YOU MUST DO".
-- Also: code warns `gemini-2.0-flash` shuts down **2026-06-01 (today)**. Default is already `gemini-2.5-flash`; confirm Render has **not** pinned `GEMINI_MODEL=gemini-2.0-flash`.
+### #1 — ✅ RESOLVED/RE-SCOPED: Live Gemini key is VALID (local .env key was leaked)
+- **Initial alarm, then corrected by a live probe.** The committed **local** `.env` `GEMINI_API_KEY` returns `403 "Your API key was reported as leaked"`. I assumed Render shared it.
+- I shipped a live **validity probe** (`lib/gemini-health.js` → `/health.config.geminiKey`). After deploy, **live reports `geminiKey: "ok"`** — the Render key is a different, valid key. **Real readings can generate on live.**
+- So the founder's reported generic text ("Your reading is recorded. The structure is here to build on…", `services/vision.js:157` `fallbackDiagnosis`, used by the **Daily Mirror** + legacy `/audit`) was **not** a dead key. Most likely a **transient RPM-guard fallback** (10 calls/min cap in `vision.js`) or a reading taken **before** the key was rotated. Now monitorable: if the key ever flips to `leaked`/`rate_limited`, `/health` shows it.
+- Residual: the `vision.js` fallback copy is a flagged placeholder (`// TODO copy review`) and reveals a fallback in Consultant voice — worth replacing, and worth widening the RPM cap or queuing. Lower priority than a dead key.
+- Confirm Render has **not** pinned `GEMINI_MODEL=gemini-2.0-flash` (retired 2026-06-01); default `gemini-2.5-flash` is correct.
 
 ### #2 — 🟥 CRITICAL: Stale service worker → blank-dashboard dead-end
 - `public/lookmax/sw.js` is **cache-first for the `/lookmax/` shell** and only invalidates when `CACHE_VERSION` changes. The dashboard `index.html` was updated (the `requireSession` redirect) **without bumping `CACHE_VERSION`**, so returning users are served the old shell forever.
 - **Reproduced live:** logged-out, `/lookmax/` rendered an empty shell (96 chars of text, **zero buttons**). After `unregister()` + `caches.delete('lookmax-v2')`, `/lookmax/` correctly redirected to `/lookmax/login`.
 - This also makes every future `/lookmax/*` HTML fix invisible to existing users until the cache version bumps.
 
-### #3 — 🟥 Google sign-in is a silent dead interaction on live
-- `/lookmaxing/start` shows **"Sign in with Google"**, but backend `googleConfigured()` is **false** on live (no `GOOGLE_CLIENT_ID/SECRET`). `auth/method` returns `{"method":"email"}`.
-- Clicking it → `/api/lookmax/auth/google/start` → redirect to `/lookmaxing/start?error=google_unavailable` → **page reloads with no visible error**. The user clicks and nothing happens.
-- Inconsistency: `/lookmax/login` ("Enter the room.") has **no Google button at all**; `/lookmaxing/start` has one. Two different sign-in surfaces.
+### #3 — ✅ CORRECTED: Google sign-in WORKS on live (my earlier read was a flaky click)
+- Re-tested after deploy: `/api/lookmax/auth/google/start` **302s to a real Google consent URL** (valid `client_id` `2654…apps.googleusercontent.com`, correct `redirect_uri`), and a browser click reaches **Google's account chooser** (`accounts.google.com/v3/signin/accountchooser`). `auth/method` now returns `{"method":"email","google":true}`.
+- My first "silent bounce" observation was an automated click that didn't register as a navigation — **not** a real dead-end. **Stage 2 sign-in is PASS for both Google and email on live.**
+- Defensive fix still shipped: `start.html` now only renders the Google button when `/auth/method` reports `google:true`, so if OAuth is ever unset the button can't dead-end. No-op on live today (google:true).
+- Residual nit (low): `/lookmax/login` ("Enter the room.") offers only email — no Google — so the two sign-in surfaces aren't symmetric. Cosmetic.
 
 ### #4 — ✅ CORRECTED: Funnel entry routing is adaptive (NOT a bug)
 - Initial reading was wrong: I still had a stale token in localStorage. Landing JS (`landing.html:1616`) sets `signedIn = !!localStorage.getItem('lookmax.token')` and rewrites all `.js-cta-main` CTAs → `/lookmax/` only when signed in; **logged-out users correctly go to `/lookmaxing` (the audit).** Verified in source.

@@ -8,9 +8,12 @@
   --panel-2: #050506;
   --line: #1d1d20;
   --gold: #e8b84b;
+  --gold-glow: rgba(232,184,75,0.20);
   --ink: #f4f1ea;
   --muted: #8a877f;
   --aesthetic: #b06fd8;
+  /* Aubergine glow — background only (glow-not-fill). Matches /lookmaxing tokens.css. */
+  --aubergine-glow: rgba(138,79,168,0.20);
   --good: #6fd8a0;
   --bad: #d98b8b;
   --nav-h: 62px;
@@ -25,8 +28,9 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   background-image:
-    radial-gradient(circle at 18% 0%, rgba(232,184,75,0.06), transparent 42%),
-    radial-gradient(circle at 88% 24%, rgba(176,111,216,0.05), transparent 45%);
+    radial-gradient(120% 70% at 50% -8%, var(--aubergine-glow), transparent 56%),
+    radial-gradient(circle at 50% 0%, rgba(232,184,75,0.05), transparent 40%);
+  background-attachment: fixed;
   padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
 }
 .page { max-width: 560px; margin: 0 auto; padding: 26px 18px 40px; }
@@ -57,9 +61,10 @@ h2 { font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 
 .card h3 { font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500; font-size: 21px; margin-bottom: 4px; }
 
 /* buttons */
-.btn { display: inline-block; width: 100%; text-align: center; cursor: pointer; border: 1px solid var(--gold); background: transparent; color: var(--gold); font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 600; padding: 13px; border-radius: 9px; transition: background .18s, color .18s, opacity .18s; }
-.btn--solid { background: var(--gold); color: var(--obsidian); }
-.btn:hover { background: var(--gold); color: var(--obsidian); }
+.btn { display: inline-block; width: 100%; text-align: center; cursor: pointer; border: 1px solid var(--gold); background: transparent; color: var(--gold); font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 600; padding: 13px; border-radius: 9px; transition: background .18s, color .18s, box-shadow .18s, opacity .18s; }
+/* glow-not-fill: the strong variant rests with a gold glow instead of a gold fill. */
+.btn--solid { background: rgba(232,184,75,0.07); color: var(--gold); box-shadow: 0 0 24px var(--gold-glow); }
+.btn:hover { background: rgba(232,184,75,0.10); color: var(--gold); box-shadow: 0 0 30px var(--gold-glow); }
 .btn:disabled { opacity: .5; cursor: default; }
 .btn--ghost { border-color: var(--line); color: var(--muted); }
 .link { color: var(--gold); cursor: pointer; text-decoration: none; font-size: 13px; }

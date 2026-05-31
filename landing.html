@@ -75,7 +75,11 @@ html {
 body {
   font-family: var(--font-sans);
   font-weight: 300;
-  background: var(--obsidian);
+  /* Aubergine glow from the top (glow-not-fill), matching the funnel + app. */
+  background:
+    radial-gradient(120% 70% at 50% -8%, rgba(138, 79, 168, 0.18), transparent 56%),
+    var(--obsidian);
+  background-attachment: fixed;
   color: var(--ink);
   line-height: 1.7;
   letter-spacing: 0.04em;

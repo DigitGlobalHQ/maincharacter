@@ -41,6 +41,18 @@ body.lookmaxing {
   --mc-light-point-glow-mid:  rgba(255, 255, 255, 0.32);
   --mc-light-point-glow-hot:  rgba(255, 255, 255, 0.55);
 
+  /* ─── Theme: aubergine glow + gold, used sparingly (funnel-repair P3) ───
+     Aubergine lives ONLY as a background radial glow — never fills an element
+     (glow-not-fill). Gold is the single warm accent: the ◆ mark, primary-CTA
+     outline + hover glow. Text stays silver/white. Shared with /lookmax app.css. */
+  --mc-aubergine:           #7b3f9d;
+  --mc-aubergine-glow:      rgba(138, 79, 168, 0.20);
+  --mc-aubergine-glow-soft: rgba(138, 79, 168, 0.10);
+  --mc-gold:                #e8b84b;
+  --mc-gold-dim:            rgba(232, 184, 75, 0.55);
+  --mc-gold-line:           rgba(232, 184, 75, 0.45);
+  --mc-gold-glow:           rgba(232, 184, 75, 0.20);
+
   /* Silver gradient (brushed metal — borders, monogram, score numerals) */
   --mc-silver-gradient: linear-gradient(
     180deg,
@@ -135,7 +147,12 @@ body.lookmaxing {
    ═══════════════════════════════════════════════════════════════════════════ */
 body.lookmaxing {
   margin: 0;
-  background: var(--mc-black);
+  /* Aubergine glow from the top, fading to near-black. Fixed so it doesn't
+     scroll away on long pages. glow-not-fill: this is the ONLY aubergine. */
+  background:
+    radial-gradient(120% 75% at 50% -8%, var(--mc-aubergine-glow), transparent 56%),
+    var(--mc-near-black);
+  background-attachment: fixed;
   color: var(--mc-silver-bright);
   font-family: var(--mc-font-sans);
   font-weight: 300;
@@ -224,7 +241,7 @@ body.lookmaxing .mc-silver-text {
           color: transparent;
 }
 
-/* ─── Primary CTA: silver-bordered, light-point glow on hover/focus ─── */
+/* ─── Primary CTA: gold-outline + gold glow on hover (glow-not-fill) ─── */
 body.lookmaxing .mc-btn-primary {
   display: inline-flex;
   align-items: center;
@@ -239,7 +256,7 @@ body.lookmaxing .mc-btn-primary {
   font-weight: 400;
   letter-spacing: var(--mc-ls-wide);
   text-transform: uppercase;
-  border: 1px solid var(--mc-silver-mid);
+  border: 1px solid var(--mc-gold-line);
   border-radius: var(--mc-r-2);
   cursor: pointer;
   position: relative;
@@ -251,13 +268,13 @@ body.lookmaxing .mc-btn-primary {
 }
 body.lookmaxing .mc-btn-primary:hover,
 body.lookmaxing .mc-btn-primary:focus-visible {
-  border-color: var(--mc-silver-bright);
-  color: var(--mc-ink-white);
-  box-shadow: var(--mc-shadow-light-point);
+  border-color: var(--mc-gold);
+  color: var(--mc-gold);
+  box-shadow: 0 0 28px var(--mc-gold-glow);
 }
 body.lookmaxing .mc-btn-primary:active {
   transform: translateY(1px);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(232, 184, 75, 0.05);
 }
 body.lookmaxing .mc-btn-primary[aria-busy="true"],
 body.lookmaxing .mc-btn-primary:disabled {
@@ -267,18 +284,20 @@ body.lookmaxing .mc-btn-primary:disabled {
   border-color: var(--mc-silver-faint);
 }
 
-/* Solid filled variant — use for ONE button on the entire screen if the page
-   needs an extra-strong primary (paywall unlock). */
+/* Strong variant — ONE per screen (paywall unlock). Still glow-not-fill: a
+   brighter gold edge + a resting gold glow, gold text. No solid fill. */
 body.lookmaxing .mc-btn-primary--filled {
-  background: var(--mc-ink-white);
-  color: var(--mc-black);
-  border-color: var(--mc-ink-white);
+  background: rgba(232, 184, 75, 0.06);
+  color: var(--mc-gold);
+  border-color: var(--mc-gold);
+  box-shadow: 0 0 24px var(--mc-gold-glow);
 }
 body.lookmaxing .mc-btn-primary--filled:hover,
 body.lookmaxing .mc-btn-primary--filled:focus-visible {
-  background: var(--mc-silver-bright);
-  border-color: var(--mc-silver-bright);
-  color: var(--mc-black);
+  background: rgba(232, 184, 75, 0.10);
+  border-color: var(--mc-gold);
+  color: var(--mc-gold);
+  box-shadow: 0 0 36px var(--mc-gold-glow);
 }
 
 /* ─── Ghost CTA: text-only with hairline underline on hover ─── */

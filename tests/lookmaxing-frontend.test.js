@@ -19,7 +19,8 @@
  *  - No exclamation marks in MainCharacter copy (static HTML body text)
  *  - No [COPY DRAFT] literal text
  *  - The 4 key server.js page routes exist
- *  - No gold tokens used (no var(--gold), no #e8b84b)
+ *  - Funnel HTML surfaces don't hardcode palette tokens (gold lives in tokens.css)
+ *  - tokens.css carries the approved aubergine-glow + sparing-gold theme (2026-06-01)
  *  - Copy-approved audit trail comment present on every surface
  */
 
@@ -254,10 +255,19 @@ describe('tokens.css', () => {
     const css = read('public/lookmaxing/tokens.css');
     expect(css).toContain('mcLightPointBreath');
   });
-  it('does not define gold tokens', () => {
+  // Theme update (founder-approved 2026-06-01): "black + aubergine glow + gold
+  // sparingly, glow-not-fill". tokens.css now defines an aubergine background
+  // glow and a gold accent (used for the ◆ mark + primary-CTA outline/glow).
+  it('defines the approved aubergine-glow + gold-accent tokens', () => {
     const css = read('public/lookmaxing/tokens.css');
-    expect(css).not.toContain('#e8b84b');
-    expect(css).not.toContain('--gold');
+    expect(css).toContain('--mc-aubergine');
+    expect(css).toContain('--mc-gold');
+    expect(css).toContain('#e8b84b');
+  });
+  it('uses aubergine as a background glow only (glow-not-fill)', () => {
+    const css = read('public/lookmaxing/tokens.css');
+    // Aubergine appears in a radial-gradient background, never as a solid fill on a control.
+    expect(css).toMatch(/radial-gradient\([^)]*--mc-aubergine-glow/);
   });
 });
 

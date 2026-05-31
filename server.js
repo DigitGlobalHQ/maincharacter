@@ -39,6 +39,7 @@ const EarlyAccess = require('./models/EarlyAccess');
 const adminLib = require('./lib/admin');
 const db = require('./lib/db');
 const migrate = require('./lib/migrate');
+const geminiHealth = require('./lib/gemini-health');
 
 // ─── Messaging send-mode compatibility shim (Night-3 rename) ───
 // WHATSAPP_SEND_MODE is canonical; mirror the legacy WATI_SEND_MODE into it for a
@@ -295,6 +296,9 @@ app.get('/health', async (req, res) => {
       uptimeFormatted: formatUptime(process.uptime()),
       config: {
         gemini: !!process.env.GEMINI_API_KEY,
+        // funnel-repair: validity, not just presence. A leaked/revoked key (403)
+        // surfaces as 'leaked'/'invalid_key' here while `gemini` above stays true.
+        geminiKey: geminiHealth.getStatus().status,
         razorpay: !!process.env.RAZORPAY_KEY_ID,
         adminPhone: adminLib.getAdminPhones().length > 0,
         adminCount: adminLib.getAdminPhones().length,
@@ -449,4 +453,8 @@ app.listen(PORT, async () => {
   } else {
     console.log('[server] RUN_SCHEDULER=false — scheduler not started');
   }
+
+  // Probe Gemini key validity once on boot (non-blocking) so /health.config.geminiKey
+  // reflects 'ok'/'leaked'/'invalid_key' rather than mere key presence. funnel-repair.
+  geminiHealth.init();
 });

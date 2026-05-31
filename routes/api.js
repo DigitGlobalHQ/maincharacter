@@ -771,7 +771,9 @@ async function processPaymentEvent(event) {
       if (!user.lookmaxBaseline && user.auditSessionId) {
         try {
           const AuditSession = require('../models/AuditSession');
-          const auditSession = AuditSession.getSession(user.auditSessionId);
+          // backend-adapted: await, or `auditSession` is a Promise on live and the
+          // lookmaxBaseline snapshot silently never happens. funnel-repair.
+          const auditSession = await AuditSession.getSession(user.auditSessionId);
           if (auditSession && auditSession.aestheticScores) {
             const scores = auditSession.aestheticScores;
             // Compute average overall (8-axis mean, rounded)

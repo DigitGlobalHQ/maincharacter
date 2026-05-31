@@ -23,20 +23,23 @@ const upload = multer({
 });
 
 // POST /api/audit/session — start a session
-router.post('/session', (req, res) => {
+// NOTE: AuditSession.* is backend-adapted (async under Postgres). Every call
+// MUST be awaited, or `session` is a Promise and `{sessionToken}` serialises
+// to `{}` on live — which dead-ended the whole legacy funnel. funnel-repair.
+router.post('/session', async (req, res) => {
   const { intent, reAudit, userToken } = req.body || {};
-  const session = AuditSession.createSession({ intent, reAudit: !!reAudit, userToken });
+  const session = await AuditSession.createSession({ intent, reAudit: !!reAudit, userToken });
   log.info('SESSION', `created ${session.sessionToken}${intent ? ` (intent=${intent})` : ''}`);
   res.json({ sessionToken: session.sessionToken });
 });
 
 // POST /api/audit/quiz — save quiz answers
-router.post('/quiz', (req, res) => {
+router.post('/quiz', async (req, res) => {
   const { sessionToken, answers } = req.body || {};
   if (!sessionToken || typeof answers !== 'object' || answers === null) {
     return res.status(400).json({ error: 'sessionToken and answers required' });
   }
-  const updated = AuditSession.updateSession(sessionToken, { quizAnswers: answers });
+  const updated = await AuditSession.updateSession(sessionToken, { quizAnswers: answers });
   if (!updated) return res.status(404).json({ error: 'session not found or expired' });
   res.json({ ok: true });
 });
@@ -53,7 +56,7 @@ router.post(
     try {
       const sessionToken = req.body.sessionToken;
       if (!sessionToken) return res.status(400).json({ error: 'sessionToken required' });
-      const session = AuditSession.getSession(sessionToken);
+      const session = await AuditSession.getSession(sessionToken);
       if (!session) return res.status(404).json({ error: 'session not found or expired' });
 
       const files = req.files || {};
@@ -92,7 +95,7 @@ router.post(
         photos.push({ kind, storageKey, mimeType: f.mimetype, backend });
       }
 
-      AuditSession.updateSession(sessionToken, { photos });
+      await AuditSession.updateSession(sessionToken, { photos });
       log.info('PHOTOS', `${photos.length} stored for ${sessionToken} (backend=${photos[0]?.backend || 'unknown'})`);
       res.json({ ok: true, count: photos.length, kinds });
     } catch (err) {
@@ -106,7 +109,7 @@ router.post(
 router.post('/analyze', async (req, res) => {
   try {
     const { sessionToken } = req.body || {};
-    const session = AuditSession.getSession(sessionToken);
+    const session = await AuditSession.getSession(sessionToken);
     if (!session) return res.status(404).json({ error: 'session not found or expired' });
 
     // P3.5a — cannot analyse without photos.
@@ -131,7 +134,7 @@ router.post('/analyze', async (req, res) => {
       hairFocus,
     });
 
-    AuditSession.updateSession(sessionToken, {
+    await AuditSession.updateSession(sessionToken, {
       aestheticScores: result.scores,
       weakestAxis: result.weakestAxis,
       hairReceding: result.hairReceding,
@@ -153,8 +156,8 @@ router.post('/analyze', async (req, res) => {
 });
 
 // GET /api/audit/result/:sessionToken — idempotent read for the paywall page
-router.get('/result/:sessionToken', (req, res) => {
-  const session = AuditSession.getSession(req.params.sessionToken);
+router.get('/result/:sessionToken', async (req, res) => {
+  const session = await AuditSession.getSession(req.params.sessionToken);
   if (!session) return res.status(404).json({ error: 'session not found or expired' });
   if (!session.completedAt) return res.status(409).json({ error: 'analysis not complete' });
   res.json({

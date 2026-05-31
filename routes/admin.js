@@ -209,9 +209,9 @@ router.post('/seed-test-user', requireAuth, async (req, res) => {
   const scores = {};
   for (const axis of AESTHETIC_AXES) scores[axis] = axis === weakest ? 35 : 65;
 
-  // Create + complete a synthetic AuditSession.
-  const session = AuditSession.createSession({ intent: 'founder-seed' });
-  AuditSession.updateSession(session.sessionToken, {
+  // Create + complete a synthetic AuditSession (await — backend-adapted/async on live).
+  const session = await AuditSession.createSession({ intent: 'founder-seed' });
+  await AuditSession.updateSession(session.sessionToken, {
     quizAnswers: { _seed: true, focus: weakest },
     photos: [],
     aestheticScores: scores,

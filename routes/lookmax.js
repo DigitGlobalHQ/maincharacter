@@ -204,7 +204,7 @@ async function loadBaseline(user) {
   if (!user.auditSessionId) return null;
   try {
     const AuditSession = require('../models/AuditSession');
-    const s = AuditSession.getSession(user.auditSessionId);
+    const s = await AuditSession.getSession(user.auditSessionId);
     return s && s.aestheticScores ? s.aestheticScores : null;
   } catch {
     return null;
@@ -700,7 +700,7 @@ router.get('/me/data/export', async (req, res) => {
     // Baseline from auditSession
     if (user.auditSessionId) {
       try {
-        const session = AuditSession.getSession(user.auditSessionId);
+        const session = await AuditSession.getSession(user.auditSessionId);
         if (session && session.photos) {
           for (const p of session.photos) {
             if (p.storageKey && p.storageKey.startsWith('r2:')) {

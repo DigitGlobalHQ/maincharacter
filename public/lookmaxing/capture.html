@@ -621,8 +621,12 @@
   });
 
   // ── Analysing overlay (no blank screen during the reading) ──
-  var analyzingOverlay = document.getElementById('analyzing-overlay');
-  var analyzingLine = document.getElementById('analyzing-line');
+  // NOTE: this script runs before the #analyzing-overlay markup further down the
+  // page is parsed, so eager getElementById here returned null and crashed the
+  // analyze click handler (showAnalyzing → null.textContent), blocking the whole
+  // funnel. Look these up lazily at call time instead, and guard for null.
+  var analyzingOverlay = null;
+  var analyzingLine = null;
   var ANALYZING_LINES = [
     'Reading the photograph.',
     'Mapping the structure.',
@@ -632,6 +636,9 @@
   ];
   var _analyzingTimer = null, _analyzingIdx = 0;
   function showAnalyzing() {
+    analyzingOverlay = analyzingOverlay || document.getElementById('analyzing-overlay');
+    analyzingLine = analyzingLine || document.getElementById('analyzing-line');
+    if (!analyzingOverlay || !analyzingLine) return;
     _analyzingIdx = 0;
     analyzingLine.textContent = ANALYZING_LINES[0];
     analyzingLine.style.opacity = '1';
@@ -650,7 +657,7 @@
   }
   function hideAnalyzing() {
     if (_analyzingTimer) { clearInterval(_analyzingTimer); _analyzingTimer = null; }
-    analyzingOverlay.hidden = true;
+    if (analyzingOverlay) analyzingOverlay.hidden = true;
   }
 
   // ── Analyze ──

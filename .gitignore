@@ -15,7 +15,19 @@ data/audit-sessions.json
 data/razorpay-plans.json
 data/early-access.json
 data/lookmax/
+data/audit-sessions-v2.json
+data/events.jsonl
+data/data-rights.jsonl
 maincharacter-uploads/
 /tmp/maincharacter-uploads/
 coverage/
 .DS_Store
+
+# Personal/test photos — never commit a real face to git history (PII)
+IMG_*.JPG
+IMG_*.jpg
+IMG_*.jpeg
+*.heic
+# Scratch / stray files
+NUL
+probe_tmp.js

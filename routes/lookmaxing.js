@@ -239,10 +239,14 @@ if (GEMINI_API_KEY) {
       // A generous output budget prevents the large 8-block report from being
       // truncated mid-JSON (2.5-flash spends part of its budget on hidden
       // reasoning) — truncation was the cause of intermittent analyze failures.
+      // 2026-06-01: budget raised 16384->32768 and temperature lowered 0.7->0.3
+      // after live testing showed ~2 of 3 /analyze calls returning 502
+      // (truncated JSON -> parse failure). Lower temperature yields more compact,
+      // deterministic structured output; the extra budget absorbs reasoning tokens.
       generationConfig: {
         responseMimeType: 'application/json',
-        maxOutputTokens: 16384,
-        temperature: 0.7,
+        maxOutputTokens: 32768,
+        temperature: 0.3,
       },
       // Aesthetic face analysis legitimately trips the default MEDIUM thresholds.
       // Relax to BLOCK_ONLY_HIGH so genuine readings are not silently blocked
@@ -319,6 +323,21 @@ function _fallbackReport(quizAnswers) {
 }
 
 /**
+ * Derive rank from auraScore using the documented thresholds (spec §6):
+ * 0-29 unawakened, 30-49 seeker, 50-69 ascendant, 70-84 luminary, 85-100 sovereign.
+ * Gemini occasionally returns a rank inconsistent with the score (e.g. 'seeker'
+ * for 58); deriving it server-side keeps the badge and the number aligned.
+ */
+function _rankFromScore(score) {
+  const s = Number(score) || 0;
+  if (s >= 85) return 'sovereign';
+  if (s >= 70) return 'luminary';
+  if (s >= 50) return 'ascendant';
+  if (s >= 30) return 'seeker';
+  return 'unawakened';
+}
+
+/**
  * Call Gemini Vision with the audit photo + quiz answers.
  * Returns _fallbackReport ONLY when the engine is not configured (no prompts
  * module, no API key, or rate-limited). When the model IS configured, a genuine
@@ -355,6 +374,8 @@ async function _callGemini(quizAnswers, photoBuffer) {
       if (typeof parsed.auraScore !== 'number' || !Array.isArray(parsed.freeSignals)) {
         throw new Error('Gemini response missing required fields (auraScore/freeSignals)');
       }
+      // Keep rank consistent with the score regardless of what the model returned.
+      parsed.rank = _rankFromScore(parsed.auraScore);
       return _sanitizeReport(parsed);
     } catch (err) {
       lastErr = err;

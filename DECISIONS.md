@@ -926,3 +926,23 @@ login fields, and `/api/admin/lookmax-users` (the "Signed-up Users" table) gains
 `lastLoginAt`/`loginCount` + a `signedInCount`; `public/admin.html` renders new
 "Last sign-in" and "Logins" columns. First of the sequenced auth epic (B→A→C→D→E).
 No new deps. Works under both JSON and Postgres via the existing `_adapt` dispatch.
+
+### PR A (2026-06-02): email OTP sign-in
+Added a 6-digit email OTP path alongside the existing magic-link flow (both dark
+behind `LOOKMAX_EMAIL_LOGIN`). Two new routes in `routes/lookmax-auth.js`:
+`POST /auth/request-email-otp` (enumeration-safe {status:'sent'}, reuses the
+per-email throttle, find-or-create on funnel sign-up) and
+`POST /auth/verify-email-otp` (generic 401 for all failures, per-IP cooldown,
+max 5 attempts, single-use). The code is stored HASHED (sha256) on the user
+(`emailOtpHash`/`emailOtpExpiresAt`/`emailOtpAttempts`/`emailOtpConsumedAt`),
+compared with `timingSafeEqual`, never logged or returned. On success it calls
+`recordLogin(user,'email')` (PR B) and issues the 45-day session JWT.
+`services/email.js` gains `sendEmailOtp` + `data/email-templates/email-otp.html`
+(mirrors magic-link.html). The primary sign-in entry `public/lookmaxing/start.html`
+now runs the OTP request→verify flow (stores `lookmax.token`, continues to the quiz).
+The magic-link backend + the PWA `login.html` are unchanged and still functional;
+converting `login.html` to OTP is the immediate follow-up.
+
+COPY NOTE (CLAUDE.md §5 / §7): the OTP-specific user-facing strings (email
+template + the new start.html step) are DRAFT, marked `TODO copy review`, and
+need founder approval before `LOOKMAX_EMAIL_LOGIN` is flipped live.

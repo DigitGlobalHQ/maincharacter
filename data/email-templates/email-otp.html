@@ -1,0 +1,89 @@
+<!doctype html>
+<!-- Email OTP sign-in template — PR A.
+     Tokens: {{name}}, {{code}}, {{preheader}}.
+     Structure mirrors magic-link.html exactly — table-based, inline styles only.
+     TODO copy review: the OTP-specific strings below are DRAFT pending founder
+     approval (CLAUDE.md §5 / §7). Do not treat as final Consultant-voice copy. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MainCharacter &#9670; Your sign-in code</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Sora:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body style="margin:0;padding:0;background:#070708;color:#f4f1ea;font-family:'Sora',Arial,sans-serif;">
+
+    <!-- Preheader: hidden inbox-preview text -->
+    <div style="display:none;font-size:1px;line-height:1px;color:#070708;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+      {{preheader}}
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#070708;padding:40px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#0d0d0f;border:1px solid #1d1d20;border-radius:14px;overflow:hidden;">
+
+            <!-- Eyebrow -->
+            <tr>
+              <td style="padding:40px 40px 8px;text-align:center;">
+                <div style="color:#e8b84b;letter-spacing:3px;font-size:12px;text-transform:uppercase;">
+                  &#9670; MainCharacter
+                </div>
+              </td>
+            </tr>
+
+            <!-- Headline — TODO copy review -->
+            <tr>
+              <td style="padding:16px 40px 8px;">
+                <h1 style="font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:500;color:#f4f1ea;font-size:34px;line-height:1.2;margin:0;text-align:center;">
+                  Your sign-in code, {{name}}.
+                </h1>
+              </td>
+            </tr>
+
+            <!-- Body — TODO copy review -->
+            <tr>
+              <td style="padding:8px 40px 8px;text-align:center;color:#b9b6ae;font-size:15px;line-height:1.7;">
+                Enter the six digits below on the sign-in screen. The code is single-use and expires in ten minutes.
+              </td>
+            </tr>
+
+            <!-- The code -->
+            <tr>
+              <td style="padding:24px 40px;text-align:center;">
+                <div style="display:inline-block;background:#070708;border:1px solid #2a2a2e;border-radius:10px;padding:18px 28px;font-family:'Sora',Arial,sans-serif;font-weight:600;color:#e8b84b;font-size:34px;letter-spacing:12px;">
+                  {{code}}
+                </div>
+              </td>
+            </tr>
+
+            <!-- Divider -->
+            <tr>
+              <td style="padding:0 40px;">
+                <div style="border-top:1px solid #1d1d20;"></div>
+              </td>
+            </tr>
+
+            <!-- Security note — TODO copy review -->
+            <tr>
+              <td style="padding:16px 40px;text-align:center;color:#8a877f;font-size:12px;line-height:1.6;">
+                If you did not request this, no action is needed &mdash; the code expires in ten minutes and can be used only once.
+              </td>
+            </tr>
+
+            <!-- Signature footer -->
+            <tr>
+              <td style="padding:8px 40px 40px;text-align:center;color:#5f5d58;font-size:12px;line-height:1.6;">
+                &#9670; MainCharacter &middot; The Consultant
+              </td>
+            </tr>
+
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

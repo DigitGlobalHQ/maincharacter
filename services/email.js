@@ -169,6 +169,25 @@ async function sendMagicLink({ user, token, label, next } = {}) {
 }
 
 /**
+ * Send a 6-digit email sign-in code (PR A — Email OTP). DRY-RUN when
+ * RESEND_API_KEY is unset. Returns {result:'no-recipient'} when the user has no
+ * email. The code is rendered into the email body only — never logged.
+ * NOTE: OTP-specific copy is DRAFT pending founder approval (CLAUDE.md §5 / §7);
+ * the template strings are marked `<!-- TODO copy review -->`.
+ * @param {{user:object, code:string|number}} args
+ */
+async function sendEmailOtp({ user, code } = {}) {
+  if (!user || !user.email) return { result: 'no-recipient' };
+  const subject = '◆ Your MainCharacter sign-in code'; // TODO copy review
+  const html = renderTemplate('email-otp.html', {
+    name: user.name || 'Seeker',
+    code: String(code == null ? '' : code),
+    preheader: 'Your single-use sign-in code, valid for ten minutes.', // TODO copy review
+  });
+  return sendEmail({ to: user.email, subject, html });
+}
+
+/**
  * Send the post-payment receipt. `plan` may be a plan key or a {label, amount}.
  * Pass `firstLoginToken` to embed the one-shot magic-link URL as a backup entry
  * path in the receipt (spec §6, Login Gate P0-1).
@@ -314,6 +333,7 @@ async function sendDay7EvolutionReport({ user, assessment } = {}) {
 module.exports = {
   sendEmail,
   sendMagicLink,
+  sendEmailOtp,
   sendPaywallReceipt,
   sendAuditConfirmation,
   sendDay7EvolutionReport,

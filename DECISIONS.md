@@ -1060,3 +1060,15 @@ numbers, mirror/hair big numbers, sparkline labels) — the "instrument" upgrade
 (Step 3); the big reveal stays the silver-gradient object. +53 tests
 (aura-score-object.test.js). Full suite 1372 + smoke 44/44 green. Visual — needs
 founder eyeball.
+
+### Email templates → silver brand (2026-06-02)
+Follow-up to the website elevation: the transactional emails (welcome, OTP,
+magic-link, paywall-receipt, audit-confirmation, day7) still rendered in gold ◆
+while the whole site moved to silver — the welcome email is a user's first
+impression, so coherence matters. Converted all six templates: CTA buttons →
+near-white fill (#ececf2, matching the site's ink-white primary CTA) with dark
+text; ◆ marks/eyebrows/links/borders/OTP code → silver (#c6c6cf, code brightened
+to #ececf2); day7 aesthetic purple → silver. Kept email-safe (flat inline colors,
+no gradients/glows/vars — those don't render reliably in mail clients), so no
+aubergine atmosphere here. magic-link-template test updated for the new fill.
+Full suite 1372 + smoke 44/44 green.

@@ -1015,3 +1015,48 @@ assertion tests updated to assert the silver system (no gold present). Email
 templates intentionally deferred to a later pass (just copy-approved). Full
 suite 1312 + smoke 44/44 green. CANNOT be visually verified in sandbox — needs
 a live eyeball post-merge.
+
+### Website elevation PR 2 (2026-06-02): landing hero monogram + type system
+The logo (a beautiful brushed-silver "M" lit by one white light-point) was hidden
+as a 26px cropped JPEG in the nav. Converted the black-background JPEG to TWO
+transparent PNGs via sharp (alpha derived from luminance with a noise floor, so
+black→transparent cleanly): maincharacter-logo.png (full lockup) +
+maincharacter-mark.png (mark only). Rebuilt the landing hero so the mark is the
+first thing seen, at scale, with the whole mark gently breathing (the baked
+light-point reads as alive). Nav now shows the whole transparent mark (no crop,
+no black box). Added JetBrains Mono + --font-mono token (data/numeral role,
+sitewide rollout continues in PR 3). Primary CTA kept FILLED + brightened to ink-
+white (deliberately NOT the spec's quiet outline — the hero CTA is conversion-
+critical; bold white + a breathing light-point glow is both prominent and on-
+brand). All locked hero copy preserved verbatim. prefers-reduced-motion disables
+both loops. Faithful recreation via the real asset, not hand-traced SVG (lower
+risk). CANNOT be visually verified in sandbox — needs founder eyeball.
+
+### Website elevation (2026-06-02): aubergine reinstated as sitewide atmosphere
+Founder feedback: the purple/aubergine read well with silver+black; bring it back.
+PR 1 had removed it entirely — but the original problem was never aubergine, it was
+that aubergine lived on ONLY the funnel. Fix: reinstate aubergine as a DELIBERATE,
+tokenized, sitewide AMBIENT ATMOSPHERE (rgba(138,79,168,0.16) top-down radial),
+layered UNDER a tighter white light-point halo, on every surface (landing, funnel
+tokens.css, dashboard app.css, paywall). Discipline: aubergine is atmosphere only —
+never a fill, text, or border; silver stays the structure; the white light-point
+stays the one bright accent. Tokens: --aubergine/--mc-aubergine (#8a4fa8) +
+--aubergine-glow. Also synced the stale source-of-truth product/design-lookmaxing-
+tokens.css ← the served mirror (it predated the silver work; a re-copy would have
+clobbered everything — landmine removed). Color tests updated. CANNOT verify visually
+in sandbox — founder eyeball needed for the aubergine intensity.
+
+### Website elevation (2026-06-02): canonical Aura-score object + Mono data numerals
+One shared score component (`.mc-aura-obj` + buildAuraScoreObject({score,rank})):
+silver-gradient numeral + thin silver ring arc (dasharray = value) + the white
+light-point dot marking the value + mono "/100" and rank. Used IDENTICALLY on the
+funnel reading (audit.html #score-obj-container) and the dashboard saved-reading
+card (index.html) — so a paying user sees continuity, not a costume change (the
+dashboard uses -db-suffixed SVG IDs to avoid PWA cache ID collisions). Also fixed
+a latent bug: audit.html renderReport referenced never-assigned scoreNumeral/
+rankLabel DOM nodes; now builds straight into the canonical container. Rolled
+JetBrains Mono into all dashboard DATA numerals (timeline score/rank/delta, axis
+numbers, mirror/hair big numbers, sparkline labels) — the "instrument" upgrade
+(Step 3); the big reveal stays the silver-gradient object. +53 tests
+(aura-score-object.test.js). Full suite 1372 + smoke 44/44 green. Visual — needs
+founder eyeball.

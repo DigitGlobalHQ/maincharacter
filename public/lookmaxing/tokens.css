@@ -3,7 +3,7 @@
    Stage: stage-1-audit
 
    Visual-system-audit Part C Steps 1-2 (2026-06-02):
-   Gold and aubergine fully retired. Palette = BLACK / SILVER / WHITE light-point.
+   Gold retired. Palette = BLACK / SILVER / WHITE light-point + AUBERGINE atmosphere.
    All --mc-gold* tokens now alias silver/white. No warm hues remain. */
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -44,13 +44,14 @@ body.lookmaxing {
   --mc-light-point-glow-mid:  rgba(255, 255, 255, 0.32);
   --mc-light-point-glow-hot:  rgba(255, 255, 255, 0.55);
 
-  /* ─── RETIRED: aubergine + gold removed (visual-system-audit Part C Step 1).
-     These tokens alias silver/white/light-point so legacy HTML references
-     resolve safely during migration. Do NOT add new uses of --mc-gold or
-     --mc-aubergine-glow. The system is BLACK / SILVER / WHITE light-point. ─── */
-  --mc-aubergine:           #2a2a2a;                   /* retired → near-black */
-  --mc-aubergine-glow:      rgba(255, 255, 255, 0.00); /* retired → transparent */
-  --mc-aubergine-glow-soft: rgba(255, 255, 255, 0.00); /* retired → transparent */
+  /* ─── Palette: BLACK / SILVER / WHITE light-point + AUBERGINE atmosphere.
+     Aubergine (reinstated 2026-06-02, founder) is ATMOSPHERE ONLY — a low-opacity
+     ambient glow that gives the obsidian depth. Silver stays the structure; the
+     white light-point stays the one bright accent. Never use aubergine as a fill,
+     text, or border colour. Gold remains retired (aliases to silver). ─── */
+  --mc-aubergine:           #8a4fa8;                    /* the accent hue */
+  --mc-aubergine-glow:      rgba(138, 79, 168, 0.16);   /* ambient atmosphere */
+  --mc-aubergine-glow-soft: rgba(138, 79, 168, 0.09);   /* fainter atmosphere */
   --mc-gold:                var(--mc-silver-mid);       /* retired → silver-mid (#c0c0c0) */
   --mc-gold-dim:            rgba(192, 192, 192, 0.55);  /* retired → silver-dim translucent */
   --mc-gold-line:           var(--mc-line-bright);      /* retired → silver hairline */
@@ -150,10 +151,11 @@ body.lookmaxing {
    ═══════════════════════════════════════════════════════════════════════════ */
 body.lookmaxing {
   margin: 0;
-  /* Single soft white glow from directly above — echoes the logo's one light
-     source. glow-not-fill; the only ambient colour on the page. */
+  /* Aubergine atmosphere from above + a tighter white light-point halo over it —
+     silver-black with an aubergine soul, lit by one white point. glow-not-fill. */
   background:
-    radial-gradient(120% 75% at 50% -8%, var(--mc-light-point-glow-soft), transparent 56%),
+    radial-gradient(125% 85% at 50% -12%, var(--mc-aubergine-glow), transparent 55%),
+    radial-gradient(70% 45% at 50% -6%, var(--mc-light-point-glow-soft), transparent 60%),
     var(--mc-near-black);
   background-attachment: fixed;
   color: var(--mc-silver-bright);

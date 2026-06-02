@@ -7,7 +7,7 @@
 <meta name="description" content="Most people know who they want to be. MainCharacter makes the gap visible, measurable, and closable — one deliberate ritual at a time. Two pillars. Seven days. Five minutes a day.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=Sora:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=JetBrains+Mono:wght@300;400;500&family=Sora:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ═══════════════════════════════════════════
    DESIGN TOKENS
@@ -55,6 +55,12 @@
 
   --font-serif: 'Cormorant Garamond', 'Georgia', serif;
   --font-sans: 'Sora', 'Helvetica Neue', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+
+  /* Aubergine atmosphere (reinstated 2026-06-02, founder) — ambient glow only,
+     never a fill/text/border. Silver = structure; white light-point = the accent. */
+  --aubergine: #8a4fa8;
+  --aubergine-glow: rgba(138, 79, 168, 0.16);
 }
 
 /* ═══════════════════════════════════════════
@@ -75,10 +81,11 @@ html {
 body {
   font-family: var(--font-sans);
   font-weight: 300;
-  /* Single soft white glow from directly above — echoes the logo's one light
-     source (visual-system-audit Part C Step 1, 2026-06-02). glow-not-fill. */
+  /* Aubergine atmosphere from above + a tighter white light-point halo over it —
+     silver-black with an aubergine soul, lit by one white point. glow-not-fill. */
   background:
-    radial-gradient(120% 70% at 50% -8%, rgba(255, 255, 255, 0.07), transparent 56%),
+    radial-gradient(125% 85% at 50% -12%, var(--aubergine-glow), transparent 55%),
+    radial-gradient(70% 45% at 50% -6%, rgba(255, 255, 255, 0.07), transparent 60%),
     var(--obsidian);
   background-attachment: fixed;
   color: var(--ink);
@@ -237,14 +244,12 @@ h1, h2, h3, h4 {
   line-height: 1;
 }
 
-/* funnel-repair P3: the logo monogram in the nav (square crop of the logo's
-   upper region; the image is on pure black so it sits flush on the obsidian nav). */
+/* The silver M-monogram in the nav — now a transparent PNG (mark only), shown
+   whole on the obsidian bar. No crop, no black box. */
 .nav__logo {
-  width: 26px;
-  height: 26px;
-  object-fit: cover;
-  object-position: center 34%;
-  border-radius: 3px;
+  width: auto;
+  height: 22px;
+  object-fit: contain;
 }
 
 .nav__right { display: inline-flex; align-items: center; flex-shrink: 0; gap: clamp(0.9rem, 2.5vw, 1.6rem); }
@@ -325,6 +330,26 @@ h1, h2, h3, h4 {
   pointer-events: none;
 }
 
+/* The monogram is the hero: the brushed-silver M lit by one white point.
+   The mark's apex light-point is baked into the PNG; we let the whole mark
+   breathe so that single light reads as alive. (visual-system-audit B3/B6) */
+.hero__mark {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  margin-bottom: clamp(1.8rem, 4.5vw, 3rem);
+}
+.hero__mark-img {
+  width: clamp(116px, 22vw, 188px);
+  height: auto;
+  animation: markBreath 5.5s ease-in-out infinite;
+}
+@keyframes markBreath {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.12)); }
+  50%      { filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.30)); }
+}
+
 .hero__eyebrow {
   position: relative;
   z-index: 1;
@@ -386,9 +411,9 @@ h1, h2, h3, h4 {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   padding: 15px 40px;
-  background: var(--gold);
+  background: var(--ink);
   color: var(--obsidian);
-  border: 1px solid var(--gold);
+  border: 1px solid var(--ink);
   border-radius: var(--radius);
   cursor: pointer;
   transition: all 0.5s var(--ease);
@@ -396,9 +421,25 @@ h1, h2, h3, h4 {
 }
 
 .btn--primary:hover {
-  background: var(--gold-bright);
-  box-shadow: 0 4px 40px rgba(255, 255, 255, 0.25);
+  background: #ffffff;
+  border-color: #ffffff;
+  box-shadow: 0 0 36px rgba(255, 255, 255, 0.30);
   transform: translateY(-1px);
+}
+
+/* The hero's single primary action carries the breathing light-point — one
+   per screen, the only loop on the page (visual-system-audit B4). */
+.hero__ctas .btn--primary {
+  animation: ctaBreath 5.5s ease-in-out infinite;
+}
+@keyframes ctaBreath {
+  0%, 100% { box-shadow: 0 0 16px rgba(255, 255, 255, 0.10); }
+  50%      { box-shadow: 0 0 30px rgba(255, 255, 255, 0.22); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__mark-img,
+  .hero__ctas .btn--primary { animation: none; }
 }
 
 .btn--ghost {
@@ -1164,7 +1205,7 @@ button:focus-visible {
      ═══════════════════════════════════════════ -->
 <nav class="nav" id="nav" role="navigation" aria-label="Main navigation">
   <a href="#hero" class="nav__brand" aria-label="MAINCHARACTER home">
-    <img class="nav__logo" src="/maincharacter-logo.jpeg" alt="" aria-hidden="true">
+    <img class="nav__logo" src="/maincharacter-mark.png" alt="" aria-hidden="true">
     <span>MAINCHARACTER</span>
   </a>
   <!-- funnel-repair Item 2(b): auth-aware nav. Default logged-out; the script
@@ -1180,6 +1221,9 @@ button:focus-visible {
      HERO
      ═══════════════════════════════════════════ -->
 <section class="hero" id="hero">
+  <div class="hero__mark" aria-hidden="true">
+    <img class="hero__mark-img" src="/maincharacter-mark.png" alt="">
+  </div>
   <div class="hero__eyebrow">Personal Growth · Redesigned</div>
   <h1 class="hero__headline">Become the Main Character</h1>
   <p class="hero__sub">Most people know who they want to be. They just can't see the gap clearly enough to close it. MainCharacter makes the gap visible, measurable, and closable — one deliberate ritual at a time.</p>

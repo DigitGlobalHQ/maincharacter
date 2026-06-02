@@ -1,7 +1,7 @@
 /* ════════════════════════════════════════════════════════════════
    Lookmaxxing PWA — shared styles (Night-4, P2)
    visual-system-audit Part C Steps 1-2 (2026-06-02):
-   Gold and aubergine retired. Palette = BLACK / SILVER / WHITE light-point.
+   Gold retired. Palette = BLACK / SILVER / WHITE light-point + AUBERGINE atmosphere.
    ════════════════════════════════════════════════════════════════ */
 :root {
   --obsidian: #070708;
@@ -25,7 +25,9 @@
   --gold: var(--silver-mid);
   --gold-glow: var(--light-point-glow-soft);
   --aesthetic: var(--silver-dim);
-  --aubergine-glow: rgba(255,255,255,0.00);
+  /* Aubergine atmosphere (reinstated 2026-06-02, founder) — ambient glow only */
+  --aubergine: #8a4fa8;
+  --aubergine-glow: rgba(138,79,168,0.16);
   /* Status */
   --good: #6fd8a0;
   --bad: #d98b8b;
@@ -44,7 +46,8 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   background-image:
-    radial-gradient(120% 70% at 50% -8%, var(--light-point-glow-soft), transparent 56%);
+    radial-gradient(125% 85% at 50% -12%, var(--aubergine-glow), transparent 55%),
+    radial-gradient(70% 45% at 50% -6%, var(--light-point-glow-soft), transparent 60%);
   background-attachment: fixed;
   padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
 }

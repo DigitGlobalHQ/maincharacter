@@ -258,9 +258,9 @@ describe('tokens.css', () => {
     const css = read('public/lookmaxing/tokens.css');
     expect(css).toContain('mcLightPointBreath');
   });
-  // Unified silver system: --mc-gold and --mc-aubergine are RETIRED aliases
-  // that resolve to silver/white. No warm hue (#e8b84b, aubergine) may appear
-  // as a live value — only as an alias target of silver/white/transparent.
+  // Unified palette: silver = structure, white light-point = the bright accent,
+  // aubergine = low-opacity ambient atmosphere only (reinstated 2026-06-02).
+  // --mc-gold remains a RETIRED alias to silver; no warm gold (#e8b84b) may appear.
   it('defines --mc-silver-bright and the silver gradient (the new primary accent)', () => {
     const css = read('public/lookmaxing/tokens.css');
     expect(css).toContain('--mc-silver-bright');
@@ -284,18 +284,17 @@ describe('tokens.css', () => {
     // No rgba warm amber either
     expect(css).not.toMatch(/rgba\(232,\s*184,\s*75/);
   });
-  it('aubergine-glow token resolves to transparent (retired)', () => {
+  it('aubergine-glow token is a low-opacity aubergine atmosphere (reinstated 2026-06-02)', () => {
     const css = read('public/lookmaxing/tokens.css');
-    // --mc-aubergine-glow must be transparent (rgba(255,255,255,0.00) or similar)
+    // Reinstated as ambient atmosphere: a low-opacity aubergine rgba, not transparent.
     expect(css).toContain('--mc-aubergine-glow');
-    expect(css).toMatch(/--mc-aubergine-glow\s*:\s*rgba\(255,\s*255,\s*255,\s*0(\.0+)?\)/);
+    expect(css).toMatch(/--mc-aubergine-glow\s*:\s*rgba\(138,\s*79,\s*168,\s*0?\.\d+\)/);
   });
-  it('body background uses white light-point glow, not aubergine', () => {
+  it('body layers aubergine atmosphere under a white light-point halo', () => {
     const css = read('public/lookmaxing/tokens.css');
-    // The body background must reference --mc-light-point-glow-soft (white)
+    // Atmosphere (aubergine) + the white light-point, both present in the body bg.
+    expect(css).toContain('--mc-aubergine-glow');
     expect(css).toContain('--mc-light-point-glow-soft');
-    // Must not reference the old aubergine warm color
-    expect(css).not.toMatch(/rgba\(138,\s*79,\s*168/);
   });
   it('primary CTA borders use silver/white, not gold', () => {
     const css = read('public/lookmaxing/tokens.css');

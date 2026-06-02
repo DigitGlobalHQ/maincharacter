@@ -58,13 +58,70 @@
       .lm-skeleton { animation: none; background: var(--mc-silver-ghost); }
     }
 
-    /* ── Score ── */
+    /* ── Score block ── */
     .lm-score-block {
       text-align: center;
       margin-bottom: var(--mc-sp-6);
     }
     .lm-score-eyebrow { margin: 0 0 var(--mc-sp-4); }
-    .lm-score-numeral {
+
+    /* ── Canonical Aura Score Object (mc-aura-obj)
+       Shared identical classes across audit.html and lookmax/index.html.
+       A JS builder function (buildAuraScoreObject) generates this markup
+       given {score, rank}. Defined here and mirrored in the dashboard.
+    ── */
+    .mc-aura-obj {
+      position: relative;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--mc-sp-2);
+    }
+    /* Ring container — positions the SVG behind the numeral */
+    .mc-aura-obj__ring-wrap {
+      position: relative;
+      width: 160px;
+      height: 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    @media (min-width: 768px) {
+      .mc-aura-obj__ring-wrap { width: 200px; height: 200px; }
+    }
+    .mc-aura-obj__ring {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+    /* Silver arc track */
+    .mc-aura-obj__track {
+      fill: none;
+      stroke: var(--mc-silver-ghost);
+      stroke-width: 1.5;
+    }
+    /* Silver arc fill — width set via JS stroke-dasharray */
+    .mc-aura-obj__arc {
+      fill: none;
+      stroke: url(#mc-aura-silver-grad);
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      transform-origin: 50% 50%;
+      transform: rotate(-90deg);
+      transition: stroke-dasharray 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .mc-aura-obj__arc { transition: none; }
+    }
+    /* The white light-point dot that sits on the arc at the score position */
+    .mc-aura-obj__dot {
+      fill: var(--mc-light-point);
+      filter: drop-shadow(0 0 5px rgba(255,255,255,0.7)) drop-shadow(0 0 10px rgba(255,255,255,0.4));
+    }
+    /* Large silver-gradient numeral (serif) */
+    .mc-aura-obj__numeral {
       font-family: var(--mc-font-serif);
       font-size: var(--mc-fs-display);
       font-weight: 400;
@@ -76,22 +133,25 @@
       -webkit-text-fill-color: transparent;
       color: transparent;
       display: block;
-      margin: 0 0 var(--mc-sp-3);
+      /* positioned inside ring-wrap */
+      position: relative;
+      z-index: 1;
     }
-    @media (min-width: 768px) { .lm-score-numeral { font-size: 8rem; } }
-    .lm-score-sub {
+    @media (min-width: 768px) { .mc-aura-obj__numeral { font-size: 7rem; } }
+    /* "/ 100" — JetBrains Mono */
+    .mc-aura-obj__denom {
       font-family: var(--mc-font-mono);
       font-size: var(--mc-fs-mono);
       letter-spacing: var(--mc-ls-wide);
       color: var(--mc-silver-faint);
     }
-    .lm-rank-label {
+    /* Rank label — JetBrains Mono */
+    .mc-aura-obj__rank {
       font-family: var(--mc-font-mono);
       font-size: var(--mc-fs-mono);
       letter-spacing: var(--mc-ls-xwide);
       text-transform: uppercase;
       color: var(--mc-silver-mid);
-      margin: var(--mc-sp-2) 0;
       display: block;
     }
 
@@ -348,12 +408,12 @@
 <!-- Resolved report -->
 <main id="audit-report" class="lm-audit-body" hidden>
 
-  <!-- Block 1: Aura Score -->
+  <!-- Block 1: Aura Score — canonical mc-aura-obj; populated by buildAuraScoreObject() in JS -->
   <div class="lm-score-block" aria-labelledby="score-block-label">
     <p class="mc-eyebrow lm-score-eyebrow" id="score-block-label">YOUR READING</p>
-    <span class="lm-score-numeral" id="score-numeral" aria-label="Aura score">0</span>
-    <span class="lm-score-sub">out of 100</span>
-    <span class="lm-rank-label" id="rank-label"></span>
+    <div id="score-obj-container" aria-label="Aura score">
+      <!-- Populated by buildAuraScoreObject() after fetch -->
+    </div>
   </div>
 
   <!-- Block 2: First Impression -->
@@ -576,14 +636,109 @@
   var RAZORPAY_POLL_INTERVAL = 1500;
   var RAZORPAY_POLL_MAX = 10;
 
+  // ── Canonical Aura Score Object builder ──────────────────────────────────────
+  // Shared identical pattern with public/lookmax/index.html (dashboard).
+  // Returns an HTML string that renders the score ring + numeral + rank.
+  // Call once after fetch; animates the arc dash on first paint unless reduced-motion.
+  //
+  // SVG ring geometry:
+  //   cx=80, cy=80, r=72 (160px container; 200px at ≥768px scales via CSS)
+  //   circumference ≈ 452.4; dasharray = (score/100) * circumference  (gap = rest)
+  //   light-point dot angle: -90° + (score/100)*360° (starting from top)
+  function buildAuraScoreObject(opts) {
+    var score = Math.max(0, Math.min(100, opts.score || 0));
+    var rank  = opts.rank  || '';
+    var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Ring geometry (matches 160px container; SVG viewBox is 160×160)
+    var cx = 80; var cy = 80; var r = 66;
+    var circ = 2 * Math.PI * r; // ≈ 414.7
+    var filled = reducedMotion ? (score / 100) * circ : 0; // animate from 0 unless reduced
+    var gap = circ - filled;
+    var targetFilled = (score / 100) * circ;
+    var targetGap    = circ - targetFilled;
+
+    // Light-point dot position at score angle (start from top = -90°)
+    var angleDeg = -90 + (score / 100) * 360;
+    var angleRad = (angleDeg * Math.PI) / 180;
+    var dotCx = (cx + r * Math.cos(angleRad)).toFixed(2);
+    var dotCy = (cy + r * Math.sin(angleRad)).toFixed(2);
+
+    var html =
+      '<div class="mc-aura-obj" data-score="' + score + '" data-target-filled="' + targetFilled.toFixed(2) + '" data-target-gap="' + targetGap.toFixed(2) + '">' +
+        '<div class="mc-aura-obj__ring-wrap">' +
+          '<svg class="mc-aura-obj__ring" viewBox="0 0 160 160" aria-hidden="true">' +
+            '<defs>' +
+              '<linearGradient id="mc-aura-silver-grad" x1="0%" y1="0%" x2="0%" y2="100%">' +
+                '<stop offset="0%" stop-color="#e8e8e8"/>' +
+                '<stop offset="48%" stop-color="#c0c0c0"/>' +
+                '<stop offset="100%" stop-color="#8a8a8a"/>' +
+              '</linearGradient>' +
+            '</defs>' +
+            '<circle class="mc-aura-obj__track" cx="' + cx + '" cy="' + cy + '" r="' + r + '"/>' +
+            '<circle class="mc-aura-obj__arc" id="mc-aura-arc"' +
+              ' cx="' + cx + '" cy="' + cy + '" r="' + r + '"' +
+              ' stroke-dasharray="' + filled.toFixed(2) + ' ' + gap.toFixed(2) + '"' +
+            '/>' +
+            '<circle class="mc-aura-obj__dot" id="mc-aura-dot"' +
+              ' cx="' + (reducedMotion ? dotCx : cx) + '" cy="' + (reducedMotion ? dotCy : (cy - r)) + '" r="4"' +
+            '/>' +
+          '</svg>' +
+          '<span class="mc-aura-obj__numeral" id="mc-aura-numeral">' + (reducedMotion ? score : '0') + '</span>' +
+        '</div>' +
+        '<span class="mc-aura-obj__denom">/ 100</span>' +
+        '<span class="mc-aura-obj__rank">' + rank.toUpperCase() + '</span>' +
+      '</div>';
+    return html;
+  }
+
+  // Animate the score arc and numeral count-up after the element is in the DOM.
+  function animateAuraScoreObject(finalScore) {
+    var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion) return; // already rendered at final value
+
+    var obj = document.querySelector('.mc-aura-obj');
+    if (!obj) return;
+    var arc      = document.getElementById('mc-aura-arc');
+    var dot      = document.getElementById('mc-aura-dot');
+    var numEl    = document.getElementById('mc-aura-numeral');
+    if (!arc || !dot || !numEl) return;
+
+    var targetFilled = parseFloat(obj.getAttribute('data-target-filled'));
+    var targetGap    = parseFloat(obj.getAttribute('data-target-gap'));
+    var r = 66; var cx = 80; var cy = 80;
+    var circ = 2 * Math.PI * r;
+
+    var duration = 1400;
+    var startTime = null;
+    function animate(ts) {
+      if (!startTime) startTime = ts;
+      var progress = Math.min((ts - startTime) / duration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      var current = Math.round(eased * finalScore);
+      var currentFilled = (current / 100) * circ;
+      var currentGap    = circ - currentFilled;
+
+      numEl.textContent = current;
+      arc.setAttribute('stroke-dasharray', currentFilled.toFixed(2) + ' ' + currentGap.toFixed(2));
+
+      // Move light-point dot
+      var angleDeg = -90 + (current / 100) * 360;
+      var angleRad = (angleDeg * Math.PI) / 180;
+      dot.setAttribute('cx', (cx + r * Math.cos(angleRad)).toFixed(2));
+      dot.setAttribute('cy', (cy + r * Math.sin(angleRad)).toFixed(2));
+
+      if (progress < 1) requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+  }
+
   // DOM refs
   var loadingEl = document.getElementById('audit-loading');
   var errorEl = document.getElementById('audit-error');
   var reportEl = document.getElementById('audit-report');
   var retryBtn = document.getElementById('audit-retry-btn');
   var auditIdDisplay = document.getElementById('audit-id-display');
-  var scoreNumeral = document.getElementById('score-numeral');
-  var rankLabel = document.getElementById('rank-label');
   var firstImpression = document.getElementById('first-impression');
   var signalsRow = document.getElementById('signals-row');
   var faceShapePill = document.getElementById('face-shape-pill');
@@ -632,27 +787,16 @@
 
     reportEl.hidden = false;
 
-    // Score count-up
+    // Canonical score object — build and inject, then animate.
     var finalScore = report.auraScore || 0;
-    var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reducedMotion) {
-      scoreNumeral.textContent = finalScore;
-    } else {
-      var start = 0;
-      var duration = 1400;
-      var startTime = null;
-      function countUp(ts) {
-        if (!startTime) startTime = ts;
-        var progress = Math.min((ts - startTime) / duration, 1);
-        var eased = 1 - Math.pow(1 - progress, 3);
-        scoreNumeral.textContent = Math.round(eased * finalScore);
-        if (progress < 1) requestAnimationFrame(countUp);
-      }
-      requestAnimationFrame(countUp);
+    var scoreObjContainer = document.getElementById('score-obj-container');
+    if (scoreObjContainer) {
+      scoreObjContainer.innerHTML = buildAuraScoreObject({
+        score: finalScore,
+        rank: capitalise(report.rank || ''),
+      });
+      animateAuraScoreObject(finalScore);
     }
-
-    // Rank
-    rankLabel.textContent = capitalise(report.rank || '');
 
     // First impression
     firstImpression.textContent = report.firstImpression || '';

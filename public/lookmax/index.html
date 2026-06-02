@@ -809,8 +809,8 @@
     // Fetches GET /api/lookmax/me/history and renders 5 history modules.
     // Fails silently — the "today" dashboard above must never be blocked.
     //
-    // TODO copy review — ALL user-facing strings in JOURNEY_COPY below are draft
-    // placeholders awaiting founder/copy-consultant approval.
+    // COPY APPROVED 2026-06-02 — strings in JOURNEY_COPY below are founder-approved
+    // (see COPY_APPROVAL_2026-06-02.md).
     /* eslint-disable */
     const JOURNEY_COPY = {
       sectionEyebrow:    'YOUR JOURNEY',
@@ -845,7 +845,7 @@
     /* eslint-enable */
 
     // Axis key → human label map (locked to the 8 keys the audit returns).
-    // TODO copy review — display labels draft pending founder approval.
+    // COPY APPROVED 2026-06-02 — display labels founder-approved.
     const AXIS_LABELS = {
       skinClarity:    'Skin clarity',
       jawDefinition:  'Jaw definition',
@@ -954,12 +954,12 @@
         : JOURNEY_COPY.timelinePlural(readings.length);
 
       const showMoreBtn = hasMore
-        ? `<button class="timeline-showmore" aria-expanded="false" id="journeyShowMore"><!-- TODO copy review -->${JOURNEY_COPY.showAll}</button>`
+        ? `<button class="timeline-showmore" aria-expanded="false" id="journeyShowMore">${JOURNEY_COPY.showAll}</button>`
         : '';
 
       return `<article class="card" aria-labelledby="journey-timeline-heading">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px">
-          <span style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)" id="journey-timeline-heading"><!-- TODO copy review -->${JOURNEY_COPY.timelineEyebrow}</span>
+          <span style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)" id="journey-timeline-heading">${JOURNEY_COPY.timelineEyebrow}</span>
           <span style="font-size:12px;color:var(--muted)">${countText}</span>
         </div>
         <ol class="timeline-rail" style="padding:0;list-style:none;padding-left:24px" id="journeyTimelineList">
@@ -1046,20 +1046,20 @@
       // Delta summary beneath SVG
       let summaryHtml = '';
       if (n === 1) {
-        summaryHtml = `<p class="sparkline-caption"><!-- TODO copy review -->${JOURNEY_COPY.auraOnePoint}</p>`;
+        summaryHtml = `<p class="sparkline-caption">${JOURNEY_COPY.auraOnePoint}</p>`;
       } else {
         const net = readings[n - 1].auraScore - readings[0].auraScore;
         const sClass = net > 0 ? 'up' : (net < 0 ? 'down' : 'neutral');
         const sText = net > 0
           ? JOURNEY_COPY.auraSummaryUp(net)
           : (net < 0 ? JOURNEY_COPY.auraSummaryDown(net) : JOURNEY_COPY.auraSummaryFlat);
-        summaryHtml = `<p class="sparkline-summary ${sClass}"><!-- TODO copy review -->${escapeHtml(sText)}</p>`;
+        summaryHtml = `<p class="sparkline-summary ${sClass}">${escapeHtml(sText)}</p>`;
       }
 
       return `<article class="card" aria-labelledby="journey-aura-heading">
-        <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:14px" id="journey-aura-heading"><!-- TODO copy review -->${JOURNEY_COPY.auraTitle}</div>
+        <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:14px" id="journey-aura-heading">${JOURNEY_COPY.auraTitle}</div>
         <svg class="sparkline-wrap" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"
-             role="img" aria-label="<!-- TODO copy review -->Aura score over ${n} reading${n !== 1 ? 's' : ''}: ${ariaLabel}.">
+             role="img" aria-label="Aura score over ${n} reading${n !== 1 ? 's' : ''}: ${ariaLabel}.">
           ${svgContent}
         </svg>
         ${summaryHtml}
@@ -1108,8 +1108,8 @@
 
       return `<article class="card" aria-labelledby="journey-axes-heading">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px">
-          <span style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)" id="journey-axes-heading"><!-- TODO copy review -->${JOURNEY_COPY.axesTitle}</span>
-          <span style="font-size:12px;color:var(--muted)"><!-- TODO copy review -->${JOURNEY_COPY.axesSubhead}</span>
+          <span style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)" id="journey-axes-heading">${JOURNEY_COPY.axesTitle}</span>
+          <span style="font-size:12px;color:var(--muted)">${JOURNEY_COPY.axesSubhead}</span>
         </div>
         ${rows.join('')}
       </article>`;
@@ -1163,17 +1163,17 @@
 
       // Streak line — only show if longestStreak >= 2
       const streakHtml = (mirrors.longestStreak || 0) >= 2
-        ? `<p class="mirror-streak-line"><!-- TODO copy review -->${JOURNEY_COPY.mirrorStreak(mirrors.longestStreak)}</p>`
+        ? `<p class="mirror-streak-line">${JOURNEY_COPY.mirrorStreak(mirrors.longestStreak)}</p>`
         : '';
 
       // Zero-state caption
       const countNum = mirrors.totalCount || 0;
       const countCaption = countNum === 0
-        ? `<span class="mirror-count-label"><!-- TODO copy review -->${JOURNEY_COPY.mirrorZeroCaption}</span>`
-        : `<span class="mirror-count-label"><!-- TODO copy review -->${JOURNEY_COPY.mirrorCountLabel}</span>`;
+        ? `<span class="mirror-count-label">${JOURNEY_COPY.mirrorZeroCaption}</span>`
+        : `<span class="mirror-count-label">${JOURNEY_COPY.mirrorCountLabel}</span>`;
 
       return `<article class="card" aria-labelledby="journey-mirror-heading" id="journeyMirrorCard">
-        <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:16px" id="journey-mirror-heading"><!-- TODO copy review -->${JOURNEY_COPY.mirrorTitle}</div>
+        <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:16px" id="journey-mirror-heading">${JOURNEY_COPY.mirrorTitle}</div>
         <span class="mirror-count-big">${countNum}</span>
         ${countCaption}
         <div class="heatmap-month-nav" role="group" aria-label="Navigate months">
@@ -1219,18 +1219,17 @@
       const current = hair.current;
       const history = hair.history || [];
 
-      // Trend pill — based on score direction. Neutral framing only.
-      // TODO copy review — pill wording. Never alarmist.
+      // Trend pill — based on score direction. Neutral framing only (COPY APPROVED 2026-06-02).
       let trendPill = '';
       if (history.length >= 2) {
         const first = history[0].hairlineScore;
         const last  = history[history.length - 1].hairlineScore;
         const diff  = last - first;
         let pillText = JOURNEY_COPY.hairTitle; // fallback
-        if (diff > 2)       pillText = 'improving';   // TODO copy review
-        else if (diff < -2) pillText = 'receding';    // TODO copy review
-        else                pillText = 'stable';       // TODO copy review
-        trendPill = `<span class="badge"><!-- TODO copy review -->${pillText}</span>`;
+        if (diff > 2)       pillText = 'improving';
+        else if (diff < -2) pillText = 'receding';
+        else                pillText = 'stable';
+        trendPill = `<span class="badge">${pillText}</span>`;
       }
 
       // Norwood stage summary
@@ -1238,9 +1237,9 @@
       if (history.length >= 2) {
         const stage = current.norwoodStage || '';
         const stageCount = history.filter((h) => h.norwoodStage === stage).length;
-        stageSummary = `<p class="hair-stage-caption"><!-- TODO copy review -->${JOURNEY_COPY.hairStageHeld(stage, stageCount)}</p>`;
+        stageSummary = `<p class="hair-stage-caption">${JOURNEY_COPY.hairStageHeld(stage, stageCount)}</p>`;
       } else {
-        stageSummary = `<p class="hair-stage-caption"><!-- TODO copy review -->${JOURNEY_COPY.hairOneReading}</p>`;
+        stageSummary = `<p class="hair-stage-caption">${JOURNEY_COPY.hairOneReading}</p>`;
       }
 
       // Mini sparkline (identical spec to Module 2 but 80px tall)
@@ -1275,7 +1274,7 @@
       }
 
       return `<article class="card" aria-labelledby="journey-hair-heading">
-        <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:14px" id="journey-hair-heading"><!-- TODO copy review -->${JOURNEY_COPY.hairTitle}</div>
+        <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:14px" id="journey-hair-heading">${JOURNEY_COPY.hairTitle}</div>
         <div class="hair-top-row">
           <span class="hair-score-big">${current.hairlineScore}</span>
           <span class="hair-norwood">Norwood ${escapeHtml(current.norwoodStage || '')}</span>
@@ -1300,8 +1299,8 @@
 
       const href = baseline.href || '#';
       return `<div class="card card--gold">
-        <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:12px"><!-- TODO copy review -->${JOURNEY_COPY.sectionEyebrow}</div>
-        <p style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:16px;color:var(--ink);margin-bottom:20px"><!-- TODO copy review -->${JOURNEY_COPY.firstChapterQuote}</p>
+        <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">${JOURNEY_COPY.sectionEyebrow}</div>
+        <p style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:16px;color:var(--ink);margin-bottom:20px">${JOURNEY_COPY.firstChapterQuote}</p>
         <a href="${href}" class="timeline-link"
            aria-label="${escapeHtml(readingAriaLabel(baseline, null))}"
            data-event="journey_reading_clicked"
@@ -1309,7 +1308,7 @@
            data-reading-type="${escapeHtml(baseline.type)}"
            style="padding:12px 0;display:block">
           <div class="timeline-meta">
-            <span class="timeline-label"><!-- TODO copy review -->${JOURNEY_COPY.rowBaseline}</span>
+            <span class="timeline-label">${JOURNEY_COPY.rowBaseline}</span>
             <span class="timeline-date">${fmtDate(baseline.date)}</span>
           </div>
           <div class="timeline-score-row">
@@ -1320,7 +1319,7 @@
             <span class="timeline-view">${JOURNEY_COPY.rowView}</span>
           </div>
         </a>
-        <p style="font-size:13px;color:var(--muted);margin-top:16px"><!-- TODO copy review -->${escapeHtml(nextLine)}</p>
+        <p style="font-size:13px;color:var(--muted);margin-top:16px">${escapeHtml(nextLine)}</p>
       </div>`;
     }
 
@@ -1341,7 +1340,7 @@
           headers: { 'Authorization': 'Bearer ' + token },
         });
         if (!res.ok) {
-          section.innerHTML = `<p style="font-size:13px;color:var(--muted);text-align:center;margin-top:8px"><!-- TODO copy review -->${JOURNEY_COPY.errorRetry}</p>`;
+          section.innerHTML = `<p style="font-size:13px;color:var(--muted);text-align:center;margin-top:8px">${JOURNEY_COPY.errorRetry}</p>`;
           return;
         }
         data = await res.json();
@@ -1369,8 +1368,8 @@
       // Build section HTML.
       let html = `<section aria-labelledby="journey-heading">
         <div class="journey-header">
-          <p class="journey-eyebrow"><!-- TODO copy review -->${JOURNEY_COPY.sectionEyebrow}</p>
-          <h2 class="journey-subhead" id="journey-heading"><!-- TODO copy review -->${JOURNEY_COPY.sectionSubhead}</h2>
+          <p class="journey-eyebrow">${JOURNEY_COPY.sectionEyebrow}</p>
+          <h2 class="journey-subhead" id="journey-heading">${JOURNEY_COPY.sectionSubhead}</h2>
         </div>`;
 
       if (isFirstChapter) {

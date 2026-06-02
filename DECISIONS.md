@@ -988,3 +988,13 @@ points) today. Decisions:
   supports N readings if re-audit history is later persisted (open follow-up).
 The frontend section (all 5 modules + empty states) is built separately by the
 frontend-agent against this fixed contract; all journey copy is DRAFT (TODO copy review).
+
+### Copy approved (2026-06-02): auth + dashboard epic
+Founder approved all draft strings (COPY_APPROVAL_2026-06-02.md). Removed every
+`TODO copy review` marker across the OTP email, OTP on-page steps, welcome email,
+and the dashboard "Your Journey" section; added COPY APPROVED provenance. Also
+fixed a latent bug where a rendered `<!-- TODO copy review -->` sat inside the
+aura sparkline's aria-label. Strings themselves unchanged (approved as drafted).
+The journey UI test now asserts the markers are gone + provenance present.
+Unrelated drafts left intact: the dashboard push-prompt body line and the Day-7
+assessment fallback (separate copy items, still pending).

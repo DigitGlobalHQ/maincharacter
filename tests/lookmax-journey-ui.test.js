@@ -13,7 +13,7 @@
  *  - the first-chapter empty state is referenced
  *  - no emoji in the file (beyond the approved ◆ diamond glyph)
  *  - no exclamation marks in user-facing copy
- *  - TODO copy review markers present (all copy is draft, pending founder approval)
+ *  - copy approval provenance (founder-approved 2026-06-02; no lingering draft markers)
  *  - all 5 module builders are defined
  *  - analytics events are fired (journey_section_viewed, journey_reading_clicked)
  *  - accessibility: aria-labelledby, role="img", section landmark, ol for timeline
@@ -242,10 +242,12 @@ describe('brand voice — no exclamation marks in copy', () => {
   });
 });
 
-describe('TODO copy review markers', () => {
-  it('journey section copy is marked as draft (TODO copy review present)', () => {
-    // All user-facing strings must be marked pending founder/copy-consultant approval
-    expect(SRC).toContain('TODO copy review');
+describe('copy approval provenance', () => {
+  it('journey copy is founder-approved (no lingering TODO markers in JOURNEY_COPY block)', () => {
+    // Approved 2026-06-02 — the draft markers must be gone and provenance recorded.
+    const block = SRC.slice(SRC.indexOf('JOURNEY_COPY'), SRC.indexOf('AXIS_LABELS'));
+    expect(block).not.toContain('TODO copy review');
+    expect(SRC).toContain('COPY APPROVED 2026-06-02');
   });
 
   it('JOURNEY_COPY constant block is present and labelled', () => {

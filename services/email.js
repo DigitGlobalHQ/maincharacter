@@ -172,17 +172,16 @@ async function sendMagicLink({ user, token, label, next } = {}) {
  * Send the one-time welcome email (PR C). Fired once, on a user's FIRST sign-in
  * (see lib/lookmax-auth.js recordLogin). DRY-RUN when RESEND_API_KEY is unset.
  * Returns {result:'no-recipient'} when the user has no email.
- * NOTE: welcome copy is DRAFT pending founder approval (CLAUDE.md §5 / §7);
- * the template prose is marked `<!-- TODO copy review -->`.
+ * Copy: COPY APPROVED 2026-06-02 (founder) — see COPY_APPROVAL_2026-06-02.md §3.
  * @param {{user:object}} args
  */
 async function sendWelcome({ user } = {}) {
   if (!user || !user.email) return { result: 'no-recipient' };
-  const subject = '◆ Welcome to MainCharacter'; // TODO copy review
+  const subject = '◆ Welcome to MainCharacter';
   const html = renderTemplate('welcome.html', {
     name: user.name || 'Seeker',
     ctaUrl: `${baseUrl()}/lookmax/`,
-    preheader: 'You have taken the first deliberate step.', // TODO copy review
+    preheader: 'You have taken the first deliberate step.',
   });
   return sendEmail({ to: user.email, subject, html });
 }
@@ -191,17 +190,16 @@ async function sendWelcome({ user } = {}) {
  * Send a 6-digit email sign-in code (PR A — Email OTP). DRY-RUN when
  * RESEND_API_KEY is unset. Returns {result:'no-recipient'} when the user has no
  * email. The code is rendered into the email body only — never logged.
- * NOTE: OTP-specific copy is DRAFT pending founder approval (CLAUDE.md §5 / §7);
- * the template strings are marked `<!-- TODO copy review -->`.
+ * Copy: COPY APPROVED 2026-06-02 (founder) — see COPY_APPROVAL_2026-06-02.md §1.
  * @param {{user:object, code:string|number}} args
  */
 async function sendEmailOtp({ user, code } = {}) {
   if (!user || !user.email) return { result: 'no-recipient' };
-  const subject = '◆ Your MainCharacter sign-in code'; // TODO copy review
+  const subject = '◆ Your MainCharacter sign-in code';
   const html = renderTemplate('email-otp.html', {
     name: user.name || 'Seeker',
     code: String(code == null ? '' : code),
-    preheader: 'Your single-use sign-in code, valid for ten minutes.', // TODO copy review
+    preheader: 'Your single-use sign-in code, valid for ten minutes.',
   });
   return sendEmail({ to: user.email, subject, html });
 }

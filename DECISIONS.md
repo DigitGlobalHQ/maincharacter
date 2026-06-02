@@ -1031,3 +1031,17 @@ critical; bold white + a breathing light-point glow is both prominent and on-
 brand). All locked hero copy preserved verbatim. prefers-reduced-motion disables
 both loops. Faithful recreation via the real asset, not hand-traced SVG (lower
 risk). CANNOT be visually verified in sandbox — needs founder eyeball.
+
+### Website elevation (2026-06-02): aubergine reinstated as sitewide atmosphere
+Founder feedback: the purple/aubergine read well with silver+black; bring it back.
+PR 1 had removed it entirely — but the original problem was never aubergine, it was
+that aubergine lived on ONLY the funnel. Fix: reinstate aubergine as a DELIBERATE,
+tokenized, sitewide AMBIENT ATMOSPHERE (rgba(138,79,168,0.16) top-down radial),
+layered UNDER a tighter white light-point halo, on every surface (landing, funnel
+tokens.css, dashboard app.css, paywall). Discipline: aubergine is atmosphere only —
+never a fill, text, or border; silver stays the structure; the white light-point
+stays the one bright accent. Tokens: --aubergine/--mc-aubergine (#8a4fa8) +
+--aubergine-glow. Also synced the stale source-of-truth product/design-lookmaxing-
+tokens.css ← the served mirror (it predated the silver work; a re-copy would have
+clobbered everything — landmine removed). Color tests updated. CANNOT verify visually
+in sandbox — founder eyeball needed for the aubergine intensity.

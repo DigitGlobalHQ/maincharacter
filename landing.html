@@ -56,6 +56,11 @@
   --font-serif: 'Cormorant Garamond', 'Georgia', serif;
   --font-sans: 'Sora', 'Helvetica Neue', sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+
+  /* Aubergine atmosphere (reinstated 2026-06-02, founder) — ambient glow only,
+     never a fill/text/border. Silver = structure; white light-point = the accent. */
+  --aubergine: #8a4fa8;
+  --aubergine-glow: rgba(138, 79, 168, 0.16);
 }
 
 /* ═══════════════════════════════════════════
@@ -76,10 +81,11 @@ html {
 body {
   font-family: var(--font-sans);
   font-weight: 300;
-  /* Single soft white glow from directly above — echoes the logo's one light
-     source (visual-system-audit Part C Step 1, 2026-06-02). glow-not-fill. */
+  /* Aubergine atmosphere from above + a tighter white light-point halo over it —
+     silver-black with an aubergine soul, lit by one white point. glow-not-fill. */
   background:
-    radial-gradient(120% 70% at 50% -8%, rgba(255, 255, 255, 0.07), transparent 56%),
+    radial-gradient(125% 85% at 50% -12%, var(--aubergine-glow), transparent 55%),
+    radial-gradient(70% 45% at 50% -6%, rgba(255, 255, 255, 0.07), transparent 60%),
     var(--obsidian);
   background-attachment: fixed;
   color: var(--ink);

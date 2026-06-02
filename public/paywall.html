@@ -44,8 +44,10 @@
       font-weight: 300;
       line-height: 1.6;
       padding: 48px 20px 80px;
-      /* Single soft white top glow — one light source from above (visual-system-audit Part B3) */
-      background-image: radial-gradient(120% 70% at 50% -8%, rgba(255,255,255,0.07), transparent 56%);
+      /* Aubergine atmosphere + a tighter white light-point halo (one light source) */
+      background-image:
+        radial-gradient(125% 85% at 50% -12%, rgba(138,79,168,0.16), transparent 55%),
+        radial-gradient(70% 45% at 50% -6%, rgba(255,255,255,0.07), transparent 60%);
     }
     .wrap { max-width: 1080px; margin: 0 auto; }
     .eyebrow { color: var(--silver-mid); letter-spacing: 4px; font-size: 11px; text-transform: uppercase; text-align: center; }

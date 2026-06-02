@@ -1045,3 +1045,18 @@ stays the one bright accent. Tokens: --aubergine/--mc-aubergine (#8a4fa8) +
 tokens.css ← the served mirror (it predated the silver work; a re-copy would have
 clobbered everything — landmine removed). Color tests updated. CANNOT verify visually
 in sandbox — founder eyeball needed for the aubergine intensity.
+
+### Website elevation (2026-06-02): canonical Aura-score object + Mono data numerals
+One shared score component (`.mc-aura-obj` + buildAuraScoreObject({score,rank})):
+silver-gradient numeral + thin silver ring arc (dasharray = value) + the white
+light-point dot marking the value + mono "/100" and rank. Used IDENTICALLY on the
+funnel reading (audit.html #score-obj-container) and the dashboard saved-reading
+card (index.html) — so a paying user sees continuity, not a costume change (the
+dashboard uses -db-suffixed SVG IDs to avoid PWA cache ID collisions). Also fixed
+a latent bug: audit.html renderReport referenced never-assigned scoreNumeral/
+rankLabel DOM nodes; now builds straight into the canonical container. Rolled
+JetBrains Mono into all dashboard DATA numerals (timeline score/rank/delta, axis
+numbers, mirror/hair big numbers, sparkline labels) — the "instrument" upgrade
+(Step 3); the big reveal stays the silver-gradient object. +53 tests
+(aura-score-object.test.js). Full suite 1372 + smoke 44/44 green. Visual — needs
+founder eyeball.

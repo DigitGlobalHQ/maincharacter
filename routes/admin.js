@@ -79,11 +79,15 @@ router.get('/stats', requireAuth, async (req, res) => {
     }
   });
 
+  // "Who has signed in" — count of users who have authenticated at least once.
+  const signedInUsers = userList.filter(u => (u.loginCount || 0) > 0).length;
+
   res.json({
     totalUsers: userList.length,
     activeToday,
     trialComplete,
     paidSubscribers: paid,
+    signedInUsers,
     avgImprovement: improvementCount > 0 ? Math.round(totalImprovement / improvementCount) : 0,
     users: userList.map(u => ({
       name: u.name,
@@ -99,6 +103,12 @@ router.get('/stats', requireAuth, async (req, res) => {
       subscriptionStatus: u.subscriptionStatus,
       token: u.token,
       scoresCount: u.scores.length,
+      // ── PR B: login tracking ──
+      email: u.email || null,
+      authProvider: u.authProvider || null,
+      lastLoginAt: u.lastLoginAt || null,
+      firstLoginAt: u.firstLoginAt || null,
+      loginCount: u.loginCount || 0,
     })),
     waitlist: User.getWaitlist(),
   });
@@ -734,6 +744,7 @@ router.post('/grant', requireAuth, async (req, res) => {
   // Chrome speculative-prefetch (or any link-scanner) cannot burn the single-use
   // token before the founder's actual click. The Dogfood Tools panel uses this
   // to set localStorage and redirect straight to /lookmax/.
+  user = await lookmaxAuth.recordLogin(user, 'comp');
   const directJwt = lookmaxAuth.signLookmaxToken(user);
 
   res.json({
@@ -997,10 +1008,18 @@ router.get('/lookmax-users', requireAuth, async (req, res) => {
       paid99,
       stage: stageOf(s),
       comp: !!u.comp,
+      // ── PR B: login tracking ──
+      lastLoginAt: u.lastLoginAt || null,
+      loginCount: u.loginCount || 0,
     };
   }).sort((a, b) => String(b.signupAt || '').localeCompare(String(a.signupAt || '')));
 
-  res.json({ count: rows.length, paidCount: rows.filter((r) => r.paid99).length, users: rows });
+  res.json({
+    count: rows.length,
+    paidCount: rows.filter((r) => r.paid99).length,
+    signedInCount: rows.filter((r) => r.loginCount > 0).length,
+    users: rows,
+  });
 });
 
 // ─── Exported helpers — used by tests and funnel tile computation ────────────

@@ -29,7 +29,7 @@ const User = require('../models/User');
 const Lookmax = require('../models/Lookmax');
 const auth = require('../lib/auth');
 const adminLib = require('../lib/admin');
-const { signLookmaxToken, requireLookmaxAuth } = require('../lib/lookmax-auth');
+const { signLookmaxToken, requireLookmaxAuth, recordLogin } = require('../lib/lookmax-auth');
 const { normalizePhone } = require('../lib/messaging-mode');
 const whatsapp = require('../services/whatsapp');
 const sms = require('../services/sms');
@@ -278,7 +278,8 @@ router.post('/auth/consume-link', async (req, res) => {
   ipRecordSuccess(ip);
   log.info('CONSUME-LINK', `JWT issued for ${maskPhone(user.phone)}`);
 
-  const updatedUser = await User.getUserByPhone(user.phone);
+  let updatedUser = await User.getUserByPhone(user.phone);
+  updatedUser = await recordLogin(updatedUser); // provider falls back to stored authProvider (email)
   return res.json({ token: signLookmaxToken(updatedUser), user: publicUser(updatedUser) });
 });
 
@@ -330,7 +331,8 @@ router.post('/auth/exchange-first-login', async (req, res) => {
   ipRecordSuccess(ip);
   log.info('EXCHANGE-FIRST-LOGIN', `JWT issued for ${maskPhone(user.phone)}`);
 
-  const updatedUser = await User.getUserByPhone(user.phone);
+  let updatedUser = await User.getUserByPhone(user.phone);
+  updatedUser = await recordLogin(updatedUser); // google / post-payment — provider from stored authProvider
   return res.json({ token: signLookmaxToken(updatedUser), user: publicUser(updatedUser) });
 });
 
@@ -350,6 +352,7 @@ router.post('/auth/admin-login', async (req, res) => {
     user = await User.updateUser(normalised, { lookmaxxingActive: true, lookmaxxingStartedAt: new Date().toISOString() });
   }
   log.info('ADMIN-LOGIN', `admin authenticated: ${maskPhone(normalised)}`);
+  user = await recordLogin(user, 'admin');
   res.json({ token: signLookmaxToken(user), user: publicUser(user) });
 });
 
@@ -396,6 +399,7 @@ router.post('/auth/verify-otp', async (req, res) => {
   if (!user) {
     user = await User.createUser({ name: 'Seeker', phone: normalised, pillar: 'aesthetic' });
   }
+  user = await recordLogin(user, 'phone-otp');
   res.json({ token: signLookmaxToken(user), user: publicUser(user) });
 });
 

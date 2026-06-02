@@ -912,3 +912,17 @@ Audited the 11-stage Lookmaxxing funnel on live and shipped seven fixes (commits
 - **Theme = additive aubergine glow + sparing gold (glow-not-fill)** — founder-approved direction. Aubergine lives ONLY as a background radial glow (never fills a control); gold is the single warm accent (◆ mark + CTA outline/hover-glow). Applied via the two token files (`tokens.css`, `app.css`) + landing, so it inherits to every page. Updated the `lookmaxing-frontend` "no gold" test (the old "no warm tones" rule was explicitly overridden).
 - **Trial CTA enabled by server-injected flag** — `window.LOOKMAX_TRIAL_LIVE` was read but never set; the `/lookmaxing/fork` route now injects it (default true; `LOOKMAX_TRIAL_LIVE=false` to disable). Razorpay stays in TEST mode; the public paywall flag was NOT touched.
 - **Founder actions** (cannot do from here): verify gated stages 3–11 via the checklist in `FUNNEL_AUDIT.md`; optionally set `INTRO_VIDEO_ID` and add Google to `/lookmax/login`.
+
+### PR B (2026-06-02): login tracking — "who has signed in and when"
+Every successful sign-in now stamps the user record via a single central helper
+`recordLogin(user, provider)` in `lib/lookmax-auth.js`, called from all session-
+issue paths (email magic-link consume, first-login/Google exchange, admin-login,
+WhatsApp OTP verify, and the admin comp-grant). Records `lastLoginAt`,
+`firstLoginAt` (write-once; distinct from the unrelated one-shot `firstLoginToken`
+post-payment bridge), `loginCount`, and `authProvider` (google|email|admin|
+phone-otp|comp). Best-effort — never blocks or throws on the auth path.
+Surfaced in `/admin`: `/api/admin/stats` gains a `signedInUsers` count + per-user
+login fields, and `/api/admin/lookmax-users` (the "Signed-up Users" table) gains
+`lastLoginAt`/`loginCount` + a `signedInCount`; `public/admin.html` renders new
+"Last sign-in" and "Logins" columns. First of the sequenced auth epic (B→A→C→D→E).
+No new deps. Works under both JSON and Postgres via the existing `_adapt` dispatch.

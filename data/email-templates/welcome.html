@@ -1,0 +1,88 @@
+<!doctype html>
+<!-- Welcome email template — PR C. Fires once, on a user's FIRST sign-in.
+     Tokens: {{name}}, {{ctaUrl}}, {{preheader}}.
+     Structure mirrors magic-link.html / email-otp.html — table-based, inline styles only.
+     TODO copy review: ALL prose below is DRAFT pending founder approval
+     (CLAUDE.md §5 / §7 — the founder owns The Consultant voice). Do not treat as final. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MainCharacter &#9670; Welcome</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Sora:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body style="margin:0;padding:0;background:#070708;color:#f4f1ea;font-family:'Sora',Arial,sans-serif;">
+
+    <!-- Preheader: hidden inbox-preview text -->
+    <div style="display:none;font-size:1px;line-height:1px;color:#070708;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+      {{preheader}}
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#070708;padding:40px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#0d0d0f;border:1px solid #1d1d20;border-radius:14px;overflow:hidden;">
+
+            <!-- Eyebrow -->
+            <tr>
+              <td style="padding:40px 40px 8px;text-align:center;">
+                <div style="color:#e8b84b;letter-spacing:3px;font-size:12px;text-transform:uppercase;">
+                  &#9670; MainCharacter
+                </div>
+              </td>
+            </tr>
+
+            <!-- Headline — TODO copy review -->
+            <tr>
+              <td style="padding:16px 40px 8px;">
+                <h1 style="font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:500;color:#f4f1ea;font-size:36px;line-height:1.2;margin:0;text-align:center;">
+                  Welcome, {{name}}.
+                </h1>
+              </td>
+            </tr>
+
+            <!-- Body — TODO copy review -->
+            <tr>
+              <td style="padding:12px 40px 8px;text-align:center;color:#b9b6ae;font-size:15px;line-height:1.8;">
+                You have taken the first deliberate step.
+                <br /><br />
+                From here, the work is simple in shape and demanding in practice: make the gap between who you are and who you intend to become visible, measurable, and closable. One ritual at a time.
+                <br /><br />
+                We will meet you in the work.
+              </td>
+            </tr>
+
+            <!-- CTA button — TODO copy review -->
+            <tr>
+              <td style="padding:28px 40px;text-align:center;">
+                <a href="{{ctaUrl}}"
+                   aria-label="Enter your space"
+                   style="display:inline-block;background:#e8b84b;color:#070708;text-decoration:none;font-family:'Sora',Arial,sans-serif;font-weight:600;font-size:14px;padding:14px 32px;border-radius:8px;">
+                  Enter your space
+                </a>
+              </td>
+            </tr>
+
+            <!-- Divider -->
+            <tr>
+              <td style="padding:0 40px;">
+                <div style="border-top:1px solid #1d1d20;"></div>
+              </td>
+            </tr>
+
+            <!-- Signature footer -->
+            <tr>
+              <td style="padding:20px 40px 40px;text-align:center;color:#5f5d58;font-size:12px;line-height:1.6;">
+                &#9670; MainCharacter &middot; The Consultant
+              </td>
+            </tr>
+
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

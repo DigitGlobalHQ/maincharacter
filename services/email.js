@@ -169,6 +169,25 @@ async function sendMagicLink({ user, token, label, next } = {}) {
 }
 
 /**
+ * Send the one-time welcome email (PR C). Fired once, on a user's FIRST sign-in
+ * (see lib/lookmax-auth.js recordLogin). DRY-RUN when RESEND_API_KEY is unset.
+ * Returns {result:'no-recipient'} when the user has no email.
+ * NOTE: welcome copy is DRAFT pending founder approval (CLAUDE.md §5 / §7);
+ * the template prose is marked `<!-- TODO copy review -->`.
+ * @param {{user:object}} args
+ */
+async function sendWelcome({ user } = {}) {
+  if (!user || !user.email) return { result: 'no-recipient' };
+  const subject = '◆ Welcome to MainCharacter'; // TODO copy review
+  const html = renderTemplate('welcome.html', {
+    name: user.name || 'Seeker',
+    ctaUrl: `${baseUrl()}/lookmax/`,
+    preheader: 'You have taken the first deliberate step.', // TODO copy review
+  });
+  return sendEmail({ to: user.email, subject, html });
+}
+
+/**
  * Send a 6-digit email sign-in code (PR A — Email OTP). DRY-RUN when
  * RESEND_API_KEY is unset. Returns {result:'no-recipient'} when the user has no
  * email. The code is rendered into the email body only — never logged.
@@ -334,6 +353,7 @@ module.exports = {
   sendEmail,
   sendMagicLink,
   sendEmailOtp,
+  sendWelcome,
   sendPaywallReceipt,
   sendAuditConfirmation,
   sendDay7EvolutionReport,

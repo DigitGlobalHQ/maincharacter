@@ -1015,3 +1015,19 @@ assertion tests updated to assert the silver system (no gold present). Email
 templates intentionally deferred to a later pass (just copy-approved). Full
 suite 1312 + smoke 44/44 green. CANNOT be visually verified in sandbox — needs
 a live eyeball post-merge.
+
+### Website elevation PR 2 (2026-06-02): landing hero monogram + type system
+The logo (a beautiful brushed-silver "M" lit by one white light-point) was hidden
+as a 26px cropped JPEG in the nav. Converted the black-background JPEG to TWO
+transparent PNGs via sharp (alpha derived from luminance with a noise floor, so
+black→transparent cleanly): maincharacter-logo.png (full lockup) +
+maincharacter-mark.png (mark only). Rebuilt the landing hero so the mark is the
+first thing seen, at scale, with the whole mark gently breathing (the baked
+light-point reads as alive). Nav now shows the whole transparent mark (no crop,
+no black box). Added JetBrains Mono + --font-mono token (data/numeral role,
+sitewide rollout continues in PR 3). Primary CTA kept FILLED + brightened to ink-
+white (deliberately NOT the spec's quiet outline — the hero CTA is conversion-
+critical; bold white + a breathing light-point glow is both prominent and on-
+brand). All locked hero copy preserved verbatim. prefers-reduced-motion disables
+both loops. Faithful recreation via the real asset, not hand-traced SVG (lower
+risk). CANNOT be visually verified in sandbox — needs founder eyeball.

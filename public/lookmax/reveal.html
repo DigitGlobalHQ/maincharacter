@@ -550,9 +550,9 @@
       const scores = [];
       if (d.baselineScores != null) scores.push(d.baselineScores);
       if (d.day30Scores != null) scores.push(d.day30Scores);
-      // Use muted gold for down-delta, gold for positive
+      // Silver trajectory; dimmed silver for a down-delta (visual-system: no gold).
       const negative = d.overallDelta != null && d.overallDelta < 0;
-      drawTrajectory('day30Traj', scores, negative ? 'rgba(232,184,75,0.45)' : '#e8b84b');
+      drawTrajectory('day30Traj', scores, negative ? 'rgba(192,192,192,0.45)' : '#c0c0c0');
     }
 
     // ── Shared trajectory draw (vanilla canvas) ────────────────────────────────
@@ -563,9 +563,9 @@
       const ctx = canvas.getContext('2d');
       const w = canvas.width, h = canvas.height;
       const pad = 8;
-      const goldColor = color || '#e8b84b';
+      const lineColor = color || '#c0c0c0';
 
-      ctx.strokeStyle = goldColor;
+      ctx.strokeStyle = lineColor;
       ctx.lineWidth = 2;
       ctx.beginPath();
       scores.forEach((s, idx) => {

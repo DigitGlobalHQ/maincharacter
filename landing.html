@@ -75,9 +75,10 @@ html {
 body {
   font-family: var(--font-sans);
   font-weight: 300;
-  /* Aubergine glow from the top (glow-not-fill), matching the funnel + app. */
+  /* Single soft white glow from directly above — echoes the logo's one light
+     source (visual-system-audit Part C Step 1, 2026-06-02). glow-not-fill. */
   background:
-    radial-gradient(120% 70% at 50% -8%, rgba(138, 79, 168, 0.18), transparent 56%),
+    radial-gradient(120% 70% at 50% -8%, rgba(255, 255, 255, 0.07), transparent 56%),
     var(--obsidian);
   background-attachment: fixed;
   color: var(--ink);

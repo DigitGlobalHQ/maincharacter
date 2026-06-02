@@ -3,7 +3,7 @@
  *
  * Structural tests for the 8 Lookmaxing audit funnel surfaces.
  * Spec: briefs/stage-1-audit-spec.md §3, §8, §10
- * Design: product/design-lookmaxing-8-surfaces.md
+ * Design: product/design-lookmaxing-8-surfaces.md, design/visual-system-audit.md Part C
  * Copy: product/copy-lookmaxing-audit.md
  *
  * Checks (per brief):
@@ -20,7 +20,8 @@
  *  - No [COPY DRAFT] literal text
  *  - The 4 key server.js page routes exist
  *  - Funnel HTML surfaces don't hardcode palette tokens (gold lives in tokens.css)
- *  - tokens.css carries the approved aubergine-glow + sparing-gold theme (2026-06-01)
+ *  - tokens.css carries the unified BLACK/SILVER/WHITE system (visual-system-audit Part C, 2026-06-02)
+ *    Gold (#e8b84b) and aubergine are fully retired. Silver/white light-point is the palette.
  *  - Copy-approved audit trail comment present on every surface
  */
 
@@ -242,6 +243,8 @@ describe('copy audit-trail comment', () => {
 });
 
 // ── §J: Tokens CSS file exists + is valid CSS ────────────────────────────────
+// visual-system-audit Part C Steps 1-2 (2026-06-02):
+// Gold (#e8b84b) and aubergine fully retired. Palette = BLACK / SILVER / WHITE light-point.
 describe('tokens.css', () => {
   it('exists at public/lookmaxing/tokens.css', () => {
     const p = path.join(ROOT, 'public/lookmaxing/tokens.css');
@@ -255,19 +258,51 @@ describe('tokens.css', () => {
     const css = read('public/lookmaxing/tokens.css');
     expect(css).toContain('mcLightPointBreath');
   });
-  // Theme update (founder-approved 2026-06-01): "black + aubergine glow + gold
-  // sparingly, glow-not-fill". tokens.css now defines an aubergine background
-  // glow and a gold accent (used for the ◆ mark + primary-CTA outline/glow).
-  it('defines the approved aubergine-glow + gold-accent tokens', () => {
+  // Unified silver system: --mc-gold and --mc-aubergine are RETIRED aliases
+  // that resolve to silver/white. No warm hue (#e8b84b, aubergine) may appear
+  // as a live value — only as an alias target of silver/white/transparent.
+  it('defines --mc-silver-bright and the silver gradient (the new primary accent)', () => {
     const css = read('public/lookmaxing/tokens.css');
-    expect(css).toContain('--mc-aubergine');
-    expect(css).toContain('--mc-gold');
-    expect(css).toContain('#e8b84b');
+    expect(css).toContain('--mc-silver-bright');
+    expect(css).toContain('--mc-silver-gradient');
   });
-  it('uses aubergine as a background glow only (glow-not-fill)', () => {
+  it('defines the white light-point tokens', () => {
     const css = read('public/lookmaxing/tokens.css');
-    // Aubergine appears in a radial-gradient background, never as a solid fill on a control.
-    expect(css).toMatch(/radial-gradient\([^)]*--mc-aubergine-glow/);
+    expect(css).toContain('--mc-light-point');
+    expect(css).toContain('--mc-light-point-glow-soft');
+  });
+  it('--mc-gold alias resolves to silver, not to #e8b84b', () => {
+    const css = read('public/lookmaxing/tokens.css');
+    // The retired token must alias silver-mid (or a silver/white value), NOT hard-code the old amber hex.
+    expect(css).not.toContain('#e8b84b');
+    // The alias declaration must still exist (keeps legacy markup from breaking)
+    expect(css).toContain('--mc-gold');
+  });
+  it('no gold hex anywhere in the file', () => {
+    const css = read('public/lookmaxing/tokens.css');
+    expect(css).not.toContain('#e8b84b');
+    // No rgba warm amber either
+    expect(css).not.toMatch(/rgba\(232,\s*184,\s*75/);
+  });
+  it('aubergine-glow token resolves to transparent (retired)', () => {
+    const css = read('public/lookmaxing/tokens.css');
+    // --mc-aubergine-glow must be transparent (rgba(255,255,255,0.00) or similar)
+    expect(css).toContain('--mc-aubergine-glow');
+    expect(css).toMatch(/--mc-aubergine-glow\s*:\s*rgba\(255,\s*255,\s*255,\s*0(\.0+)?\)/);
+  });
+  it('body background uses white light-point glow, not aubergine', () => {
+    const css = read('public/lookmaxing/tokens.css');
+    // The body background must reference --mc-light-point-glow-soft (white)
+    expect(css).toContain('--mc-light-point-glow-soft');
+    // Must not reference the old aubergine warm color
+    expect(css).not.toMatch(/rgba\(138,\s*79,\s*168/);
+  });
+  it('primary CTA borders use silver/white, not gold', () => {
+    const css = read('public/lookmaxing/tokens.css');
+    // The CTA border must use a silver or light-point token
+    expect(css).toContain('--mc-line-bright');
+    // Must not use any gold-amber rgba on the CTA
+    expect(css).not.toMatch(/rgba\(232,\s*184,\s*75.*CTA/);
   });
 });
 

@@ -11,7 +11,10 @@
 <style>
   :root {
     --obsidian: #070708; --surface: #1c1c21; --ink: #f4f1ea; --ink-dim: #9b988f;
-    --ink-faint: #5c5a54; --gold: #e8b84b; --gold-deep: #8a6f31; --violet: #b06fd8;
+    --ink-faint: #5c5a54;
+    /* Silver system — retired gold/pillar aliases */
+    --gold: #c0c0c0; --gold-deep: #5a5a5a; --violet: #8a8a8a;
+    --silver-bright: #e8e8e8; --silver-mid: #c0c0c0; --silver-dim: #8a8a8a;
     --line: rgba(255,255,255,0.08);
     --font-serif: 'Cormorant Garamond','Georgia',serif; --font-sans: 'Sora',sans-serif;
   }
@@ -32,7 +35,7 @@
     font-family: var(--font-sans); font-size: 0.78rem; letter-spacing: 0.16em;
     text-transform: uppercase; padding: 14px 30px; border-radius: 6px; cursor: pointer;
     transition: all .4s ease; align-self: flex-start; }
-  .btn:hover { background: rgba(232,184,75,0.1); box-shadow: 0 0 24px rgba(232,184,75,0.18); }
+  .btn:hover { background: rgba(255,255,255,0.08); box-shadow: 0 0 24px rgba(255,255,255,0.12); }
   .btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .progress { height: 2px; background: var(--line); border-radius: 2px; margin-bottom: 2.4rem; }
   .progress__fill { height: 100%; background: var(--gold); border-radius: 2px;
@@ -44,7 +47,7 @@
     border: 1px solid var(--line); color: var(--ink); padding: 16px 18px; border-radius: 8px;
     margin-bottom: 12px; cursor: pointer; font-family: var(--font-sans); font-size: 0.96rem;
     transition: all .25s ease; }
-  .opt:hover, .opt.sel { border-color: var(--gold); background: rgba(232,184,75,0.06); }
+  .opt:hover, .opt.sel { border-color: var(--silver-mid); background: rgba(255,255,255,0.05); }
   textarea { width: 100%; background: var(--surface); border: 1px solid var(--line);
     color: var(--ink); padding: 16px; border-radius: 8px; font-family: var(--font-sans);
     font-size: 1rem; min-height: 120px; resize: vertical; }
@@ -83,14 +86,14 @@
   .muted { color: var(--ink-faint); font-size: 0.85rem; margin-top: 1.4rem; }
   /* F3 — "Hold this reading" ghost button (secondary tier, does not compete with primary CTA) */
   .btn--ghost {
-    background: transparent; border: 1px solid rgba(232,184,75,0.35); color: var(--gold);
+    background: transparent; border: 1px solid rgba(232,232,232,0.25); color: var(--silver-mid);
     font-family: var(--font-sans); font-size: 0.75rem; letter-spacing: 0.12em;
     text-transform: uppercase; padding: 11px 24px; border-radius: 6px; cursor: pointer;
     transition: border-color .3s ease, background .3s ease; align-self: flex-start;
     margin-top: 0.8rem; min-height: 44px; min-width: 44px;
   }
-  .btn--ghost:hover { border-color: var(--gold); background: rgba(232,184,75,0.06); }
-  .btn--ghost:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+  .btn--ghost:hover { border-color: var(--silver-mid); background: rgba(255,255,255,0.05); }
+  .btn--ghost:focus-visible { outline: 2px solid var(--silver-mid); outline-offset: 3px; }
   /* Confirmation line after copy/share */
   .recover-confirm {
     font-size: 0.8rem; color: var(--ink-faint); margin-top: 0.6rem;

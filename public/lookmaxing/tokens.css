@@ -1,12 +1,15 @@
 /* Mirror of product/design-lookmaxing-tokens.css; do not edit here — edit the source and re-copy.
    Source: product/design-lookmaxing-tokens.css
-   Stage: stage-1-audit */
+   Stage: stage-1-audit
+
+   Visual-system-audit Part C Steps 1-2 (2026-06-02):
+   Gold and aubergine fully retired. Palette = BLACK / SILVER / WHITE light-point.
+   All --mc-gold* tokens now alias silver/white. No warm hues remain. */
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MainCharacter · Lookmaxing — Design Tokens
-   Spec source: briefs/stage-1-audit-spec.md §2 (BLACK & SILVER, no gold)
+   Spec source: design/visual-system-audit.md Part B1 (BLACK & SILVER, no gold)
    Scope: applied ONLY when <body class="lookmaxing"> is present.
-          Existing /lookmax/* gold pages are untouched by this stylesheet.
 
    Font dependency note for frontend-agent:
    Add this <link> to the <head> of every /lookmaxing/* page (Cormorant +
@@ -41,17 +44,17 @@ body.lookmaxing {
   --mc-light-point-glow-mid:  rgba(255, 255, 255, 0.32);
   --mc-light-point-glow-hot:  rgba(255, 255, 255, 0.55);
 
-  /* ─── Theme: aubergine glow + gold, used sparingly (funnel-repair P3) ───
-     Aubergine lives ONLY as a background radial glow — never fills an element
-     (glow-not-fill). Gold is the single warm accent: the ◆ mark, primary-CTA
-     outline + hover glow. Text stays silver/white. Shared with /lookmax app.css. */
-  --mc-aubergine:           #7b3f9d;
-  --mc-aubergine-glow:      rgba(138, 79, 168, 0.20);
-  --mc-aubergine-glow-soft: rgba(138, 79, 168, 0.10);
-  --mc-gold:                #e8b84b;
-  --mc-gold-dim:            rgba(232, 184, 75, 0.55);
-  --mc-gold-line:           rgba(232, 184, 75, 0.45);
-  --mc-gold-glow:           rgba(232, 184, 75, 0.20);
+  /* ─── RETIRED: aubergine + gold removed (visual-system-audit Part C Step 1).
+     These tokens alias silver/white/light-point so legacy HTML references
+     resolve safely during migration. Do NOT add new uses of --mc-gold or
+     --mc-aubergine-glow. The system is BLACK / SILVER / WHITE light-point. ─── */
+  --mc-aubergine:           #2a2a2a;                   /* retired → near-black */
+  --mc-aubergine-glow:      rgba(255, 255, 255, 0.00); /* retired → transparent */
+  --mc-aubergine-glow-soft: rgba(255, 255, 255, 0.00); /* retired → transparent */
+  --mc-gold:                var(--mc-silver-mid);       /* retired → silver-mid (#c0c0c0) */
+  --mc-gold-dim:            rgba(192, 192, 192, 0.55);  /* retired → silver-dim translucent */
+  --mc-gold-line:           var(--mc-line-bright);      /* retired → silver hairline */
+  --mc-gold-glow:           var(--mc-light-point-glow-soft); /* retired → light-point glow */
 
   /* Silver gradient (brushed metal — borders, monogram, score numerals) */
   --mc-silver-gradient: linear-gradient(
@@ -147,10 +150,10 @@ body.lookmaxing {
    ═══════════════════════════════════════════════════════════════════════════ */
 body.lookmaxing {
   margin: 0;
-  /* Aubergine glow from the top, fading to near-black. Fixed so it doesn't
-     scroll away on long pages. glow-not-fill: this is the ONLY aubergine. */
+  /* Single soft white glow from directly above — echoes the logo's one light
+     source. glow-not-fill; the only ambient colour on the page. */
   background:
-    radial-gradient(120% 75% at 50% -8%, var(--mc-aubergine-glow), transparent 56%),
+    radial-gradient(120% 75% at 50% -8%, var(--mc-light-point-glow-soft), transparent 56%),
     var(--mc-near-black);
   background-attachment: fixed;
   color: var(--mc-silver-bright);
@@ -241,7 +244,7 @@ body.lookmaxing .mc-silver-text {
           color: transparent;
 }
 
-/* ─── Primary CTA: gold-outline + gold glow on hover (glow-not-fill) ─── */
+/* ─── Primary CTA: silver-outline + white light-point glow on hover (glow-not-fill) ─── */
 body.lookmaxing .mc-btn-primary {
   display: inline-flex;
   align-items: center;
@@ -256,7 +259,7 @@ body.lookmaxing .mc-btn-primary {
   font-weight: 400;
   letter-spacing: var(--mc-ls-wide);
   text-transform: uppercase;
-  border: 1px solid var(--mc-gold-line);
+  border: 1px solid var(--mc-line-bright);
   border-radius: var(--mc-r-2);
   cursor: pointer;
   position: relative;
@@ -268,13 +271,13 @@ body.lookmaxing .mc-btn-primary {
 }
 body.lookmaxing .mc-btn-primary:hover,
 body.lookmaxing .mc-btn-primary:focus-visible {
-  border-color: var(--mc-gold);
-  color: var(--mc-gold);
-  box-shadow: 0 0 28px var(--mc-gold-glow);
+  border-color: var(--mc-ink-white);
+  color: var(--mc-ink-white);
+  box-shadow: 0 0 28px var(--mc-light-point-glow-mid);
 }
 body.lookmaxing .mc-btn-primary:active {
   transform: translateY(1px);
-  background: rgba(232, 184, 75, 0.05);
+  background: var(--mc-light-point-glow-soft);
 }
 body.lookmaxing .mc-btn-primary[aria-busy="true"],
 body.lookmaxing .mc-btn-primary:disabled {
@@ -284,20 +287,22 @@ body.lookmaxing .mc-btn-primary:disabled {
   border-color: var(--mc-silver-faint);
 }
 
-/* Strong variant — ONE per screen (paywall unlock). Still glow-not-fill: a
-   brighter gold edge + a resting gold glow, gold text. No solid fill. */
+/* Strong variant — ONE per screen (paywall unlock). White/silver outline +
+   resting white light-point glow. glow-not-fill. */
 body.lookmaxing .mc-btn-primary--filled {
-  background: rgba(232, 184, 75, 0.06);
-  color: var(--mc-gold);
-  border-color: var(--mc-gold);
-  box-shadow: 0 0 24px var(--mc-gold-glow);
+  background: var(--mc-light-point-glow-soft);
+  color: var(--mc-ink-white);
+  border-color: var(--mc-silver-bright);
+  box-shadow: 0 0 24px var(--mc-light-point-glow-mid);
+  animation: mcLightPointBreath 3.2s var(--mc-ease) infinite;
 }
 body.lookmaxing .mc-btn-primary--filled:hover,
 body.lookmaxing .mc-btn-primary--filled:focus-visible {
-  background: rgba(232, 184, 75, 0.10);
-  border-color: var(--mc-gold);
-  color: var(--mc-gold);
-  box-shadow: 0 0 36px var(--mc-gold-glow);
+  background: var(--mc-light-point-glow-mid);
+  border-color: var(--mc-ink-white);
+  color: var(--mc-ink-white);
+  box-shadow: 0 0 36px var(--mc-light-point-glow-hot);
+  animation: none;
 }
 
 /* ─── Ghost CTA: text-only with hairline underline on hover ─── */

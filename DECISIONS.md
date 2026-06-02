@@ -946,3 +946,15 @@ converting `login.html` to OTP is the immediate follow-up.
 COPY NOTE (CLAUDE.md §5 / §7): the OTP-specific user-facing strings (email
 template + the new start.html step) are DRAFT, marked `TODO copy review`, and
 need founder approval before `LOOKMAX_EMAIL_LOGIN` is flipped live.
+
+### PR C (2026-06-02): welcome email on first sign-in
+Added `email.sendWelcome({user})` + `data/email-templates/welcome.html` (mirrors
+the magic-link/OTP templates). Fired ONCE, from `recordLogin` (PR B), on a real
+user's first-ever sign-in — gated to self-serve providers (`google`/`email`) with
+an email on file; admin / comp / phone-otp accounts are excluded. Detected via the
+`firstLoginAt`-was-unset signal already computed in recordLogin. Fire-and-forget
+(lazy `require` of services/email, `.catch()`) so a failing send never blocks the
+login. DRY-RUN until RESEND_API_KEY is set.
+
+COPY NOTE (CLAUDE.md §5 / §7): ALL welcome-email prose is DRAFT, marked
+`TODO copy review`, and needs founder approval before email goes live.

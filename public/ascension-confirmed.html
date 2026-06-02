@@ -16,12 +16,13 @@
     --ink: #f4f1ea;
     --ink-dim: #9b988f;
     --ink-faint: #5c5a54;
-    --gold: #e8b84b;
-    --gold-bright: #f5d07a;
-    --gold-glow: rgba(232,184,75,0.18);
-    --orator: #f0a500;
-    --aesthetic: #b06fd8;
-    --sage: #3dbfa0;
+    /* Silver system — retired gold/pillar aliases */
+    --gold: #c0c0c0;
+    --gold-bright: #e8e8e8;
+    --gold-glow: rgba(255,255,255,0.12);
+    --orator: #c0c0c0;
+    --aesthetic: #8a8a8a;
+    --sage: #8a8a8a;
     --border: rgba(255,255,255,0.07);
     --serif: 'Cormorant Garamond', Georgia, serif;
     --sans: 'Sora', system-ui, sans-serif;
@@ -54,7 +55,7 @@
     z-index: 9999;
   }
 
-  /* Gold glow behind checkmark */
+  /* White light-point glow behind checkmark */
   .glow-bg {
     position: fixed;
     top: 50%;
@@ -62,7 +63,7 @@
     transform: translate(-50%, -60%);
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, rgba(232,184,75,0.06) 0%, transparent 60%);
+    background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 60%);
     pointer-events: none;
     animation: pulseGlow 4s ease-in-out infinite;
   }
@@ -88,7 +89,7 @@
     width: 88px;
     height: 88px;
     border-radius: 50%;
-    border: 3px solid var(--gold);
+    border: 3px solid rgba(232,232,232,0.55);
     position: absolute;
     inset: 0;
     animation: ringDraw 0.8s cubic-bezier(0.16,1,0.3,1) 0.3s both;
@@ -100,7 +101,7 @@
     position: absolute;
     inset: -8px;
     border-radius: 50%;
-    border: 1px solid rgba(232,184,75,0.15);
+    border: 1px solid rgba(255,255,255,0.10);
     animation: ringPulse 2s ease-in-out 1.5s infinite;
   }
 
@@ -314,7 +315,7 @@
   // SUBTLE GOLD PARTICLES
   // ═══════════════════════════════════════════════════════════════
 
-  const colors = ['#e8b84b', '#f5d07a', '#f0a500', '#b06fd8', '#3dbfa0'];
+  const colors = ['#e8e8e8', '#c0c0c0', '#8a8a8a', '#5a5a5a', '#ffffff'];
 
   function createParticle() {
     const particle = document.createElement('div');

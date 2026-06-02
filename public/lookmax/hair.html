@@ -20,19 +20,19 @@
     .norwood { display: flex; gap: 6px; justify-content: space-between; margin: 14px 0; }
     .nw { flex: 1; text-align: center; }
     /* Mark row: holds ◆ only for active stage */
-    .nw__mark { height: 14px; font-size: 12px; line-height: 1; color: var(--gold); margin-bottom: 2px; }
-    /* Dome: neutral outline for ALL stages — no gold fill */
+    .nw__mark { height: 14px; font-size: 12px; line-height: 1; color: var(--silver-bright); margin-bottom: 2px; }
+    /* Dome: neutral outline for ALL stages — no fill */
     .nw .dome {
       height: 30px;
       border: 1px solid var(--muted);
       border-radius: 16px 16px 4px 4px;
       background: transparent;
     }
-    /* Active stage: gold border on dome only (no fill) */
-    .nw.on .dome { border-color: var(--gold); }
+    /* Active stage: silver border on dome only (no fill) */
+    .nw.on .dome { border-color: var(--silver-mid); }
     /* Stage number */
     .nw .n { font-size: 10px; color: var(--muted); margin-top: 4px; }
-    .nw.on .n { color: var(--gold); }
+    .nw.on .n { color: var(--silver-bright); }
 
     /* ── Photo slots ──────────────────────────────────────────── */
     .slot {
@@ -45,7 +45,7 @@
       cursor: pointer;
       min-height: 56px;
     }
-    .slot.filled { border-style: solid; border-color: rgba(232,184,75,0.5); color: var(--gold); }
+    .slot.filled { border-style: solid; border-color: rgba(232,232,232,0.40); color: var(--silver-bright); }
 
     /* ── Recommendation lists ─────────────────────────────────── */
     .reclist li {
@@ -58,11 +58,11 @@
       content: '◆';
       position: absolute;
       left: 0;
-      color: var(--gold);
+      color: var(--silver-dim);
       font-size: 9px;
       top: 8px;
     }
-    .reclist.dont li::before { content: '⊘'; color: var(--aesthetic); }
+    .reclist.dont li::before { content: '⊘'; color: var(--silver-dim); }
 
     /* ── Capture frame line ───────────────────────────────────── */
     .capture-frame {
@@ -87,7 +87,7 @@
       font-family: 'Cormorant Garamond', serif;
       font-style: italic;
       font-size: 15px;
-      color: var(--gold);
+      color: var(--silver-bright);
       margin-bottom: 14px;
     }
 
@@ -272,7 +272,7 @@
             <div class="norwood">${nw}</div>
             <div style="display:flex;justify-content:space-between;font-size:14px">
               <span>Hairline score</span>
-              <b style="color:var(--gold)">${r.hairlineScore}/100${delta}</b>
+              <b style="color:var(--silver-bright)">${r.hairlineScore}/100${delta}</b>
             </div>
             <div style="display:flex;justify-content:space-between;font-size:14px;margin-top:6px">
               <span>Recession</span>
@@ -298,7 +298,7 @@
           <div class="norwood">${nw}</div>
           <div style="display:flex;justify-content:space-between;font-size:14px">
             <span>Hairline score</span>
-            <b style="color:var(--gold)">${r.hairlineScore}/100${delta}</b>
+            <b style="color:var(--silver-bright)">${r.hairlineScore}/100${delta}</b>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:14px;margin-top:6px">
             <span>Recession</span>

@@ -26,7 +26,7 @@
       display: block;
     }
     .preview--live {
-      box-shadow: inset 0 0 0 1px rgba(232,184,75,0.6);
+      box-shadow: inset 0 0 0 1px rgba(232,232,232,0.55);
     }
     .cap-row { display: flex; gap: 10px; margin-top: 14px; }
     .cap-row .btn { min-height: 44px; }
@@ -244,8 +244,8 @@
       var t = document.getElementById('nlSalt');
       t.textContent = nlState.saltAlcoholFlag ? 'Yes' : 'No';
       t.setAttribute('aria-checked', nlState.saltAlcoholFlag ? 'true' : 'false');
-      t.style.color = nlState.saltAlcoholFlag ? 'var(--gold)' : 'var(--muted)';
-      t.style.borderColor = nlState.saltAlcoholFlag ? 'rgba(232,184,75,0.5)' : 'var(--line)';
+      t.style.color = nlState.saltAlcoholFlag ? 'var(--silver-bright)' : 'var(--muted)';
+      t.style.borderColor = nlState.saltAlcoholFlag ? 'rgba(232,232,232,0.45)' : 'var(--line)';
     }
     async function initNightLog() {
       try {
@@ -493,7 +493,7 @@
       ctx.setLineDash([]);
 
       // Progressive draw with setLineDash animation (or static if reduced-motion)
-      const goldColor = '#e8b84b';
+      const goldColor = '#c0c0c0';
       const totalLen = (function () {
         let len = 0;
         for (let i = 1; i < n; i++) {

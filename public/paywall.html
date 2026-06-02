@@ -1,7 +1,8 @@
 <!doctype html>
 <!-- Paywall (P5 + NOW-3). Aura++ unapproved bullet removed per NOW-3 §2.0.
      Tag A/B bucketing: Most chosen / Saves ₹299/mo / Voice and presence, one arc (all founder-approved 2026-05-28).
-     Clip fix applied at 1280px. -->
+     Clip fix applied at 1280px.
+     visual-system-audit Part C Steps 1-2 (2026-06-02): gold + pillar hues retired → silver/white. -->
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -15,13 +16,25 @@
       --obsidian: #070708;
       --panel: #0d0d0f;
       --line: #1d1d20;
-      --gold: #e8b84b;
-      --gold-bright: #f0cb6a;
-      --gold-deep: rgba(232,184,75,0.4);
+      /* Silver system */
+      --silver-bright: #e8e8e8;
+      --silver-mid: #c0c0c0;
+      --silver-dim: #8a8a8a;
+      --silver-ghost: #2a2a2a;
+      --silver-gradient: linear-gradient(180deg, #e8e8e8 0%, #c0c0c0 48%, #8a8a8a 100%);
+      /* White light-point */
+      --light-point: #ffffff;
+      --light-point-glow-soft: rgba(255,255,255,0.18);
+      --light-point-glow-mid: rgba(255,255,255,0.32);
+      /* Retired token aliases */
+      --gold: var(--silver-mid);
+      --gold-bright: var(--silver-bright);
+      --gold-deep: rgba(192,192,192,0.40);
       --ink: #f4f1ea;
       --muted: #8a877f;
-      --orator: #f0a500;
-      --aesthetic: #b06fd8;
+      /* Pillar hues retired — alias to silver so legacy class refs resolve */
+      --orator: var(--silver-mid);
+      --aesthetic: var(--silver-dim);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -31,11 +44,11 @@
       font-weight: 300;
       line-height: 1.6;
       padding: 48px 20px 80px;
-      background-image: radial-gradient(circle at 20% 0%, rgba(232,184,75,0.06), transparent 45%),
-                        radial-gradient(circle at 85% 30%, rgba(176,111,216,0.05), transparent 45%);
+      /* Single soft white top glow — one light source from above (visual-system-audit Part B3) */
+      background-image: radial-gradient(120% 70% at 50% -8%, rgba(255,255,255,0.07), transparent 56%);
     }
     .wrap { max-width: 1080px; margin: 0 auto; }
-    .eyebrow { color: var(--gold); letter-spacing: 4px; font-size: 11px; text-transform: uppercase; text-align: center; }
+    .eyebrow { color: var(--silver-mid); letter-spacing: 4px; font-size: 11px; text-transform: uppercase; text-align: center; }
     h1 {
       font-family: 'Cormorant Garamond', serif;
       font-weight: 500; font-style: italic;
@@ -55,7 +68,11 @@
       font-family: 'Cormorant Garamond', serif;
       font-style: italic;
       font-size: 1.75rem;
-      color: var(--gold);
+      background: var(--silver-gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
       font-weight: 500;
       line-height: 1.1;
     }
@@ -79,20 +96,22 @@
       display: flex; flex-direction: column;
       transition: border-color 0.18s;
     }
-    .card--orator { border-top: 3px solid var(--orator); }
-    .card--look { border-top: 3px solid var(--aesthetic); }
+    /* Card top-borders: 1px silver hairlines (visual-system-audit Part B5) */
+    .card--orator { border-top: 1px solid rgba(192,192,192,0.45); }
+    .card--look { border-top: 1px solid rgba(192,192,192,0.28); }
     /* Clip fix: inset inner ring so it stays inside border-box; overflow visible for tag pill */
     .card--aura {
-      border: 1px solid var(--gold);
-      box-shadow: inset 0 0 0 1px rgba(232,184,75,0.25), 0 20px 60px rgba(0,0,0,0.5);
+      border: 1px solid rgba(232,232,232,0.32);
+      box-shadow: inset 0 0 0 1px rgba(232,232,232,0.12), 0 20px 60px rgba(0,0,0,0.5),
+                  0 0 32px rgba(255,255,255,0.06);
       position: relative;
       overflow: visible;
       isolation: isolate;
     }
-    .card.is-selected { border-color: var(--gold-bright); }
+    .card.is-selected { border-color: var(--silver-bright); }
     .tag {
       position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
-      background: var(--gold); color: var(--obsidian);
+      background: var(--silver-mid); color: var(--obsidian);
       font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
       padding: 5px 14px; border-radius: 20px; white-space: nowrap;
       max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis;
@@ -100,19 +119,20 @@
     .card h2 { font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500; font-size: 28px; }
     .price { font-size: 30px; font-weight: 500; margin: 10px 0 2px; }
     .price span { font-size: 14px; color: var(--muted); font-weight: 300; }
-    .save { color: var(--gold); font-size: 13px; min-height: 18px; }
+    .save { color: var(--silver-mid); font-size: 13px; min-height: 18px; }
     ul { list-style: none; margin: 20px 0 26px; flex: 1; }
     li { padding: 7px 0 7px 22px; position: relative; font-size: 14px; color: #cfccc4; }
-    li::before { content: '◆'; position: absolute; left: 0; color: var(--gold); font-size: 10px; top: 9px; }
+    li::before { content: '◆'; position: absolute; left: 0; color: var(--silver-mid); font-size: 10px; top: 9px; }
     .btn {
       display: block; width: 100%; text-align: center; cursor: pointer;
-      border: 1px solid var(--gold); background: transparent; color: var(--gold);
-      font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 600;
-      padding: 13px; border-radius: 9px; transition: background .18s, color .18s;
+      border: 1px solid rgba(232,232,232,0.32); background: transparent; color: var(--silver-bright);
+      font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 400;
+      padding: 13px; border-radius: 4px; transition: background .18s, color .18s, box-shadow .18s;
       min-height: 44px;
     }
-    .card--aura .btn { background: var(--gold); color: var(--obsidian); }
-    .btn:hover { background: var(--gold); color: var(--obsidian); }
+    /* Aura++ CTA — white light-point glow variant (the one primary per screen) */
+    .card--aura .btn { background: var(--light-point-glow-soft); color: var(--light-point); border-color: var(--silver-bright); box-shadow: 0 0 24px var(--light-point-glow-mid); }
+    .btn:hover { background: var(--light-point-glow-soft); color: var(--light-point); border-color: var(--light-point); box-shadow: 0 0 30px var(--light-point-glow-mid); }
     /* ── Form ─────────────────────────────────────────────────────────────── */
     .form {
       max-width: 600px; margin: 0 auto; border: 1px solid var(--line);
@@ -126,7 +146,7 @@
       color: var(--ink); font-family: 'Sora', sans-serif; font-size: 15px; padding: 12px 14px;
       min-height: 44px;
     }
-    input:focus { outline: none; border-color: var(--gold); }
+    input:focus { outline: none; border-color: var(--silver-mid); }
     .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
     .err { color: #d98b8b; font-size: 13px; min-height: 18px; margin-top: 4px; text-align: center; }
     .selected-note { text-align: center; color: var(--muted); font-size: 13px; margin-top: 14px; min-height: 18px; }

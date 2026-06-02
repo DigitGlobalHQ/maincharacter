@@ -998,3 +998,20 @@ aura sparkline's aria-label. Strings themselves unchanged (approved as drafted).
 The journey UI test now asserts the markers are gone + provenance present.
 Unrelated drafts left intact: the dashboard push-prompt body line and the Day-7
 assessment fallback (separate copy items, still pending).
+
+### Website elevation PR 1 (2026-06-02): retire gold → unify on silver
+Founder-approved direction after two audits (design/visual-system-audit.md +
+growth/competitor-visual-benchmark.md). The site ran THREE color systems (gold
+landing/dashboard, silver/aubergine funnel) and the accent flipped from silver
+to gold exactly when a user started paying — the primary "AI vibe-coded" tell.
+Decisive evidence: the actual logo (maincharacter-logo.jpeg) is brushed SILVER +
+a white light-point, ZERO gold — so every gold surface contradicted the locked
+mark. Resolution: retire gold + aubergine + pillar hues across ALL 14 served
+surfaces; unify on black + brushed silver (#e8e8e8→#c0c0c0→#8a8a8a) + a single
+white light-point glow as the only accent. Mechanical token surgery only — no
+layout/copy/font changes (type system + monogram hero are PR 2). `--gold` token
+names kept as silver-valued aliases so var() references keep resolving. Color-
+assertion tests updated to assert the silver system (no gold present). Email
+templates intentionally deferred to a later pass (just copy-approved). Full
+suite 1312 + smoke 44/44 green. CANNOT be visually verified in sandbox — needs
+a live eyeball post-merge.

@@ -257,8 +257,13 @@ describe('copy approval provenance', () => {
 
 // ── CSS — no new tokens, correct classes ─────────────────────────────────────
 
+// CSS token discipline — visual-system-audit Part C Steps 1-2 (2026-06-02):
+// var(--gold) is now a retired alias that resolves to silver in app.css.
+// rgba(232,184,75,...) is no longer a permitted value anywhere in the surface.
 describe('CSS token discipline', () => {
-  it('uses var(--gold) for score numerals and accents', () => {
+  it('uses var(--gold) token (which aliases silver in the unified system)', () => {
+    // var(--gold) is still permitted as a reference — it now resolves to silver-mid.
+    // This test confirms the surface uses the token rather than a hard-coded hex.
     expect(SRC).toContain('var(--gold)');
   });
 
@@ -278,23 +283,18 @@ describe('CSS token discipline', () => {
     expect(SRC).toContain('var(--line)');
   });
 
-  it('does not introduce new hex color codes (only approved token vars used)', () => {
-    // The only allowed non-var hex is rgba(232,184,75,...) for the gold glow fills
-    // which is an existing pattern in app.css and existing style blocks.
-    // We just ensure no new brand hex colors are invented.
-    const styleBlock = SRC.match(/<style>([\s\S]*?)<\/style>/)?.[1] || '';
-    // The existing rgba(232,184,75,...) is for gold glow (already used); allow it.
-    // New isolated hex codes for brand colors must not appear.
-    const forbiddenHex = styleBlock.match(/#[0-9a-fA-F]{6}/g) || [];
-    // Only allowed: pre-existing palette refs (none should be added in journey CSS).
-    expect(forbiddenHex.length).toBe(0);
+  it('does not introduce gold hex (#e8b84b) or rgba amber directly in the source', () => {
+    // Gold hex must not appear in this surface — var(--gold) is the alias.
+    expect(SRC).not.toContain('#e8b84b');
+    // No raw rgba amber either (the retired gold glow pattern)
+    expect(SRC).not.toMatch(/rgba\(232,\s*184,\s*75/);
   });
 
   it('reuses .card class for module containers', () => {
     expect(SRC).toContain('class="card"');
   });
 
-  it('reuses .card--gold class for the first-chapter card', () => {
+  it('reuses .card--gold class for the first-chapter card (class kept; token now resolves to silver)', () => {
     expect(SRC).toContain('card--gold');
   });
 

@@ -311,3 +311,18 @@ describe('login.html — Footer', () => {
     expect(loginHtml).toContain('◆ MainCharacter · The Consultant');
   });
 });
+
+describe('login.html — Google sign-in (PR D)', () => {
+  it('has a Google sign-in button wired to the OAuth start route', () => {
+    expect(loginHtml).toContain('id="googleBtn"');
+    expect(loginHtml).toContain('/api/lookmax/auth/google/start?next=/lookmax/');
+    expect(loginHtml).toContain('Sign in with Google');
+  });
+
+  it('keeps the Google block hidden until the server reports OAuth is configured', () => {
+    // Block ships hidden; revealed only when /auth/method returns {google:true}.
+    expect(loginHtml).toContain('id="googleBlock" class="hidden"');
+    expect(loginHtml).toContain("if (data.google)");
+    expect(loginHtml).toContain("getElementById('googleBlock').classList.remove('hidden')");
+  });
+});

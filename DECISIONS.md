@@ -958,3 +958,14 @@ login. DRY-RUN until RESEND_API_KEY is set.
 
 COPY NOTE (CLAUDE.md §5 / §7): ALL welcome-email prose is DRAFT, marked
 `TODO copy review`, and needs founder approval before email goes live.
+
+### PR D (2026-06-02): Google sign-in turn-on (config + re-entry button)
+The Google OAuth code was already complete (funnel-repair P2); this PR makes it
+usable end-to-end. Added the founder-facing `GOOGLE_OAUTH_SETUP.md` (Cloud Console
++ Render steps, exact redirect URI, verify checklist) and added a gated "Sign in
+with Google" button to the PWA re-entry page `public/lookmax/login.html`. The button
+is revealed only when the server reports OAuth is configured (`/auth/method`
+→ `google:true`), independent of the email-login flag, so Google works even in
+admin-only mode and can never dead-end. start.html already had the button. Welcome
+email on first Google sign-in is already wired (PR C). No backend code change.
+Founder action required: set GOOGLE_OAUTH_CLIENT_ID/SECRET + JWT_SECRET in Render.

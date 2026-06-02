@@ -49,6 +49,17 @@
 
       <div class="card">
 
+        <!-- ── Google sign-in (revealed when OAuth is configured; independent of
+             the email-login flag, so Google works even in admin-only mode) ── -->
+        <div id="googleBlock" class="hidden" style="margin-bottom:16px">
+          <a id="googleBtn" class="btn btn--ghost" href="/api/lookmax/auth/google/start?next=/lookmax/"
+             data-event="lookmax_login_signin" data-event-props='{"method":"google"}'
+             style="display:block;text-align:center;text-decoration:none;" aria-label="Sign in with Google">
+            Sign in with Google
+          </a>
+          <p class="hint" style="text-align:center;margin:12px 0 0">or</p>
+        </div>
+
         <!-- ── State A: Request (default when no ?token and method='email') ── -->
         <div id="stateRequest" role="region" aria-label="Request entry link">
           <form id="requestForm" novalidate>
@@ -329,11 +340,14 @@
       try {
         var res = await fetch('/api/lookmax/auth/method');
         var data = await res.json().catch(function() { return {}; });
+        // Reveal Google whenever OAuth is configured — independent of the email
+        // flag, so it can never silently dead-end (mirrors start.html).
+        if (data.google) { document.getElementById('googleBlock').classList.remove('hidden'); }
         if (data.method === 'email') {
           showState('stateRequest');
           document.getElementById('email').focus();
         } else {
-          // admin-only (flag off or OTP mode)
+          // admin-only (flag off or OTP mode) — Google (if configured) still shows above.
           showState('stateAdmin');
         }
       } catch (_) {

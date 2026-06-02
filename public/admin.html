@@ -508,9 +508,9 @@
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>Email</th><th>Name</th><th>Signed up</th><th>Via</th><th>Paid ₹99</th><th>Stage</th></tr>
+          <tr><th>Email</th><th>Name</th><th>Signed up</th><th>Via</th><th>Last sign-in</th><th>Logins</th><th>Paid ₹99</th><th>Stage</th></tr>
         </thead>
-        <tbody id="lmx-users-table"><tr><td colspan="6" style="color:var(--ink-dim)">Loading…</td></tr></tbody>
+        <tbody id="lmx-users-table"><tr><td colspan="8" style="color:var(--ink-dim)">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -667,11 +667,13 @@ function loadLookmaxUsers() {
     .then(d => {
       const rows = d.users || [];
       document.getElementById('lmx-users-count').textContent =
-        `— ${d.count} total · ${d.paidCount} paid`;
+        `— ${d.count} total · ${d.signedInCount != null ? d.signedInCount + ' signed in · ' : ''}${d.paidCount} paid`;
       const tbody = document.getElementById('lmx-users-table');
-      if (!rows.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--ink-dim)">No sign-ups yet.</td></tr>'; return; }
+      if (!rows.length) { tbody.innerHTML = '<tr><td colspan="8" style="color:var(--ink-dim)">No sign-ups yet.</td></tr>'; return; }
       tbody.innerHTML = rows.map(u => {
         const signed = u.signupAt ? new Date(u.signupAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+        const lastLogin = u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '<span style="color:var(--ink-faint)">never</span>';
+        const logins = u.loginCount > 0 ? u.loginCount : '<span style="color:var(--ink-faint)">0</span>';
         const paid = u.paid99 ? '◆ Yes' : '—';
         const comp = u.comp ? ' <span style="color:var(--ink-faint)">(comp)</span>' : '';
         return `<tr>
@@ -679,6 +681,8 @@ function loadLookmaxUsers() {
           <td>${esc(u.name)}</td>
           <td>${signed}</td>
           <td>${esc(u.provider)}</td>
+          <td>${lastLogin}</td>
+          <td>${logins}</td>
           <td>${paid}</td>
           <td>${esc(u.stage)}</td>
         </tr>`;

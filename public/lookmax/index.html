@@ -81,6 +81,386 @@
       margin-top: 6px;
     }
     .cross-sell__dismiss:hover { color: var(--ink); }
+
+    /* ── Your Journey section ───────────────────────────────────────── */
+    /* Section header */
+    .journey-header {
+      margin-top: 32px;
+      margin-bottom: 16px;
+      border-top: 1px solid var(--line);
+      padding-top: 20px;
+    }
+    .journey-eyebrow {
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .journey-subhead {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-weight: 500;
+      font-size: 22px;
+      color: var(--ink);
+    }
+
+    /* Timeline rail */
+    .timeline-rail {
+      position: relative;
+      padding-left: 24px;
+    }
+    .timeline-rail::before {
+      content: '';
+      position: absolute;
+      left: 4px;
+      top: 8px;
+      bottom: 8px;
+      width: 1px;
+      background: var(--line);
+    }
+    .timeline-node {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px;
+      color: var(--gold);
+      opacity: 0.85;
+      line-height: 1;
+      width: 10px;
+      text-align: center;
+    }
+    .timeline-node.current {
+      opacity: 1;
+    }
+    .timeline-item {
+      position: relative;
+      list-style: none;
+      margin-bottom: 0;
+    }
+    .timeline-item:not(:last-child) {
+      border-bottom: 1px solid var(--line);
+    }
+    .timeline-link {
+      display: block;
+      min-height: 44px;
+      padding: 14px 0 14px 0;
+      text-decoration: none;
+      color: inherit;
+    }
+    .timeline-link:focus-visible {
+      outline: 2px solid var(--gold);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+    .timeline-link:hover .timeline-view {
+      opacity: 1;
+    }
+    .timeline-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 4px;
+    }
+    .timeline-label {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 16px;
+      color: var(--ink);
+    }
+    .timeline-date {
+      font-family: 'Sora', sans-serif;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .timeline-score-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .timeline-score {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 500;
+      font-size: 28px;
+      line-height: 1;
+      color: var(--gold);
+    }
+    .timeline-rank {
+      font-family: 'Sora', sans-serif;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-left: 10px;
+    }
+    .timeline-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+    .timeline-delta {
+      font-family: 'Sora', sans-serif;
+      font-size: 12px;
+    }
+    .timeline-delta.up { color: var(--good); }
+    .timeline-delta.down { color: var(--bad); }
+    .timeline-delta.neutral { color: var(--muted); }
+    .timeline-view {
+      font-family: 'Sora', sans-serif;
+      font-size: 13px;
+      color: var(--gold);
+      opacity: 0.85;
+    }
+    .timeline-showmore {
+      display: block;
+      background: none;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      font-family: 'Sora', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      padding: 10px 16px;
+      min-height: 44px;
+      width: 100%;
+      margin-top: 12px;
+      text-align: center;
+    }
+    .timeline-showmore:hover { color: var(--ink); }
+    .timeline-showmore:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+    /* Sparkline SVG (Module 2 + 5) */
+    .sparkline-wrap {
+      width: 100%;
+      overflow: visible;
+      display: block;
+    }
+    .sparkline-summary {
+      font-family: 'Sora', sans-serif;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    .sparkline-summary.up { color: var(--good); }
+    .sparkline-summary.down { color: var(--bad); }
+    .sparkline-summary.neutral { color: var(--muted); }
+    .sparkline-caption {
+      font-family: 'Sora', sans-serif;
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 10px;
+    }
+
+    /* 8-Axis bars (Module 3) */
+    .axis-journey {
+      margin-bottom: 12px;
+    }
+    .axis-journey:last-child { margin-bottom: 0; }
+    .axis-journey-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 5px;
+    }
+    .axis-journey-label {
+      font-family: 'Sora', sans-serif;
+      font-size: 14px;
+      color: var(--ink);
+    }
+    .axis-journey-scores {
+      font-family: 'Sora', sans-serif;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .axis-journey-scores .now-val { color: var(--ink); }
+    .axis-journey-bar {
+      position: relative;
+      height: 7px;
+      border-radius: 4px;
+      background: var(--line);
+      overflow: visible;
+      margin-bottom: 4px;
+    }
+    .axis-journey-bar .base-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      border-radius: 4px;
+      background: rgba(232,184,75,0.22);
+      width: 0;
+      transition: width .9s ease;
+    }
+    .axis-journey-bar .gain-fill {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      border-radius: 0 4px 4px 0;
+      background: var(--gold);
+      width: 0;
+      transition: width .9s ease .1s;
+    }
+    .axis-journey-bar .now-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      border-radius: 4px;
+      background: rgba(232,184,75,0.22);
+      width: 0;
+      transition: width .9s ease;
+    }
+    .axis-journey-delta {
+      font-family: 'Sora', sans-serif;
+      font-size: 12px;
+    }
+    .axis-journey-delta.up { color: var(--good); }
+    .axis-journey-delta.down { color: var(--bad); }
+    .axis-journey-delta.neutral { color: var(--muted); }
+
+    /* Mirror heatmap (Module 4) */
+    .mirror-count-big {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 500;
+      font-size: 44px;
+      line-height: 1;
+      color: var(--gold);
+      display: block;
+    }
+    .mirror-count-label {
+      font-family: 'Sora', sans-serif;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    .heatmap-month-nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .heatmap-month-label {
+      font-family: 'Sora', sans-serif;
+      font-size: 14px;
+      color: var(--ink);
+      flex: 1;
+    }
+    .heatmap-chevron {
+      background: none;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 15px;
+      cursor: pointer;
+      min-width: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color .18s;
+    }
+    .heatmap-chevron:hover { color: var(--ink); }
+    .heatmap-chevron:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+    .heatmap-chevron:disabled { opacity: 0.3; cursor: default; }
+    .heatmap-dow {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+    .heatmap-dow span {
+      font-family: 'Sora', sans-serif;
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .heatmap-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+    .heatmap-dot {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: transparent;
+    }
+    .heatmap-dot.on {
+      background: var(--gold);
+      border-color: var(--gold);
+    }
+    .heatmap-dot.empty {
+      border-color: transparent;
+      background: transparent;
+    }
+    .mirror-streak-line {
+      font-family: 'Sora', sans-serif;
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 14px;
+    }
+
+    /* Hair trend (Module 5) */
+    .hair-top-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .hair-score-big {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 500;
+      font-size: 28px;
+      color: var(--gold);
+      line-height: 1;
+    }
+    .hair-norwood {
+      font-family: 'Sora', sans-serif;
+      font-size: 14px;
+      color: var(--ink);
+    }
+    .hair-stage-caption {
+      font-family: 'Sora', sans-serif;
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 12px;
+    }
+
+    /* Journey skeleton loading */
+    .journey-skeleton {
+      min-height: 140px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .journey-skeleton::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%);
+      animation: skeletonShimmer 1.4s ease infinite;
+    }
+    @keyframes skeletonShimmer {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .journey-skeleton::after { animation: none; }
+      .axis-journey-bar .base-fill,
+      .axis-journey-bar .gain-fill,
+      .axis-journey-bar .now-fill { transition: none; }
+    }
+
+    /* Journey section fade-in (reuse existing fadeIn keyframe) */
+    #journey-section { animation: fadeIn 0.4s ease both; }
+    @media (prefers-reduced-motion: reduce) {
+      #journey-section { animation: none; }
+    }
   </style>
 </head>
 <body>
@@ -115,6 +495,9 @@
     <!-- B4: Push subscription prompt (shown after ≥3 mirrors, once, if not subscribed) -->
     <div id="push-prompt-slot"></div>
 
+    <!-- Your Journey — history + analytics section. Rendered by renderJourney(). -->
+    <div id="journey-section"></div>
+
     <p class="footer-note">The mirror has been honest. ◆ MainCharacter</p>
   </div>
 
@@ -130,6 +513,9 @@
       // If we have its id, surface it here so "Maybe later" lands on a preserved
       // reading the user can return to and resolve.
       renderAuraReading().catch(() => {});
+
+      // ── Your Journey section — independent fetch, fails silently ───────────
+      renderJourney().catch(() => {});
 
       let d;
       try { d = await LM.api('/api/lookmax/dashboard'); }
@@ -417,6 +803,663 @@
       const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
       const rawData = atob(base64);
       return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+    }
+
+    // ── Your Journey section ───────────────────────────────────────────────────
+    // Fetches GET /api/lookmax/me/history and renders 5 history modules.
+    // Fails silently — the "today" dashboard above must never be blocked.
+    //
+    // TODO copy review — ALL user-facing strings in JOURNEY_COPY below are draft
+    // placeholders awaiting founder/copy-consultant approval.
+    /* eslint-disable */
+    const JOURNEY_COPY = {
+      sectionEyebrow:    'YOUR JOURNEY',
+      sectionSubhead:    'Every reading, in order.',
+      timelineEyebrow:   'YOUR READINGS',
+      timelineSingular:  '1 reading',
+      timelinePlural:    (n) => `${n} readings`,
+      rowBaseline:       'Baseline reading',
+      rowReaudit:        'Re-audit',
+      rowView:           'View ◆',
+      showAll:           'Show all readings ◆',
+      auraTitle:         'AURA OVER TIME',
+      auraOnePoint:      'One reading so far. The line begins at your next.',
+      auraSummaryUp:     (n) => `+${n} since baseline`,
+      auraSummaryDown:   (n) => `${n} since baseline`,
+      auraSummaryFlat:   'No change since baseline.',
+      axesTitle:         'WHERE YOU\'VE MOVED',
+      axesSubhead:       'Baseline → Now',
+      axesTeaser:        'Your 8-axis comparison appears after your first re-audit.',
+      mirrorTitle:       'THE MIRROR, OVER TIME',
+      mirrorCountLabel:  'mornings logged',
+      mirrorZeroCaption: 'Your first morning is waiting.',
+      mirrorStreak:      (n) => `Longest streak — ${n} days`,
+      hairTitle:         'HAIRLINE',
+      hairOneReading:    'Tracking begins now.',
+      hairStageHeld:     (stage, n) => `Stage held at ${stage} for ${n} reading${n !== 1 ? 's' : ''}.`,
+      firstChapterQuote: 'This is your baseline. Everything after this is movement.',
+      firstChapterNext:  (n) => `Your next reading unlocks in ${n} days.`,
+      firstChapterDefault: 'Your re-audit unlocks after 30 days.',
+      errorRetry:        'Couldn\'t load your journey. Retry ◆',
+    };
+    /* eslint-enable */
+
+    // Axis key → human label map (locked to the 8 keys the audit returns).
+    // TODO copy review — display labels draft pending founder approval.
+    const AXIS_LABELS = {
+      skinClarity:    'Skin clarity',
+      jawDefinition:  'Jaw definition',
+      eyeArea:        'Eye area',
+      hairDensity:    'Hair density',
+      posture:        'Posture',
+      facialHarmony:  'Facial harmony',
+      expression:     'Expression',
+      bodyComposition:'Body composition',
+      // Legacy axis keys present in some audit sessions — kept for back-compat:
+      symmetry:       'Symmetry',
+      hairlineScore:  'Hairline',
+      leanness:       'Leanness',
+      grooming:       'Grooming',
+    };
+
+    // Month abbreviations for date formatting.
+    const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const MONTHS_FULL  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    function fmtDate(iso) {
+      // "DD Mon YY" — e.g. "03 Apr 26"
+      const d = new Date(iso + 'T00:00:00');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = MONTHS_SHORT[d.getMonth()];
+      const yy = String(d.getFullYear()).slice(2);
+      return `${dd} ${mm} ${yy}`;
+    }
+
+    function deltaClass(val) {
+      if (val > 0) return 'up';
+      if (val < 0) return 'down';
+      return 'neutral';
+    }
+    function deltaText(val) {
+      if (val > 0) return `▲ +${val}`;
+      if (val < 0) return `▼ ${val}`;
+      return '—';
+    }
+
+    // Build an accessible aria-label for a reading row.
+    function readingAriaLabel(r, delta) {
+      const typeStr = r.type === 'baseline' ? 'Baseline reading' : 'Re-audit';
+      const dateStr = fmtDate(r.date);
+      const rankStr = (r.rank || '').charAt(0).toUpperCase() + (r.rank || '').slice(1);
+      let deltaStr = '';
+      if (delta !== null) {
+        if (delta > 0) deltaStr = `, up ${delta}`;
+        else if (delta < 0) deltaStr = `, down ${Math.abs(delta)}`;
+        else deltaStr = ', no change';
+      }
+      return `${typeStr}, ${dateStr}, score ${r.auraScore}, ${rankStr}${deltaStr}. View reading.`;
+    }
+
+    // Build a single timeline row <li>.
+    function buildTimelineRow(r, delta, isFirst) {
+      const nodeClass = isFirst ? 'timeline-node current' : 'timeline-node';
+      const dClass = delta !== null ? deltaClass(delta) : 'neutral';
+      const dText  = delta !== null ? deltaText(delta) : '—';
+      const label  = r.type === 'baseline' ? JOURNEY_COPY.rowBaseline : JOURNEY_COPY.rowReaudit;
+      const href   = r.href || '#';
+      return `<li class="timeline-item">
+        <a href="${href}" class="timeline-link"
+           aria-label="${escapeHtml(readingAriaLabel(r, delta))}"
+           data-event="journey_reading_clicked"
+           data-reading-id="${escapeHtml(r.id)}"
+           data-reading-type="${escapeHtml(r.type)}">
+          <span class="${nodeClass}" aria-hidden="true">◆</span>
+          <div class="timeline-meta">
+            <span class="timeline-label">${escapeHtml(label)}</span>
+            <span class="timeline-date">${fmtDate(r.date)}</span>
+          </div>
+          <div class="timeline-score-row">
+            <span>
+              <span class="timeline-score">${r.auraScore}</span>
+              <span class="timeline-rank">${escapeHtml((r.rank || '').toUpperCase())}</span>
+            </span>
+            <span class="timeline-right">
+              <span class="timeline-delta ${dClass}" aria-hidden="true">${dText}</span>
+              <span class="timeline-view">${JOURNEY_COPY.rowView}</span>
+            </span>
+          </div>
+        </a>
+      </li>`;
+    }
+
+    // Module 1 — Readings Timeline.
+    function buildTimeline(readings) {
+      // readings is oldest→newest from API; display newest first.
+      const reversed = readings.slice().reverse();
+      const SHOW_INITIAL = 4;
+      const hasMore = reversed.length > SHOW_INITIAL;
+      const visible = hasMore ? reversed.slice(0, SHOW_INITIAL) : reversed;
+
+      // Compute deltas: for each entry in reversed, delta vs the next one in
+      // reversed (i.e. the item that was *older* by one position).
+      const deltas = reversed.map((r, i) => {
+        if (i === reversed.length - 1) return null; // oldest reading — no delta
+        return r.auraScore - reversed[i + 1].auraScore;
+      });
+
+      let rowsHtml = visible.map((r, i) => buildTimelineRow(r, deltas[i], i === 0)).join('');
+
+      const countText = readings.length === 1
+        ? JOURNEY_COPY.timelineSingular
+        : JOURNEY_COPY.timelinePlural(readings.length);
+
+      const showMoreBtn = hasMore
+        ? `<button class="timeline-showmore" aria-expanded="false" id="journeyShowMore"><!-- TODO copy review -->${JOURNEY_COPY.showAll}</button>`
+        : '';
+
+      return `<article class="card" aria-labelledby="journey-timeline-heading">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px">
+          <span style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)" id="journey-timeline-heading"><!-- TODO copy review -->${JOURNEY_COPY.timelineEyebrow}</span>
+          <span style="font-size:12px;color:var(--muted)">${countText}</span>
+        </div>
+        <ol class="timeline-rail" style="padding:0;list-style:none;padding-left:24px" id="journeyTimelineList">
+          ${rowsHtml}
+        </ol>
+        ${showMoreBtn}
+      </article>`;
+    }
+
+    // Module 2 — Aura Score Over Time (inline SVG sparkline).
+    function buildAuraSparkline(readings) {
+      const W = 280; // logical SVG width; scales with 100% via viewBox
+      const H = 120;
+      const PAD_L = 8; const PAD_R = 30; const PAD_T = 18; const PAD_B = 28;
+
+      const n = readings.length;
+      // Min/max for Y scale (frame around min-20, max+10, but at least 0–100)
+      const scores = readings.map((r) => r.auraScore);
+      const rawMin = Math.min(...scores);
+      const rawMax = Math.max(...scores);
+      const yMin = Math.max(0, rawMin - 15);
+      const yMax = Math.min(100, rawMax + 10);
+
+      function xOf(i) {
+        if (n === 1) return PAD_L + (W - PAD_L - PAD_R) / 2;
+        return PAD_L + (i / (n - 1)) * (W - PAD_L - PAD_R);
+      }
+      function yOf(score) {
+        if (yMax === yMin) return PAD_T + (H - PAD_T - PAD_B) / 2;
+        return PAD_T + (1 - (score - yMin) / (yMax - yMin)) * (H - PAD_T - PAD_B);
+      }
+
+      // Aria label: compose from readings
+      const ariaLabel = readings.map((r) => {
+        const d = new Date(r.date + 'T00:00:00');
+        return `${r.auraScore} in ${MONTHS_SHORT[d.getMonth()]}`;
+      }).join(', ');
+
+      // Gridlines at yMin and yMax
+      const gridY1 = yOf(yMin + Math.round((yMax - yMin) * 0.25));
+      const gridY2 = yOf(yMin + Math.round((yMax - yMin) * 0.75));
+
+      let svgContent = '';
+      // Gridlines
+      svgContent += `<line x1="${PAD_L}" y1="${gridY1}" x2="${W - PAD_R + 10}" y2="${gridY1}" stroke="var(--line)" stroke-width="1" aria-hidden="true"/>`;
+      svgContent += `<line x1="${PAD_L}" y1="${gridY2}" x2="${W - PAD_R + 10}" y2="${gridY2}" stroke="var(--line)" stroke-width="1" aria-hidden="true"/>`;
+
+      if (n > 1) {
+        // Polyline — no fill gradient (forbidden per spec)
+        const pts = readings.map((r, i) => `${xOf(i).toFixed(1)},${yOf(r.auraScore).toFixed(1)}`).join(' ');
+        svgContent += `<polyline points="${pts}" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-opacity="0.6" aria-hidden="true"/>`;
+      }
+
+      // Dots + labels
+      readings.forEach((r, i) => {
+        const cx = xOf(i).toFixed(1);
+        const cy = yOf(r.auraScore).toFixed(1);
+        const isLatest = (i === n - 1);
+        const radius = isLatest ? 6 : 5;
+        const fill   = isLatest ? 'var(--gold)' : 'var(--panel)';
+        const stroke = 'var(--gold)';
+        svgContent += `<circle cx="${cx}" cy="${cy}" r="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="1.5" aria-hidden="true"/>`;
+        if (isLatest) {
+          // Score label above/beside latest dot
+          const labelX = (parseFloat(cx) + 8).toFixed(1);
+          const labelY = (parseFloat(cy) + 5).toFixed(1);
+          svgContent += `<text x="${labelX}" y="${labelY}" fill="var(--gold)" font-family="Cormorant Garamond,serif" font-size="14" aria-hidden="true">${r.auraScore}</text>`;
+        }
+      });
+
+      // Date labels under each dot
+      readings.forEach((r, i) => {
+        const cx = xOf(i).toFixed(1);
+        const labelY = (H - 4).toFixed(1);
+        const d = new Date(r.date + 'T00:00:00');
+        const monthLbl = MONTHS_SHORT[d.getMonth()];
+        // For collisions at 360px with many points: show first/middle/last only when n>3
+        const showLabel = (n <= 3) || (i === 0 || i === Math.floor((n - 1) / 2) || i === n - 1);
+        if (showLabel) {
+          svgContent += `<text x="${cx}" y="${labelY}" fill="var(--muted)" font-family="Sora,sans-serif" font-size="11" text-anchor="middle" aria-hidden="true">${monthLbl}</text>`;
+        }
+      });
+
+      // Delta summary beneath SVG
+      let summaryHtml = '';
+      if (n === 1) {
+        summaryHtml = `<p class="sparkline-caption"><!-- TODO copy review -->${JOURNEY_COPY.auraOnePoint}</p>`;
+      } else {
+        const net = readings[n - 1].auraScore - readings[0].auraScore;
+        const sClass = net > 0 ? 'up' : (net < 0 ? 'down' : 'neutral');
+        const sText = net > 0
+          ? JOURNEY_COPY.auraSummaryUp(net)
+          : (net < 0 ? JOURNEY_COPY.auraSummaryDown(net) : JOURNEY_COPY.auraSummaryFlat);
+        summaryHtml = `<p class="sparkline-summary ${sClass}"><!-- TODO copy review -->${escapeHtml(sText)}</p>`;
+      }
+
+      return `<article class="card" aria-labelledby="journey-aura-heading">
+        <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:14px" id="journey-aura-heading"><!-- TODO copy review -->${JOURNEY_COPY.auraTitle}</div>
+        <svg class="sparkline-wrap" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"
+             role="img" aria-label="<!-- TODO copy review -->Aura score over ${n} reading${n !== 1 ? 's' : ''}: ${ariaLabel}.">
+          ${svgContent}
+        </svg>
+        ${summaryHtml}
+      </article>`;
+    }
+
+    // Module 3 — 8-Axis Before→After (paired horizontal bars).
+    function buildAxes(axes) {
+      // Use the axes keys that exist in both baseline and latest.
+      const keys = Object.keys(axes.baseline).filter((k) => k in axes.latest);
+      const rows = keys.map((k) => {
+        const base = axes.baseline[k] || 0;
+        const now  = axes.latest[k]   || 0;
+        const delta = now - base;
+        const label = AXIS_LABELS[k] || k;
+        const dClass = deltaClass(delta);
+        // Bar widths: base portion fills [0, base]%, gain is the delta on top.
+        // For regression (now < base), no gain fill; bar is shorter.
+        const baseW = Math.min(base, 100);
+        const gainW = Math.max(0, Math.min(delta, 100 - baseW));
+        const nowW  = Math.max(0, Math.min(now, 100));
+        const isGain = delta >= 0;
+
+        // Accessible axis row label (no color-only meaning).
+        const accessibleDelta = delta > 0 ? `up ${delta}` : (delta < 0 ? `down ${Math.abs(delta)}` : 'no change');
+        const rowAriaLabel = `${label}: ${base} baseline, ${now} now, ${accessibleDelta}.`;
+
+        return `<div class="axis-journey" aria-label="${escapeHtml(rowAriaLabel)}">
+          <div class="axis-journey-header">
+            <span class="axis-journey-label">${escapeHtml(label)}</span>
+            <span class="axis-journey-scores">
+              <span>${base}</span>
+              <span style="color:var(--muted)"> → </span>
+              <span class="now-val">${now}</span>
+            </span>
+          </div>
+          <div class="axis-journey-bar" role="presentation">
+            ${isGain
+              ? `<span class="base-fill" style="width:${baseW}%"></span><span class="gain-fill" style="left:${baseW}%;width:${gainW}%"></span>`
+              : `<span class="now-fill" style="width:${nowW}%"></span>`
+            }
+          </div>
+          <div class="axis-journey-delta ${dClass}" aria-hidden="true">${deltaText(delta)}</div>
+        </div>`;
+      });
+
+      return `<article class="card" aria-labelledby="journey-axes-heading">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px">
+          <span style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)" id="journey-axes-heading"><!-- TODO copy review -->${JOURNEY_COPY.axesTitle}</span>
+          <span style="font-size:12px;color:var(--muted)"><!-- TODO copy review -->${JOURNEY_COPY.axesSubhead}</span>
+        </div>
+        ${rows.join('')}
+      </article>`;
+    }
+
+    // Module 4 — Mirror Consistency (month heatmap).
+    // State object lives here so chevrons can re-render.
+    let _mirrorData = null;
+    let _mirrorYear = 0;
+    let _mirrorMonth = 0; // 0-indexed
+
+    function buildMirrorHeatmap(mirrors, year, month) {
+      const loggedSet = new Set(mirrors.loggedDates || []);
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      // Day of week of 1st (0=Sun)
+      const firstDow = new Date(year, month, 1).getDay();
+      const monthLabel = `${MONTHS_FULL[month]} ${year}`;
+
+      // Logged count this month
+      let monthLogged = 0;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        if (loggedSet.has(iso)) monthLogged++;
+      }
+
+      // Accessible label
+      const gridAriaLabel = `Mirror logged on ${monthLogged} of ${daysInMonth} days in ${MONTHS_FULL[month]}.`;
+
+      // Determine navigation bounds
+      const firstDate = mirrors.firstDate ? new Date(mirrors.firstDate + 'T00:00:00') : null;
+      const firstYear  = firstDate ? firstDate.getFullYear() : year;
+      const firstMonth = firstDate ? firstDate.getMonth() : month;
+      const now = new Date();
+      const canPrev = firstDate ? (year > firstYear || (year === firstYear && month > firstMonth)) : false;
+      const canNext = (year < now.getFullYear() || (year === now.getFullYear() && month < now.getMonth()));
+
+      // DOW header
+      const dowLabels = ['S','M','T','W','T','F','S'];
+      const dowHtml = dowLabels.map((l) => `<span>${l}</span>`).join('');
+
+      // Blank cells before day 1
+      let cellsHtml = '';
+      for (let i = 0; i < firstDow; i++) {
+        cellsHtml += `<div class="heatmap-dot empty" aria-hidden="true"></div>`;
+      }
+      for (let d = 1; d <= daysInMonth; d++) {
+        const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const on = loggedSet.has(iso);
+        cellsHtml += `<div class="heatmap-dot${on ? ' on' : ''}" aria-hidden="true"></div>`;
+      }
+
+      // Streak line — only show if longestStreak >= 2
+      const streakHtml = (mirrors.longestStreak || 0) >= 2
+        ? `<p class="mirror-streak-line"><!-- TODO copy review -->${JOURNEY_COPY.mirrorStreak(mirrors.longestStreak)}</p>`
+        : '';
+
+      // Zero-state caption
+      const countNum = mirrors.totalCount || 0;
+      const countCaption = countNum === 0
+        ? `<span class="mirror-count-label"><!-- TODO copy review -->${JOURNEY_COPY.mirrorZeroCaption}</span>`
+        : `<span class="mirror-count-label"><!-- TODO copy review -->${JOURNEY_COPY.mirrorCountLabel}</span>`;
+
+      return `<article class="card" aria-labelledby="journey-mirror-heading" id="journeyMirrorCard">
+        <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:16px" id="journey-mirror-heading"><!-- TODO copy review -->${JOURNEY_COPY.mirrorTitle}</div>
+        <span class="mirror-count-big">${countNum}</span>
+        ${countCaption}
+        <div class="heatmap-month-nav" role="group" aria-label="Navigate months">
+          <button class="heatmap-chevron"
+            aria-label="Previous month"
+            id="journeyMirrorPrev"
+            ${canPrev ? '' : 'disabled'}>‹</button>
+          <span class="heatmap-month-label">${monthLabel}</span>
+          <button class="heatmap-chevron"
+            aria-label="Next month"
+            id="journeyMirrorNext"
+            ${canNext ? '' : 'disabled'}>›</button>
+        </div>
+        <div class="heatmap-dow" aria-hidden="true">${dowHtml}</div>
+        <div class="heatmap-grid" role="img" aria-label="${escapeHtml(gridAriaLabel)}">${cellsHtml}</div>
+        ${streakHtml}
+      </article>`;
+    }
+
+    function attachMirrorChevrons(mirrors) {
+      const prevBtn = document.getElementById('journeyMirrorPrev');
+      const nextBtn = document.getElementById('journeyMirrorNext');
+      if (!prevBtn || !nextBtn) return;
+      prevBtn.addEventListener('click', function () {
+        _mirrorMonth--;
+        if (_mirrorMonth < 0) { _mirrorMonth = 11; _mirrorYear--; }
+        const card = document.getElementById('journeyMirrorCard');
+        if (card) card.outerHTML = buildMirrorHeatmap(mirrors, _mirrorYear, _mirrorMonth);
+        // Re-attach after DOM replacement
+        attachMirrorChevrons(mirrors);
+      });
+      nextBtn.addEventListener('click', function () {
+        _mirrorMonth++;
+        if (_mirrorMonth > 11) { _mirrorMonth = 0; _mirrorYear++; }
+        const card = document.getElementById('journeyMirrorCard');
+        if (card) card.outerHTML = buildMirrorHeatmap(mirrors, _mirrorYear, _mirrorMonth);
+        attachMirrorChevrons(mirrors);
+      });
+    }
+
+    // Module 5 — Hair Trend (score + Norwood + mini sparkline).
+    function buildHairTrend(hair) {
+      const current = hair.current;
+      const history = hair.history || [];
+
+      // Trend pill — based on score direction. Neutral framing only.
+      // TODO copy review — pill wording. Never alarmist.
+      let trendPill = '';
+      if (history.length >= 2) {
+        const first = history[0].hairlineScore;
+        const last  = history[history.length - 1].hairlineScore;
+        const diff  = last - first;
+        let pillText = JOURNEY_COPY.hairTitle; // fallback
+        if (diff > 2)       pillText = 'improving';   // TODO copy review
+        else if (diff < -2) pillText = 'receding';    // TODO copy review
+        else                pillText = 'stable';       // TODO copy review
+        trendPill = `<span class="badge"><!-- TODO copy review -->${pillText}</span>`;
+      }
+
+      // Norwood stage summary
+      let stageSummary = '';
+      if (history.length >= 2) {
+        const stage = current.norwoodStage || '';
+        const stageCount = history.filter((h) => h.norwoodStage === stage).length;
+        stageSummary = `<p class="hair-stage-caption"><!-- TODO copy review -->${JOURNEY_COPY.hairStageHeld(stage, stageCount)}</p>`;
+      } else {
+        stageSummary = `<p class="hair-stage-caption"><!-- TODO copy review -->${JOURNEY_COPY.hairOneReading}</p>`;
+      }
+
+      // Mini sparkline (identical spec to Module 2 but 80px tall)
+      let sparkHtml = '';
+      if (history.length >= 2) {
+        const W = 280; const H = 80;
+        const PAD_L = 8; const PAD_R = 20; const PAD_T = 12; const PAD_B = 20;
+        const n = history.length;
+        const hairScores = history.map((h) => h.hairlineScore);
+        const hMin = Math.max(0, Math.min(...hairScores) - 10);
+        const hMax = Math.min(100, Math.max(...hairScores) + 10);
+        function hX(i) {
+          if (n === 1) return PAD_L + (W - PAD_L - PAD_R) / 2;
+          return PAD_L + (i / (n - 1)) * (W - PAD_L - PAD_R);
+        }
+        function hY(score) {
+          if (hMax === hMin) return PAD_T + (H - PAD_T - PAD_B) / 2;
+          return PAD_T + (1 - (score - hMin) / (hMax - hMin)) * (H - PAD_T - PAD_B);
+        }
+        const pts = history.map((h, i) => `${hX(i).toFixed(1)},${hY(h.hairlineScore).toFixed(1)}`).join(' ');
+        const hairAriaLabel = `Hairline score over ${n} readings: ${history.map((h) => h.hairlineScore).join(', ')}.`;
+        let hairSvg = `<polyline points="${pts}" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-opacity="0.6" aria-hidden="true"/>`;
+        history.forEach((h, i) => {
+          const cx = hX(i).toFixed(1);
+          const cy = hY(h.hairlineScore).toFixed(1);
+          const isLatest = (i === n - 1);
+          const r = isLatest ? 5 : 4;
+          const fill = isLatest ? 'var(--gold)' : 'var(--panel)';
+          hairSvg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="var(--gold)" stroke-width="1.5" aria-hidden="true"/>`;
+        });
+        sparkHtml = `<svg class="sparkline-wrap" style="height:80px" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(hairAriaLabel)}">${hairSvg}</svg>`;
+      }
+
+      return `<article class="card" aria-labelledby="journey-hair-heading">
+        <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:14px" id="journey-hair-heading"><!-- TODO copy review -->${JOURNEY_COPY.hairTitle}</div>
+        <div class="hair-top-row">
+          <span class="hair-score-big">${current.hairlineScore}</span>
+          <span class="hair-norwood">Norwood ${escapeHtml(current.norwoodStage || '')}</span>
+          ${trendPill}
+        </div>
+        ${sparkHtml}
+        ${stageSummary}
+      </article>`;
+    }
+
+    // Section-level "first chapter" card — shown when almost no data.
+    function buildFirstChapterCard(readings) {
+      const baseline = readings[0];
+      // Days until next reading: 30 days from baseline date.
+      const baseDate = new Date(baseline.date + 'T00:00:00');
+      const now = new Date();
+      const daysSince = Math.floor((now - baseDate) / 86400000);
+      const daysUntil = Math.max(0, 30 - daysSince);
+      const nextLine = daysUntil > 0
+        ? JOURNEY_COPY.firstChapterNext(daysUntil)
+        : JOURNEY_COPY.firstChapterDefault;
+
+      const href = baseline.href || '#';
+      return `<div class="card card--gold">
+        <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:12px"><!-- TODO copy review -->${JOURNEY_COPY.sectionEyebrow}</div>
+        <p style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:16px;color:var(--ink);margin-bottom:20px"><!-- TODO copy review -->${JOURNEY_COPY.firstChapterQuote}</p>
+        <a href="${href}" class="timeline-link"
+           aria-label="${escapeHtml(readingAriaLabel(baseline, null))}"
+           data-event="journey_reading_clicked"
+           data-reading-id="${escapeHtml(baseline.id)}"
+           data-reading-type="${escapeHtml(baseline.type)}"
+           style="padding:12px 0;display:block">
+          <div class="timeline-meta">
+            <span class="timeline-label"><!-- TODO copy review -->${JOURNEY_COPY.rowBaseline}</span>
+            <span class="timeline-date">${fmtDate(baseline.date)}</span>
+          </div>
+          <div class="timeline-score-row">
+            <span>
+              <span class="timeline-score">${baseline.auraScore}</span>
+              <span class="timeline-rank">${escapeHtml((baseline.rank || '').toUpperCase())}</span>
+            </span>
+            <span class="timeline-view">${JOURNEY_COPY.rowView}</span>
+          </div>
+        </a>
+        <p style="font-size:13px;color:var(--muted);margin-top:16px"><!-- TODO copy review -->${escapeHtml(nextLine)}</p>
+      </div>`;
+    }
+
+    // Main render function — fetches and builds the entire Journey section.
+    async function renderJourney() {
+      const section = document.getElementById('journey-section');
+      if (!section) return;
+
+      const token = LM.getToken();
+      if (!token) return;
+
+      // Show skeleton while loading
+      section.innerHTML = `<div class="journey-skeleton" aria-hidden="true"></div>`;
+
+      let data;
+      try {
+        const res = await fetch('/api/lookmax/me/history', {
+          headers: { 'Authorization': 'Bearer ' + token },
+        });
+        if (!res.ok) {
+          section.innerHTML = `<p style="font-size:13px;color:var(--muted);text-align:center;margin-top:8px"><!-- TODO copy review -->${JOURNEY_COPY.errorRetry}</p>`;
+          return;
+        }
+        data = await res.json();
+      } catch (e) {
+        section.innerHTML = '';
+        return;
+      }
+
+      const { readings, axes, mirrors, hair } = data;
+
+      // Guard: if readings is missing or empty, section stays empty.
+      if (!readings || readings.length === 0) {
+        section.innerHTML = '';
+        return;
+      }
+
+      // Section-level first-chapter state.
+      const isFirstChapter = (
+        readings.length <= 1 &&
+        (mirrors.totalCount === 0) &&
+        axes === null &&
+        hair === null
+      );
+
+      // Build section HTML.
+      let html = `<section aria-labelledby="journey-heading">
+        <div class="journey-header">
+          <p class="journey-eyebrow"><!-- TODO copy review -->${JOURNEY_COPY.sectionEyebrow}</p>
+          <h2 class="journey-subhead" id="journey-heading"><!-- TODO copy review -->${JOURNEY_COPY.sectionSubhead}</h2>
+        </div>`;
+
+      if (isFirstChapter) {
+        html += buildFirstChapterCard(readings);
+      } else {
+        // Module 1 — always present when readings.length >= 1
+        html += buildTimeline(readings);
+
+        // Module 2 — always present when readings.length >= 1
+        html += buildAuraSparkline(readings);
+
+        // Module 3 — only when axes exists (requires a re-audit)
+        if (axes && axes.baseline && axes.latest) {
+          html += buildAxes(axes);
+        }
+
+        // Module 4 — always present (mirrors always in response)
+        if (mirrors) {
+          const now = new Date();
+          _mirrorData  = mirrors;
+          _mirrorYear  = now.getFullYear();
+          _mirrorMonth = now.getMonth();
+          html += buildMirrorHeatmap(mirrors, _mirrorYear, _mirrorMonth);
+        }
+
+        // Module 5 — only when hair data exists
+        if (hair && hair.current) {
+          html += buildHairTrend(hair);
+        }
+      }
+
+      html += `</section>`;
+      section.innerHTML = html;
+
+      // Animate axis bars after DOM insertion (transition from 0 to final width)
+      // The CSS transition handles the animation; we just need to defer the width set
+      // slightly so the browser paints the 0-width state first.
+      requestAnimationFrame(function () {
+        section.querySelectorAll('.axis-journey-bar .base-fill, .axis-journey-bar .gain-fill, .axis-journey-bar .now-fill').forEach(function (el) {
+          // Width is already set inline; the CSS transition will animate from 0.
+          // Re-apply to trigger the transition (the element was at width:0 at insertion time).
+          const w = el.style.width;
+          el.style.width = '0';
+          requestAnimationFrame(function () { el.style.width = w; });
+        });
+      });
+
+      // Attach mirror month-navigation chevrons (if mirror module is present)
+      if (mirrors && !isFirstChapter) {
+        attachMirrorChevrons(mirrors);
+      }
+
+      // Attach "Show all readings" toggle
+      const showMoreBtn = document.getElementById('journeyShowMore');
+      if (showMoreBtn) {
+        showMoreBtn.addEventListener('click', function () {
+          const list = document.getElementById('journeyTimelineList');
+          if (!list) return;
+          const expanded = showMoreBtn.getAttribute('aria-expanded') === 'true';
+          if (!expanded) {
+            // Render all rows
+            const reversed = readings.slice().reverse();
+            const deltas = reversed.map((r, i) => {
+              if (i === reversed.length - 1) return null;
+              return r.auraScore - reversed[i + 1].auraScore;
+            });
+            list.innerHTML = reversed.map((r, i) => buildTimelineRow(r, deltas[i], i === 0)).join('');
+            showMoreBtn.setAttribute('aria-expanded', 'true');
+            showMoreBtn.style.display = 'none';
+          }
+        });
+      }
+
+      // Attach reading-click tracking
+      section.querySelectorAll('[data-event="journey_reading_clicked"]').forEach(function (el) {
+        el.addEventListener('click', function () {
+          if (window.mc) {
+            window.mc.track('journey_reading_clicked', {
+              readingId:   el.getAttribute('data-reading-id'),
+              type:        el.getAttribute('data-reading-type'),
+            });
+          }
+        });
+      });
+
+      // Fire section-viewed analytics event (once per render)
+      if (window.mc) {
+        window.mc.track('journey_section_viewed', {});
+      }
     }
   </script>
 </body>

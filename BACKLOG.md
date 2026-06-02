@@ -228,3 +228,5 @@ Source: `qa/dogfood-browser-live-2026-05-28.md`
 ## Funnel-repair 2026-05-29 (logged during P0)
 
 - [ ] **P1** Lookmaxing audit `storage.putPhoto → readImage` round-trip is broken on live: R2 is configured (`storage.configured: true`, bucket `maincharacter-lookmax`) yet `/analyze` could not read back the photo `/capture` stored, so readings ran photo-blind. P0 sidestepped this by carrying the photo bytes through the session, but the R2 path must be fixed/confirmed before relying on it for the Day-30 **baseline photo** persistence (`users.lookmax_baseline`). Likely a key/return-shape mismatch between `putPhoto`'s result and what `readImage` expects. (`services/storage.js`, `routes/lookmaxing.js` capture/analyze)
+
+- [ ] Pre-existing brand nit: `public/lookmax/index.html` mirror tile uses a `✓` glyph ("Taken at … ✓") — only ◆ is allowed per CLAUDE.md §2. Found during PR E; left out of scope to keep the diff additive.

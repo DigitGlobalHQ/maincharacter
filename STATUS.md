@@ -79,12 +79,68 @@ Full autopilot. ANALYSIS/DRAFT ONLY — no Phase 2 code produced.
 
 ---
 
-## ⛔ HARD STOP — Phase 1.5 complete (2026-05-28)
-No Phase 2 build started. Founder must: (a) read the 3 briefs, (b) execute FOUNDER_ACTIONS_THIS_WEEK.md, (c) message "Go Phase 2 with NOW-X" to pick which bet starts first.
+## ✅ Phase 1.5 complete (2026-05-28).
 
-Orchestrator recommendation on first pick: **NOW-1** (cheapest large lever, mostly channel-free/ships pre-launch) — but all three are downstream of the login gate (P0-1), so 0-B1 login is the true unlock and should be built first regardless.
+---
 
-(Phase 1 deliverables list preserved below.)
+# Phase 2 — LOGIN GATE (P0-1) (🟡 IN PROGRESS, 2026-05-28)
+
+Founder picked the login gate (per orchestrator §D recommendation — true unlock; NOW-1/2/3 unreachable without it).
+
+## Step 1 — Spec ✅ COMPLETE
+| Agent | Output | Status |
+|---|---|---|
+| feature-product-agent (lead) | `product/spec-login-gate.md` (15 sections) | ✅ done — auth method chosen + logged in DECISIONS.md |
+| design-agent | `product/spec-login-gate-design.md` (3 login states + payment-confirmed mods + email template) | ✅ done — zero new tokens/icons/animation libs |
+| copy-consultant-agent | `product/spec-login-gate-copy.md` (18 strings drafted) | ✅ done — zero exclamations, ◆ only |
+| feature-product (bonus) | `briefs/design-login-gate.md`, `briefs/backend-login-gate.md`, `briefs/frontend-login-gate.md` | ✅ done — handoff briefs |
+
+**Chosen auth:** Email magic link via Resend + one-shot `firstLoginToken` minted in Razorpay webhook for silent first login. (Phone+password rejected — collapses to same email dep. SMS OTP rejected — 1-4 week DLT lead time.)
+
+**Risks the agents flagged for founder ruling:**
+1. F10 — `data/users.json` wipe on Render redeploy can lock out paying users post-session (Postgres is the durable fix; spec accepts the risk for launch cohort).
+2. Spam-folder copy line — voice-pure ("folder where your inbox sends things it does not recognise") vs clear ("Check your spam folder if it does not arrive.").
+3. New founder action needed — RESEND_API_KEY + RESEND_FROM_EMAIL (~30 min: sign up Resend, verify sending domain DNS, paste in Render).
+
+## Step 2 — Founder approval ✅ APPROVED 2026-05-28 with 3 rulings (see DECISIONS.md)
+## Step 3 — Build ✅ COMPLETE (12 commits, 490→500 tests, smoke green)
+| Agent | Output | Status |
+|---|---|---|
+| backend-agent | 7 commits → `c34960d`. routes/lookmax-auth.js rewrite, webhook firstLoginToken mint, sendMagicLink, getUserByEmail, lib/log-mask.js, JWT_SECRET guard, tightLimiter on auth namespace. +62 tests → 361/361 | ✅ done |
+| frontend-agent | 5 commits → `2f68580`. public/lookmax/login.html 3-state replace, payment-confirmed auto-poll + silent exchange, paywall email-required, magic-link.html email template. +129 tests → 490/490 | ✅ done |
+
+## Step 4 — Sign-off ✅ COMPLETE
+| Agent | Verdict | Output |
+|---|---|---|
+| qa-agent | **SIGN-OFF** (500/500 tests + 31/31 smoke, brand-voice clean, PII masked, cross-user isolation verified, 11 items DEFERRED-TO-DOGFOOD) | `product/qa-signoff-login-gate.md` |
+| security-compliance-agent | **SIGN-OFF for `LOOKMAX_EMAIL_LOGIN=true` (dogfood)** · **BLOCK on `PAYWALL_PUBLIC=true`** (3 pre-existing BLOCKERS unchanged) · 3 NEW LOW findings | `security/audit-login-gate.md` |
+
+---
+
+## ✅ Phase 2 (Login Gate / P0-1) COMPLETE — 2026-05-28
+
+### Phase 2.1 follow-up (L-1 + L-2 security fixes) ✅ shipped
+- `ad20667` fix(security): mask email in DRY-RUN log (L-1) — bonus: same fix at 3 sites (lines 109, 113, 118), logged in DECISIONS.md
+- `73d4d3b` fix(security): cap ipCooldown map with FIFO eviction (L-2)
+- Tests: 503/503 passing (500 → 503). Smoke: 31/31.
+
+### Phase 2.2 (confirmed.mirrorCta copy options) ✅ drafted, NOT shipped
+- Three DRAFT options in `product/spec-login-gate-copy.md` Section C — A `Open the mirror` / B `Enter the room` / C `Enter the Chamber`.
+- Live `payment-confirmed.html` still carries the build-time placeholder. Awaits founder pick.
+
+### ⛔ PARKED — awaiting founder dogfood
+NOW-1 / NOW-2 / NOW-3 on hold. Founder is dogfooding the login gate first.
+
+---
+
+## 🛑 PERSISTENT LAUNCH GATE — DO NOT FORGET
+**PAYWALL_PUBLIC=true is CAPPED at ≤50 paid users until the Postgres migration lands.**
+Founder ruling 2026-05-28. Accepting the F10 JSON-wipe risk only for dogfood + first cohort.
+Every record wiped between Render redeploy and Postgres = a refund.
+Unbounded public traffic flip blocked until Postgres scopes + ships.
+(See DECISIONS.md, Phase-2-Step-2 ruling.)
+
+(Phase 1 + 1.5 deliverables list preserved below.)
 
 **Deliverables:**
 - product/audit-lookmaxxing-pre-launch.md

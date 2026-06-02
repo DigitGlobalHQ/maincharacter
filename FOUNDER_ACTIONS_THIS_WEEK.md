@@ -2,6 +2,8 @@
 
 **Generated:** 2026-05-28
 **Source:** Phase 1 §0 Launch Prerequisites (`security/audit-pre-public-launch.md`, `product/ROADMAP_TO_1CR.md` §0)
+
+> 🚨 **NEW REVENUE-GATING BLOCKER (discovered 2026-05-28 during dogfood):** Razorpay account does not have Subscriptions / recurring payments enabled. Every subscription checkout fails with "seller does not support recurring payments." **NOTHING can be charged until this is resolved** — this is the longest external lead time on the board now. See item #10 below.
 **Why this list exists:** None of the Top-3 growth bets (NOW-1/2/3) reaches a single real paying customer until these are done. Three are hard launch BLOCKERS. One (the lawyer) has external lead time — **start it today even though it finishes last.**
 
 > Legend: 🔴 BLOCKER (gates `PAYWALL_PUBLIC`) · 🟠 gates a specific flip · 🟢 do-soon hygiene
@@ -83,6 +85,21 @@
 - **Why it blocks:** Security #4. Gates `WHATSAPP_SEND_MODE=all` specifically (not the paywall). Needed before NOW-1's gated follow-up channel goes live.
 - **Time:** ~5 min.
 
+## 9. 🟠 Set up Resend (gates the email magic-link recovery + receipt fallback)
+
+- **What:** The login gate (Phase 2, approved 2026-05-28) uses email magic link via Resend as the recovery surface. Silent first-login on `/payment-confirmed` works without Resend, so build does NOT block on this — but every recovery scenario (returning user on a second device, F1 webhook race, F2 closed-tab fallback) needs Resend live. Spec: `product/spec-login-gate.md` §13.
+- **Steps:**
+  1. Sign up at https://resend.com (free tier ~3,000 emails/mo — fine for dogfood + first cohort).
+  2. Add a sending domain — likely `maincharacter.digitglobalservices.com` or a `mail.` subdomain.
+  3. Resend will show you 3-4 DNS records to add (SPF / DKIM / DMARC). Add them at your DNS provider (Render manages the apex if you set it up there; otherwise wherever your domain DNS lives). Verify in Resend dashboard (instant once DNS propagates — usually <1 hr).
+  4. Generate an API key in Resend → API Keys → Create API Key. Copy.
+  5. Render → Environment → set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` (e.g. `consultant@maincharacter.digitglobalservices.com`) → Save.
+  6. While dogfooding: also set `EMAIL_ALLOWLIST` to your email + any test users — Resend will only deliver to allowlisted addresses while `WHATSAPP_SEND_MODE=allowlist`.
+- **Why it blocks:** The email magic-link login + the receipt-email magic-link fallback + the F1/F2 recovery flows degrade to DRY-RUN (logged, no send) until this lands. Build merges with `LOOKMAX_EMAIL_LOGIN=false` so nothing user-visible breaks; founder flips the flag once Resend is live + dogfood verifies one happy-path login.
+- **Time:** ~30 min hands-on (sign up, DNS records, paste 2 env vars) + DNS propagation wait.
+
+---
+
 ## 8. 🟢 Authorize the `services/gemini.js:85` prompt-injection fix (engineering — queue it)
 
 - **What:** This is a code change, not a dashboard action — listed here so you explicitly greenlight it. `generateEvolutionAssessment()` concatenates `user.name` + raw user replies into the Gemini prompt with no delimiter/guard (the other three Gemini call sites are guarded; the handoff wrongly claimed all four were). It's a small, isolated, test-first fix independent of any NOW brief.
@@ -92,16 +109,34 @@
 
 ---
 
+## 10. 🔴 BLOCKER — Enable Razorpay Subscriptions / recurring payments on the account
+
+- **What:** Discovered during dogfood 2026-05-28. The subscription object created OK (`sub_Suhr5kDlLNt5Gg`), but Razorpay's hosted checkout rejected the charge with **"seller does not support recurring payments."** This is a Razorpay-side account flag — the codebase is doing the right thing; the *account* isn't enabled for Subscriptions. **No paying customer can complete checkout until this is resolved.** Gates the entire revenue flow.
+- **Steps:**
+  1. Razorpay Dashboard → **Subscriptions** tab (https://dashboard.razorpay.com/app/subscriptions) → check the account status. If you see a "Subscriptions not enabled" / "Get in touch with support" prompt, that's the issue.
+  2. Razorpay Dashboard → **Support** → submit a ticket: *"Please enable Razorpay Subscriptions / recurring payments on my account [Account ID]. The error 'seller does not support recurring payments' is returned at checkout despite the subscription object being created. Subscription ID for reference: sub_Suhr5kDlLNt5Gg."*
+  3. Razorpay typically asks for: GST certificate, MOA/AOA or business-registration doc, a brief description of the recurring product (you sell ₹799/₹1,499/₹1,999 monthly self-improvement subscriptions delivered via web PWA + WhatsApp), and may want to verify the website. Have these ready.
+  4. Wait for Razorpay confirmation (commonly 1-3 business days, can be longer if they request additional docs).
+  5. Once enabled: re-test with `4111 1111 1111 1111` on test mode end-to-end before flipping to live keys. Then proceed to action #2 (regenerate to `rzp_live_*`).
+- **Why it blocks:** **Everything revenue-related.** Until enabled: zero subscriptions can be charged, the silent-first-login flow cannot be dogfooded end-to-end, NOW-1/2/3 cannot reach real paying users. This is now the long-pole external dependency alongside #3 (DPDPA lawyer).
+- **Time:** ~30 min hands-on (ticket + doc upload). 1-3 business days waiting for Razorpay.
+
+---
+
 ## Sequencing (do in this order)
 
 ```
 TODAY:
-  #3 lawyer engagement (external lead time — start first even though it lands last)
+  #10 open Razorpay support ticket (NEW external long pole — start now)
+  #3 lawyer engagement (external long pole — start now)
   #1 rotate Gemini   #2 rotate/regenerate Razorpay (+ start KYC if needed)
   #5 JWT_SECRET   #6 ADMIN_PASSWORD_HASH   (5 min each, do them in one Render sitting)
 
+BEFORE any subscription charge can complete (revenue blocker):
+  #10 Razorpay Subscriptions enabled
+
 BEFORE rzp_live / PAYWALL_PUBLIC:
-  #4 RAZORPAY_WEBHOOK_SECRET → then swap rzp_live → test ONE ₹1 subscription end-to-end → only then flip PAYWALL_PUBLIC
+  #4 RAZORPAY_WEBHOOK_SECRET → #10 Razorpay Subscriptions enabled → swap rzp_live → test ONE ₹1 subscription end-to-end → only then flip PAYWALL_PUBLIC (still capped at ≤50 paid users until Postgres lands)
 
 BEFORE WHATSAPP_SEND_MODE=all:
   #7 WHATSAPP_APP_SECRET

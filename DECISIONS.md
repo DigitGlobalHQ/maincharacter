@@ -969,3 +969,22 @@ is revealed only when the server reports OAuth is configured (`/auth/method`
 admin-only mode and can never dead-end. start.html already had the button. Welcome
 email on first Google sign-in is already wired (PR C). No backend code change.
 Founder action required: set GOOGLE_OAUTH_CLIENT_ID/SECRET + JWT_SECRET in Render.
+
+### PR E (2026-06-02): dashboard "Your Journey" — history + analytics (backend)
+Design pass approved (`design/dashboard-journey-spec.md`, design-agent) → built the
+data endpoint `GET /api/lookmax/me/history` (routes/lookmax.js), test-first
+(tests/lookmax-history.test.js, 6 cases). Aggregates: readings timeline, 8-axis
+before→after, mirror consistency (totalCount/longestStreak/loggedDates), hair trend.
+Fails independently of /dashboard.
+
+DATA-MODEL REALITY (important): re-audits do NOT accumulate — the model overwrites
+`reAuditResult` each cycle — and a re-audit yields 8 self-rated axes, not a fresh
+Gemini `auraScore`. So `readings` is realistically baseline + latest re-audit (≤2
+points) today. Decisions:
+- The 8-axis `axes` before→after is EXACT (re-audit literally computes those deltas).
+- The per-reading trend score is a 0-100 composite: BASELINE uses the audit's Gemini
+  auraScore (the number the user saw); RE-AUDIT uses overallOf(axes). Both are 0-100
+  "presence" composites; documented as an approximation. The response shape already
+  supports N readings if re-audit history is later persisted (open follow-up).
+The frontend section (all 5 modules + empty states) is built separately by the
+frontend-agent against this fixed contract; all journey copy is DRAFT (TODO copy review).

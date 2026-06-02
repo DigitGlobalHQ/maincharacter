@@ -47,6 +47,45 @@ function overallOf(axes) {
   return Math.round(vals.reduce((s, v) => s + v, 0) / vals.length);
 }
 
+/** Orator rank ladder from a 0-100 score (mirrors _rankFromScore in lookmaxing.js). */
+function rankFromScore(score) {
+  const s = Number(score) || 0;
+  if (s >= 85) return 'sovereign';
+  if (s >= 70) return 'luminary';
+  if (s >= 50) return 'ascendant';
+  if (s >= 30) return 'seeker';
+  return 'unawakened';
+}
+
+/** Pick exactly the 8 aesthetic axes from a scores object (drops extras). */
+function pickAxes(scores) {
+  const out = {};
+  for (const a of AESTHETIC_AXES) out[a] = Number(scores[a]) || 0;
+  return out;
+}
+
+/** ISO YYYY-MM-DD from a Date/ISO string; null-safe. */
+function isoDay(d) {
+  if (!d) return null;
+  const t = new Date(d);
+  return Number.isNaN(t.getTime()) ? null : t.toISOString().slice(0, 10);
+}
+
+/** Longest run of consecutive calendar days in a set of ISO YYYY-MM-DD strings. */
+function longestStreakOf(isoDates) {
+  const days = [...new Set(isoDates.filter(Boolean))].sort();
+  let best = 0;
+  let run = 0;
+  let prev = null;
+  for (const d of days) {
+    if (prev && (Date.parse(d) - Date.parse(prev)) === 86400000) run += 1;
+    else run = 1;
+    if (run > best) best = run;
+    prev = d;
+  }
+  return best;
+}
+
 /**
  * Next streak value: +1 when the previous mirror was within 30h (24h + buffer),
  * else reset to 1. No previous mirror → 1. Pure + exported for tests.
@@ -480,6 +519,122 @@ function lastSevenDates() {
   }
   return out;
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// PR E — "Your Journey": history + analytics for the dashboard.
+// One round-trip feeding the additive Journey section (design/dashboard-journey-spec.md).
+// Fails independently of /dashboard — a Journey error never blocks the "today" view.
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/lookmax/me/history
+ * Returns the user's readings timeline + the few honest trends that record reveals.
+ *
+ * Score-scale note (DECISIONS.md PR E): readings carry an `auraScore` 0-100. The
+ * BASELINE uses the Gemini audit's auraScore (the number the user actually saw); a
+ * RE-AUDIT uses the average of its 8 self-rated axes (overallOf) — both are 0-100
+ * "presence composite" numbers. The 8-axis before→after (`axes`) is exact (the
+ * re-audit literally computes those deltas). Re-audits do not yet accumulate — the
+ * model keeps the latest only — so `readings` is 1-2 entries today; the shape
+ * already supports more if re-audit history is later persisted.
+ */
+router.get('/me/history', async (req, res) => {
+  try {
+    const user = req.lookmaxUser;
+    const AuditSession = require('../models/AuditSession'); // eslint-disable-line global-require
+
+    // ── readings (oldest → newest) ──
+    const readings = [];
+
+    // Baseline = the Gemini audit reading (or, if the ephemeral session is gone,
+    // the persisted lookmaxBaseline overall).
+    let session = null;
+    if (user.auditSessionId) {
+      try { session = await AuditSession.getSession(user.auditSessionId); } catch { session = null; }
+    }
+    const report = session && session.geminiReport;
+    if (report && typeof report.auraScore === 'number') {
+      readings.push({
+        id: user.auditSessionId,
+        type: 'baseline',
+        date: isoDay(session.createdAt) || isoDay(user.lookmaxxingStartedAt) || isoDay(user.enrolledAt),
+        auraScore: report.auraScore,
+        rank: report.rank || rankFromScore(report.auraScore),
+        href: '/lookmaxing/audit/' + encodeURIComponent(user.auditSessionId),
+        paid: !!user.lookmaxxingActive,
+      });
+    } else if (user.lookmaxBaseline && user.lookmaxBaseline.scores) {
+      const s = overallOf(user.lookmaxBaseline.scores);
+      readings.push({
+        id: null,
+        type: 'baseline',
+        date: isoDay(user.lookmaxBaseline.capturedAt) || isoDay(user.lookmaxxingStartedAt) || isoDay(user.enrolledAt),
+        auraScore: s,
+        rank: rankFromScore(s),
+        href: null,
+        paid: !!user.lookmaxxingActive,
+      });
+    }
+
+    // Latest re-audit (model keeps one).
+    if (user.reAuditResult && user.reAuditResult.scores) {
+      const ra = user.reAuditResult;
+      const s = overallOf(ra.scores);
+      readings.push({
+        id: ra.completedAt ? 'reaudit-' + ra.completedAt : 'reaudit',
+        type: 'reaudit',
+        date: isoDay(ra.completedAt),
+        auraScore: s,
+        rank: rankFromScore(s),
+        href: '/lookmax/reveal?mode=day30',
+        paid: !!user.lookmaxxingActive,
+      });
+    }
+
+    // ── axes (before → after) — only when a re-audit exists ──
+    let axes = null;
+    if (user.lookmaxBaseline && user.lookmaxBaseline.scores && user.reAuditResult && user.reAuditResult.scores) {
+      axes = { baseline: pickAxes(user.lookmaxBaseline.scores), latest: pickAxes(user.reAuditResult.scores) };
+    }
+
+    // ── mirrors (always present; may be empty) ──
+    const mList = Lookmax.getMirrors(user.token) || [];
+    const loggedDates = [...new Set(mList.map((m) => m.date).filter(Boolean))].sort();
+    const mirrors = {
+      totalCount: mList.length,
+      longestStreak: longestStreakOf(loggedDates),
+      firstDate: loggedDates[0] || null,
+      loggedDates,
+    };
+
+    // ── hair (only when ≥1 reading) ──
+    const hList = Lookmax.getHair(user.token) || [];
+    let hair = null;
+    if (hList.length) {
+      const history = hList.map((h) => ({
+        date: isoDay(h.createdAt) || isoDay(h.date),
+        hairlineScore: Number(h.hairlineScore) || 0,
+        norwoodStage: h.norwood != null ? String(h.norwood) : null,
+      }));
+      hair = { current: history[history.length - 1], history };
+    }
+
+    return res.json({
+      user: {
+        name: user.name || 'Seeker',
+        mirrorLevel: user.mirrorLevel || 'raw',
+        joinedAt: isoDay(user.lookmaxxingStartedAt) || isoDay(user.enrolledAt),
+      },
+      readings,
+      axes,
+      mirrors,
+      hair,
+    });
+  } catch (err) {
+    log.error('HISTORY', `failed: ${err.message}`);
+    return res.status(500).json({ error: 'history unavailable' });
+  }
+});
 
 // ═══════════════════════════════════════════════════════════════════
 // B4 — Web Push subscription (VAPID)

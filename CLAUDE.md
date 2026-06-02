@@ -2,6 +2,8 @@
 
 > This file is auto-read by Claude Code on every session. It is the source of truth for **what this product is, what voice it speaks in, and what you (the AI engineer) are allowed to change.** Read it once at the start of every session.
 
+> **➡️ START HERE:** before doing anything, also read **`CLAUDE_CODE_HANDOFF.md`** (dated current-state snapshot + open work) and **`AUDIT_FUNNEL_FIXES.md`**. Deploy model: merging to `main` auto-deploys to production via Render — it is live immediately, so review every diff before merging.
+
 ---
 
 ## 1. WHAT WE ARE BUILDING

@@ -243,6 +243,7 @@
         >
           Sign in with email
         </button>
+        <!-- Step 1: email → request a code -->
         <div class="lm-email-expand" id="email-expand" aria-hidden="true">
           <label for="magic-email" class="mc-eyebrow" style="display:block;margin-bottom:var(--mc-sp-2);">Email</label>
           <input
@@ -251,13 +252,36 @@
             class="lm-email-input"
             placeholder="you@somewhere.com"
             autocomplete="email"
+            inputmode="email"
           >
-          <button class="mc-btn-primary" id="magic-submit-btn" style="width:100%;margin-top:var(--mc-sp-3);" aria-label="Send magic link">
-            Send the link →
+          <!-- TODO copy review: OTP sign-in strings are draft pending approval -->
+          <button class="mc-btn-primary" id="magic-submit-btn" style="width:100%;margin-top:var(--mc-sp-3);" aria-label="Email me a sign-in code">
+            Email me a code →
           </button>
         </div>
-        <div id="magic-sent-msg" class="lm-magic-sent" hidden aria-live="polite">
-          Check your inbox. A link is waiting. ◆
+
+        <!-- Step 2: enter the 6-digit code -->
+        <div id="otp-step" hidden>
+          <p class="lm-fork-card__body" id="otp-sent-label" style="text-align:center;margin-bottom:var(--mc-sp-3);" aria-live="polite">
+            <!-- TODO copy review --> Enter the six-digit code we emailed you.
+          </p>
+          <label for="otp-code" class="mc-eyebrow" style="display:block;margin-bottom:var(--mc-sp-2);">Code</label>
+          <input
+            type="text"
+            id="otp-code"
+            class="lm-email-input"
+            placeholder="••••••"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            maxlength="6"
+            style="text-align:center;letter-spacing:0.5em;"
+          >
+          <button class="mc-btn-primary" id="otp-verify-btn" style="width:100%;margin-top:var(--mc-sp-3);" aria-label="Verify sign-in code">
+            Verify →
+          </button>
+          <div id="otp-error" class="lm-fork-card__body" hidden aria-live="polite" style="text-align:center;margin-top:var(--mc-sp-3);color:var(--mc-silver-mid);">
+            <!-- TODO copy review --> That code did not match. Check it and try again.
+          </div>
         </div>
 
         <p class="lm-fork-card__legal">
@@ -284,8 +308,11 @@
   var emailExpand = document.getElementById('email-expand');
   var magicEmail = document.getElementById('magic-email');
   var magicSubmitBtn = document.getElementById('magic-submit-btn');
-  var magicSentMsg = document.getElementById('magic-sent-msg');
-  var signinActions = document.getElementById('signin-actions');
+  var otpStep = document.getElementById('otp-step');
+  var otpCode = document.getElementById('otp-code');
+  var otpVerifyBtn = document.getElementById('otp-verify-btn');
+  var otpError = document.getElementById('otp-error');
+  var NEXT = '/lookmaxing/quiz';
 
   // Already signed in? Skip straight to the reading.
   if (localStorage.getItem('lookmax.token')) {
@@ -311,29 +338,68 @@
     if (!isOpen) { setTimeout(function () { magicEmail.focus(); }, 300); }
   });
 
-  // Magic link submit
+  // ── Step 1: request a 6-digit code by email ──
+  var currentEmail = '';
   magicSubmitBtn.addEventListener('click', function () {
     var email = magicEmail.value.trim();
     if (!email || !email.includes('@')) { magicEmail.focus(); return; }
+    currentEmail = email;
 
     magicSubmitBtn.setAttribute('aria-busy', 'true');
     magicSubmitBtn.disabled = true;
 
-    fetch('/api/lookmax/auth/request-link', {
+    fetch('/api/lookmax/auth/request-email-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email, next: '/lookmaxing/quiz' }),
+      body: JSON.stringify({ email: email, next: NEXT }),
     })
       .then(function () {
-        signinActions.hidden = true;
-        magicSentMsg.hidden = false;
+        // Always advance to code entry — the response is enumeration-safe.
+        emailExpand.hidden = true;
+        otpStep.hidden = false;
+        setTimeout(function () { otpCode.focus(); }, 50);
       })
       .catch(function () {
         magicSubmitBtn.setAttribute('aria-busy', 'false');
         magicSubmitBtn.disabled = false;
-        magicSubmitBtn.textContent = 'Send the link →';
+        magicSubmitBtn.textContent = 'Email me a code →';
       });
   });
+
+  // ── Step 2: verify the code → store session → into the funnel ──
+  function verifyOtp() {
+    var code = (otpCode.value || '').replace(/\D/g, '');
+    if (code.length !== 6) { otpCode.focus(); return; }
+    otpError.hidden = true;
+    otpVerifyBtn.setAttribute('aria-busy', 'true');
+    otpVerifyBtn.disabled = true;
+
+    fetch('/api/lookmax/auth/verify-email-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: currentEmail, otp: code }),
+    })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (data && data.token) {
+          localStorage.setItem('lookmax.token', data.token);
+          window.location.replace(NEXT);
+        } else {
+          otpError.hidden = false;
+          otpVerifyBtn.setAttribute('aria-busy', 'false');
+          otpVerifyBtn.disabled = false;
+          otpCode.focus();
+          otpCode.select();
+        }
+      })
+      .catch(function () {
+        otpError.hidden = false;
+        otpVerifyBtn.setAttribute('aria-busy', 'false');
+        otpVerifyBtn.disabled = false;
+      });
+  }
+  otpVerifyBtn.addEventListener('click', verifyOtp);
+  otpCode.addEventListener('keydown', function (e) { if (e.key === 'Enter') verifyOtp(); });
 }());
 </script>
 </body>

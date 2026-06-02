@@ -283,8 +283,125 @@ router.post('/auth/consume-link', async (req, res) => {
   return res.json({ token: signLookmaxToken(updatedUser), user: publicUser(updatedUser) });
 });
 
-// ─── POST /auth/exchange-first-login — exchange the one-shot firstLoginToken ───
+// ═══════════════════════════════════════════════════════════════════
+// EMAIL OTP SIGN-IN (PR A) — a 6-digit code emailed to the user, exchanged
+// for the 45-day Lookmax session JWT. Dark behind LOOKMAX_EMAIL_LOGIN.
+// Reuses the per-email throttle (request) and per-IP cooldown (verify). The
+// code is stored hashed on the user record; never logged, never returned.
+// ═══════════════════════════════════════════════════════════════════
 
+const EMAIL_OTP_TTL_MS = 10 * 60 * 1000;  // 10 minutes
+const EMAIL_OTP_MAX_ATTEMPTS = 5;
+
+function hashOtp(code) {
+  return crypto.createHash('sha256').update(String(code)).digest('hex');
+}
+
+// ─── POST /auth/request-email-otp — email a 6-digit sign-in code ───
+
+router.post('/auth/request-email-otp', async (req, res) => {
+  // Always {status:'sent'} regardless of whether the email maps to a user —
+  // enumeration-safe, mirroring /auth/request-link.
+  const rawEmail = (req.body && req.body.email) || null;
+  const normalised = rawEmail ? String(rawEmail).trim().toLowerCase() : '';
+
+  if (!emailLoginEnabled()) {
+    log.info('REQUEST-OTP', 'flag off — no-op');
+    return res.json({ status: 'sent' });
+  }
+  if (!normalised || !normalised.includes('@')) {
+    log.info('REQUEST-OTP', 'no/invalid email — no-op');
+    return res.json({ status: 'sent' });
+  }
+  if (!emailThrottleAllow(normalised)) {
+    log.info('REQUEST-OTP', `throttled ${maskEmail(normalised)}`);
+    return res.json({ status: 'sent' });
+  }
+
+  // Funnel sign-up (next into our funnel) → find-or-create. Dashboard login
+  // (no funnel next) → login-only, no-op for unknown. Same rule as request-link.
+  const rawNext = (req.body && req.body.next) || null;
+  const funnelSignup = typeof rawNext === 'string' && /^\/(lookmaxing|lookmax)(\/|$|\?)/.test(rawNext);
+
+  let user;
+  if (funnelSignup) {
+    try {
+      user = await User.getOrCreateByEmail({ email: normalised, name: 'Seeker' });
+    } catch (err) {
+      log.info('REQUEST-OTP', `invalid email — no-op: ${err.message}`);
+      return res.json({ status: 'sent' });
+    }
+  } else {
+    user = await User.getUserByEmail(normalised);
+    if (!user) {
+      log.info('REQUEST-OTP', `no-match for ${maskEmail(normalised)}`);
+      return res.json({ status: 'sent' });
+    }
+  }
+
+  const code = sms.generateOtp(); // 6-digit, crypto.randomInt
+  await User.updateUser(user.phone, {
+    emailOtpHash: hashOtp(code),
+    emailOtpExpiresAt: Date.now() + EMAIL_OTP_TTL_MS,
+    emailOtpAttempts: 0,
+    emailOtpConsumedAt: null,
+  });
+
+  email.sendEmailOtp({ user, code }).catch((err) => {
+    log.error('REQUEST-OTP', `sendEmailOtp failed for ${maskEmail(normalised)}: ${err.message}`);
+  });
+
+  log.info('REQUEST-OTP', `code issued for ${maskEmail(normalised)}`);
+  return res.json({ status: 'sent' });
+});
+
+// ─── POST /auth/verify-email-otp — exchange a code for a session JWT ───
+
+router.post('/auth/verify-email-otp', async (req, res) => {
+  const ip = req.ip || 'unknown';
+  // Generic 401 for ALL failure modes — no enumeration, no attempt leak.
+  const fail = () => { ipRecordFailure(ip); return res.status(401).json({ error: 'invalid or expired code' }); };
+
+  if (!emailLoginEnabled()) return res.status(401).json({ error: 'invalid or expired code' });
+  if (ipCooled(ip)) {
+    log.warn('VERIFY-OTP', `IP ${ip} is cooled — rejected`);
+    return res.status(401).json({ error: 'invalid or expired code' });
+  }
+
+  const normalised = String((req.body && req.body.email) || '').trim().toLowerCase();
+  const code = String((req.body && req.body.otp) || '').trim();
+  if (!normalised || !/^\d{6}$/.test(code)) return fail();
+
+  const user = await User.getUserByEmail(normalised);
+  if (!user || !user.emailOtpHash || user.emailOtpConsumedAt) return fail();
+  if (!user.emailOtpExpiresAt || Date.now() > user.emailOtpExpiresAt) return fail();
+  if ((user.emailOtpAttempts || 0) >= EMAIL_OTP_MAX_ATTEMPTS) return fail();
+
+  const expected = Buffer.from(user.emailOtpHash);
+  const got = Buffer.from(hashOtp(code));
+  const match = expected.length === got.length && crypto.timingSafeEqual(expected, got);
+  if (!match) {
+    await User.updateUser(user.phone, { emailOtpAttempts: (user.emailOtpAttempts || 0) + 1 });
+    log.warn('VERIFY-OTP', `wrong code for ${maskEmail(normalised)}`);
+    return fail();
+  }
+
+  // Valid — burn the code and issue the session.
+  await User.updateUser(user.phone, {
+    emailOtpHash: null,
+    emailOtpExpiresAt: null,
+    emailOtpAttempts: 0,
+    emailOtpConsumedAt: new Date().toISOString(),
+  });
+  ipRecordSuccess(ip);
+
+  let updatedUser = await User.getUserByPhone(user.phone);
+  updatedUser = await recordLogin(updatedUser, 'email');
+  log.info('VERIFY-OTP', `JWT issued for ${maskEmail(normalised)}`);
+  return res.json({ token: signLookmaxToken(updatedUser), user: publicUser(updatedUser) });
+});
+
+// ─── POST /auth/exchange-first-login — exchange the one-shot firstLoginToken ───
 router.post('/auth/exchange-first-login', async (req, res) => {
   if (!emailLoginEnabled()) return tokenExpiredOrUsed(res);
 

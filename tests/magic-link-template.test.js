@@ -58,10 +58,10 @@ describe('magic-link.html — template structure', () => {
     expect(template).toContain('{{preheader}}');
   });
 
-  it('has a CTA <a> pointing to {{magicLinkUrl}} with gold background', () => {
+  it('has a CTA <a> pointing to {{magicLinkUrl}} with the silver light fill', () => {
     expect(template).toContain('href="{{magicLinkUrl}}"');
-    // CTA button styling
-    expect(template).toContain('background:#e8b84b');
+    // CTA button styling — near-white fill (silver brand), dark text
+    expect(template).toContain('background:#ececf2');
     expect(template).toContain('color:#070708');
   });
 

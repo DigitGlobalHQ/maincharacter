@@ -1072,3 +1072,19 @@ to #ececf2); day7 aesthetic purple → silver. Kept email-safe (flat inline colo
 no gradients/glows/vars — those don't render reliably in mail clients), so no
 aubergine atmosphere here. magic-link-template test updated for the new fill.
 Full suite 1372 + smoke 44/44 green.
+
+### Auth that works now: email+password + Google on one screen (2026-06-04)
+Founder report: sign-in/sign-up "wasn't there" — correct, because every method was
+gated behind unset env vars (Google hidden without keys; email OTP dead without
+RESEND). Per founder decision, added EMAIL + PASSWORD as the zero-config method that
+works with no external service: one smart endpoint POST /api/lookmax/auth/password =
+login-or-signup (returning+passwordHash → bcrypt verify; new email → create+hash;
+passwordless Google/OTP account → 409 guide, never hijacked). bcryptjs (already a
+dep), per-IP brute-force cooldown reused, min 8 chars, generic errors, never logged,
+passwordHash never leaves publicUser. recordLogin now fires the welcome email for
+provider 'password' too. Rebuilt public/lookmaxing/start.html as ONE screen with TWO
+methods: "Continue with Google" (always visible; intercepts gracefully until OAuth
+keys are set — no dead bounce) + email/password + a single "Continue" that signs in
+OR signs up. Replaces the dead OTP UI on that surface (OTP backend kept, dormant).
+PWA login.html (re-entry) still to be aligned — fast follow. Full suite 1380 + smoke
+44/44. Visual/flow needs founder eyeball; Google still needs the founder's 2 keys.

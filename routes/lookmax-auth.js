@@ -23,6 +23,7 @@
 
 const express = require('express');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const router = express.Router();
 
 const User = require('../models/User');
@@ -518,6 +519,71 @@ router.post('/auth/verify-otp', async (req, res) => {
   }
   user = await recordLogin(user, 'phone-otp');
   res.json({ token: signLookmaxToken(user), user: publicUser(user) });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// EMAIL + PASSWORD — the zero-config sign-in/sign-up method. One smart
+// endpoint: returning user → verify; new email → create. Works with no
+// external service (bcrypt, in-app). Reuses the per-IP brute-force cooldown.
+// ═══════════════════════════════════════════════════════════════════
+
+const PASSWORD_MIN = 8;
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+router.post('/auth/password', async (req, res) => {
+  const ip = req.ip || 'unknown';
+  const email = String((req.body && req.body.email) || '').trim().toLowerCase();
+  const password = String((req.body && req.body.password) || '');
+  const name = ((req.body && req.body.name) || '').toString().trim().slice(0, 80) || 'Seeker';
+
+  if (!EMAIL_RE.test(email)) {
+    return res.status(400).json({ error: 'Enter a valid email address.' });
+  }
+  if (password.length < PASSWORD_MIN) {
+    return res.status(400).json({ error: `Password must be at least ${PASSWORD_MIN} characters.` });
+  }
+
+  // Brute-force guard (shared with the link/OTP flows).
+  if (ipCooled(ip)) {
+    log.warn('PASSWORD', `IP ${ip} cooled — rejected`);
+    return res.status(401).json({ error: 'Too many attempts. Try again in a few minutes.' });
+  }
+
+  let user = await User.getUserByEmail(email);
+
+  // Returning user with a password → verify and sign in.
+  if (user && user.passwordHash) {
+    if (!bcrypt.compareSync(password, user.passwordHash)) {
+      ipRecordFailure(ip);
+      log.warn('PASSWORD', `wrong password for ${maskEmail(email)}`);
+      return res.status(401).json({ error: 'Email or password is incorrect.' });
+    }
+    ipRecordSuccess(ip);
+    user = await recordLogin(user, 'password');
+    log.info('PASSWORD', `login for ${maskEmail(email)}`);
+    return res.json({ token: signLookmaxToken(user), user: publicUser(user), created: false });
+  }
+
+  // Existing account created via Google / sign-in link (no password) → never let
+  // a password set itself on it; guide the user to their real method.
+  if (user && !user.passwordHash) {
+    const via = user.authProvider === 'google' ? 'Google' : 'a sign-in link';
+    log.info('PASSWORD', `passwordless-account collision for ${maskEmail(email)}`);
+    return res.status(409).json({ error: `This email is registered with ${via}. Use that to sign in.` });
+  }
+
+  // New email → create the account (sign-up).
+  let fresh;
+  try {
+    fresh = await User.getOrCreateByEmail({ email, name, provider: 'password' });
+  } catch (err) {
+    return res.status(400).json({ error: 'Enter a valid email address.' });
+  }
+  fresh = await User.updateUser(fresh.phone, { passwordHash: bcrypt.hashSync(password, 10), authProvider: 'password' });
+  ipRecordSuccess(ip);
+  fresh = await recordLogin(fresh, 'password'); // fires the welcome email on first sign-in
+  log.info('PASSWORD', `signup for ${maskEmail(email)}`);
+  return res.json({ token: signLookmaxToken(fresh), user: publicUser(fresh), created: true });
 });
 
 // ─── Current user ───

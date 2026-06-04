@@ -373,11 +373,16 @@ describe('Surface 2 — start.html', () => {
     expect(SURFACES.start).not.toContain('id="guest-btn"');
     expect(SURFACES.start).not.toContain('/api/lookmaxing/guest');
   });
-  it('has Google sign-in (to OAuth start)', () => {
-    expect(SURFACES.start).toContain('Sign in with Google');
+  it('offers Continue with Google (to OAuth start)', () => {
+    expect(SURFACES.start).toContain('Continue with Google');
     expect(SURFACES.start).toContain('/api/lookmax/auth/google/start');
   });
-  it('has email sign-in', () => {
-    expect(SURFACES.start).toContain('Sign in with email');
+  it('offers the email + password method that works with no external setup', () => {
+    expect(SURFACES.start).toContain('id="auth-email"');
+    expect(SURFACES.start).toContain('id="auth-password"');
+    expect(SURFACES.start).toContain('/api/lookmax/auth/password');
+  });
+  it('shows both methods on one screen with an "or" divider', () => {
+    expect(SURFACES.start).toContain('class="lm-or"');
   });
 });

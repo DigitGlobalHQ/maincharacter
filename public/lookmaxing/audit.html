@@ -345,7 +345,28 @@
       font-size: var(--mc-fs-small);
       color: var(--mc-silver-faint);
       text-align: center;
-      margin: var(--mc-sp-3) 0 var(--mc-sp-4);
+      margin: var(--mc-sp-3) 0 var(--mc-sp-3);
+    }
+    .lm-paywall__secure {
+      font-size: 11px;
+      color: var(--mc-silver-faint);
+      text-align: center;
+      line-height: 1.7;
+      margin: 0 0 var(--mc-sp-4);
+    }
+    .lm-paywall__spinner {
+      width: 28px; height: 28px;
+      margin: 0 auto var(--mc-sp-3);
+      border: 2px solid rgba(198,198,207,0.22);
+      border-top-color: var(--mc-silver-bright, #ececf2);
+      border-radius: 50%;
+      animation: lm-spin 0.8s linear infinite;
+    }
+    @keyframes lm-spin { to { transform: rotate(360deg); } }
+    .lm-paywall__success-sub {
+      margin-top: var(--mc-sp-2);
+      font-size: 12px;
+      color: var(--mc-silver-faint);
     }
     .lm-paywall__pay-btn { width: 100%; }
     .lm-paywall__later-btn { width: 100%; margin-top: var(--mc-sp-2); min-height: 56px; }
@@ -583,6 +604,7 @@
         <span class="lm-paywall__price-sub">₹99 · one-time · UPI / cards / wallets</span>
       </div>
       <p class="lm-paywall__trust">The ₹99 credits toward month one if you continue.</p>
+      <p class="lm-paywall__secure">Secured by Razorpay · UPI, cards &amp; wallets · 256-bit encrypted.<br>Your photo is scored, never published. ◆</p>
       <div id="paywall-error" class="lm-paywall__error" hidden role="alert" aria-live="polite"></div>
       <button
         class="mc-btn-primary mc-btn-primary--filled lm-paywall__pay-btn"
@@ -605,7 +627,9 @@
     </div>
     <!-- Success state -->
     <div id="paywall-success" class="lm-paywall__success" hidden aria-live="polite">
-      <p>Resolved. Opening the full reading. ◆</p>
+      <div class="lm-paywall__spinner" aria-hidden="true"></div>
+      <p>Resolved. Composing the full reading. ◆</p>
+      <p class="lm-paywall__success-sub">This takes a few seconds. Please don't close this window.</p>
     </div>
   </div>
 </div>
@@ -935,7 +959,7 @@
   payBtn.addEventListener('click', function () {
     payBtn.setAttribute('aria-busy', 'true');
     payBtn.disabled = true;
-    payBtn.textContent = 'Opening the payment window. Hold.';
+    payBtn.textContent = 'One moment…';
     paywallError.hidden = true;
 
     fetch('/api/lookmaxing/pay/order', {

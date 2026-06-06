@@ -5,6 +5,18 @@ Format: date, decision, 2-sentence rationale.
 
 ---
 
+## 2026-06-06 — Payment bypass for testing + branded report PDF
+
+### ₹99 payment bypass is ON by default in every non-live setup
+
+`_paymentBypass()` in routes/lookmaxing.js returns true whenever real `rzp_live_` keys are NOT set (unless `PAYMENT_BYPASS=false`). In bypass mode, /pay/subscribe skips Razorpay entirely and returns the same `{subscriptionId,keyId,testMode}` shape; the client settles via /pay/test-confirm, unlocking the full report + PDF with no charge. HARD rule: bypass can NEVER occur with `rzp_live_` keys (real money), so going live automatically re-requires a captured payment — set `PAYMENT_BYPASS=false` to exercise the real Razorpay test checkout before then.
+
+### Report PDF rebranded to MainCharacter identity
+
+`_generatePdf` now renders an obsidian header band with the gold ◆ mark (drawn as a vector — built-in PDF fonts can't render ◆), gold section labels, humanised metric names, palette swatches, and per-page footers. Body stays on white for print legibility; the brand lives in the header, accents, and footer.
+
+---
+
 ## 2026-06-06 — ₹99/month recurring subscription engine (Lookmaxing Aura Reading)
 
 ### lookmax99 is a separate plan key, not a replacement for the existing lookmaxxing plan

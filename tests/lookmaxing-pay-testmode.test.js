@@ -85,4 +85,27 @@ describe('Demo-mode ₹99 unlock', () => {
       delete process.env.RAZORPAY_KEY_SECRET;
     }
   });
+
+  it('PAYMENT_BYPASS=false forces the real checkout (test-confirm 403)', async () => {
+    process.env.PAYMENT_BYPASS = 'false';
+    try {
+      const fresh = await newAudit(bearer);
+      const res = await request(app).post('/api/lookmaxing/pay/test-confirm').set('Authorization', bearer).send({ auditId: fresh });
+      expect(res.status).toBe(403);
+    } finally {
+      delete process.env.PAYMENT_BYPASS;
+    }
+  });
+
+  it('bypass is ON by default (no keys) so the report unlocks without a charge', async () => {
+    // Fresh user (not already subscribed) so subscribe returns the bypass shape.
+    const { bearer: b2 } = await makeSession();
+    const fresh = await newAudit(b2);
+    const order = await request(app).post('/api/lookmaxing/pay/subscribe').set('Authorization', b2).send({ auditId: fresh });
+    expect(order.body.testMode).toBe(true);
+    expect(typeof order.body.subscriptionId).toBe('string');
+    const confirm = await request(app).post('/api/lookmaxing/pay/test-confirm').set('Authorization', b2).send({ auditId: fresh });
+    expect(confirm.status).toBe(200);
+    expect(confirm.body.paid).toBe(true);
+  });
 });

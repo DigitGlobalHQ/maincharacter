@@ -68,6 +68,18 @@ const PLANS = {
     description: 'All three pillars + Personal Consultant session + Sovereign rank fast-track',
     pillars: ['orator'],
   },
+  // ── Lookmaxing Aura Reading funnel — ₹99/month recurring ──────────────────
+  // Separate from the ₹1,499 lookmaxxing plan (PWA daily mirror + reveal).
+  // This plan is the audit-funnel entry: free reading → ₹99/month unlock.
+  // The ₹1,499 plan is preserved unchanged for backward compat + existing tests.
+  lookmax99: {
+    amount: 9900,       // ₹99 in paise
+    label: 'Lookmaxxing',
+    period: 'monthly',
+    display: '₹99/month',
+    description: 'Full Aura Reading + daily Mirror protocol + monthly re-audit',
+    pillars: ['lookmaxxing'],
+  },
 };
 
 /** Pillars a plan activates. Unknown plans → []. */
@@ -263,11 +275,13 @@ async function createOrFetchPlan(planKey) {
 
 /**
  * Create a recurring subscription for a plan. Returns the checkout short_url.
+ *
  * @param {string} planKey
  * @param {{ phone: string, name?: string, email?: string }} customer
+ * @param {object} [extraNotes={}] — merged into Razorpay notes (e.g. { userId, auditId, source })
  * @returns {Promise<{ id: string, short_url: string, mock?: boolean }>}
  */
-async function createSubscription(planKey, customer = {}) {
+async function createSubscription(planKey, customer = {}, extraNotes = {}) {
   const plan = PLANS[planKey];
   if (!plan) throw new Error(`Unknown plan: ${planKey}`);
   const planId = await createOrFetchPlan(planKey);
@@ -278,7 +292,13 @@ async function createSubscription(planKey, customer = {}) {
     email: customer.email || '',
     plan: planKey,
     pillars: pillarsForPlan(planKey).join(','),
+    // merge caller-supplied extras last so they can override defaults if needed
+    ...extraNotes,
   };
+
+  // Optional free-trial: if LOOKMAX_TRIAL_DAYS > 0 and live keys are present,
+  // delay the first charge by that many days (card on file, charge later).
+  const trialDays = parseInt(process.env.LOOKMAX_TRIAL_DAYS || '0', 10);
 
   if (!razorpay) {
     return {
@@ -288,12 +308,21 @@ async function createSubscription(planKey, customer = {}) {
     };
   }
 
-  const sub = await razorpay.subscriptions.create({
+  const subParams = {
     plan_id: planId,
     total_count: 12, // 12 monthly cycles
     customer_notify: 1,
     notes,
-  });
+  };
+
+  // Apply start_at delay only when live keys are set (trialDays > 0 in test mode
+  // is a no-op to avoid polluting test subscriptions with future timestamps).
+  if (trialDays > 0 && RAZORPAY_KEY_ID && !RAZORPAY_KEY_ID.startsWith('rzp_test')) {
+    subParams.start_at = Math.floor(Date.now() / 1000) + trialDays * 86400;
+    log.info('SUBS', `trial start_at set: ${trialDays}d for plan ${planKey}`);
+  }
+
+  const sub = await razorpay.subscriptions.create(subParams);
   return { id: sub.id, short_url: sub.short_url };
 }
 

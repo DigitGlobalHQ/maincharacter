@@ -315,45 +315,15 @@
   </div>
   <p class="mc-serif mc-serif--italic lm-reveal" id="full-impression" style="font-size:var(--mc-fs-h3);margin:0 0 var(--mc-sp-6);max-width:var(--mc-reading-max);"></p>
 
-  <!-- Decomposition -->
-  <div class="lm-section-label lm-reveal" aria-hidden="true">
-    <span class="lm-section-label__text">DECOMPOSITION</span>
-    <div class="lm-section-label__line"></div>
+  <!-- Status alert -->
+  <div id="full-status-wrap" class="lm-reveal" hidden style="border-left:2px solid var(--mc-silver-mid,#9a9aa3);padding:4px 0 4px var(--mc-sp-4);margin:0 0 var(--mc-sp-6);">
+    <p class="mc-eyebrow" style="margin-bottom:6px;">STATUS ALERT</p>
+    <p id="full-status" style="color:var(--mc-silver-mid);font-size:15px;line-height:1.65;margin:0;"></p>
   </div>
-  <p class="lm-block-intro lm-reveal">Every region the room reads, scored against the same axes.</p>
-  <div id="decomp-container" class="lm-reveal"></div>
 
-  <!-- Biggest lever -->
-  <div class="lm-section-label lm-reveal" aria-hidden="true">
-    <span class="lm-section-label__text">YOUR BIGGEST LEVER</span>
-    <div class="lm-section-label__line"></div>
-  </div>
-  <p class="lm-block-intro lm-reveal">One axis moves the rest. This is yours.</p>
-  <p class="mc-serif mc-serif--italic lm-lever lm-reveal" id="full-lever"></p>
-
-  <!-- Quests -->
-  <div class="lm-section-label lm-reveal" aria-hidden="true">
-    <span class="lm-section-label__text">THE QUESTS</span>
-    <div class="lm-section-label__line"></div>
-  </div>
-  <p class="lm-block-intro lm-reveal">Specific tasks. Drawn from the safe library. Tied to what your reading actually says.</p>
-  <ul class="lm-quests lm-reveal" id="full-quests" aria-label="Your quests"></ul>
-
-  <!-- Style & colour -->
-  <div class="lm-section-label lm-reveal" aria-hidden="true">
-    <span class="lm-section-label__text">STYLE &amp; COLOUR</span>
-    <div class="lm-section-label__line"></div>
-  </div>
-  <p class="lm-block-intro lm-reveal">Geometry first. Then the palette that does the work with it.</p>
-  <div id="full-style" class="lm-reveal"></div>
-
-  <!-- 7-day plan -->
-  <div class="lm-section-label lm-reveal" aria-hidden="true">
-    <span class="lm-section-label__text">THE 7-DAY STARTER PLAN</span>
-    <div class="lm-section-label__line"></div>
-  </div>
-  <p class="lm-block-intro lm-reveal">Morning and evening, for the first week. The protocol begins here.</p>
-  <div id="full-plan" class="lm-reveal"></div>
+  <!-- The Bespoke Aesthetic Blueprint (dynamic: 5 vectors, chromatic arsenal,
+       90-day intervention, projected evolution, methodology) -->
+  <div id="blueprint-container" class="lm-reveal"></div>
 
   <hr class="mc-hairline" style="margin:var(--mc-sp-7) 0;">
 
@@ -450,158 +420,129 @@
       });
   }
 
+  function clsMeta(c) {
+    if (c === 'leverage') return { g: '◆', col: '#7da0c4', t: 'Leverage via state' };
+    if (c === 'fixed')    return { g: '○', col: '#8a8a93', t: 'Fixed · context' };
+    return { g: '●', col: '#6fae8e', t: 'Actionable' };
+  }
+  function sectionLabel(text) {
+    return '<div class="lm-section-label" aria-hidden="true"><span class="lm-section-label__text">' + esc(text) + '</span><div class="lm-section-label__line"></div></div>';
+  }
+  function swatch(hex, name, note) {
+    var raw = String(hex || '').trim();
+    var safe = /^#?[0-9a-fA-F]{3,8}$/.test(raw) ? (raw[0] === '#' ? raw : '#' + raw) : '#888888';
+    return '<div style="display:flex;gap:12px;align-items:flex-start;margin:0 0 12px;">'
+      + '<span style="flex:0 0 auto;width:34px;height:34px;border-radius:6px;border:1px solid var(--mc-line);background:' + safe + '"></span>'
+      + '<div style="flex:1;"><div style="color:var(--mc-silver-bright);font-weight:600;font-size:14px;">' + esc(name || '')
+      + ' <span style="color:var(--mc-silver-faint);font-family:var(--mc-font-mono);font-size:11px;">' + safe.toUpperCase() + '</span></div>'
+      + (note ? '<div style="color:var(--mc-silver-mid);font-size:13px;line-height:1.55;margin-top:2px;">' + esc(note) + '</div>' : '')
+      + '</div></div>';
+  }
+
   function renderFull(report) {
     reportEl.hidden = false;
-
-    document.getElementById('full-score-num').textContent = report.auraScore || '—';
-    document.getElementById('full-rank').textContent = capitalise(report.rank || '');
+    var g10 = (typeof report.globalScore10 === 'number') ? report.globalScore10 : (report.auraScore ? report.auraScore / 10 : null);
+    document.getElementById('full-score-num').textContent = g10 != null ? g10.toFixed(1) : (report.auraScore || '—');
+    var rankBits = [];
+    if (report.archetype) rankBits.push(report.archetype);
+    else if (report.rank) rankBits.push(capitalise(report.rank));
+    if (report.percentile) rankBits.push(report.percentile + 'th percentile');
+    document.getElementById('full-rank').textContent = rankBits.join(' · ') || capitalise(report.rank || '');
     document.getElementById('full-impression').textContent = report.firstImpression || '';
+    var statusWrap = document.getElementById('full-status-wrap');
+    if (report.statusAlert && statusWrap) {
+      document.getElementById('full-status').textContent = report.statusAlert;
+      statusWrap.hidden = false;
+    }
 
-    // Decomposition
-    var decomp = report.decomposition || {};
-    var decompEl = document.getElementById('decomp-container');
-    var DECOMP_LABELS = {
-      skin: 'SKIN',
-      hair: 'HAIR',
-      jawAndFace: 'JAW &amp; FACE',
-      bodyAndPosture: 'BODY &amp; POSTURE',
-      lifestyleSignals: 'LIFESTYLE SIGNALS',
-    };
-    Object.keys(DECOMP_LABELS).forEach(function (key) {
-      var metrics = decomp[key];
-      if (!metrics || !metrics.length) return;
-      var group = document.createElement('div');
-      group.className = 'lm-decomp-group lm-reveal';
-      var header = document.createElement('p');
-      header.className = 'lm-decomp-group__header';
-      header.innerHTML = DECOMP_LABELS[key];
-      group.appendChild(header);
-      var hairline = document.createElement('hr');
-      hairline.className = 'mc-hairline mc-hairline--bright';
-      hairline.style.margin = '0 0 var(--mc-sp-2)';
-      group.appendChild(hairline);
-      metrics.forEach(function (m) {
-        var row = document.createElement('div');
-        row.className = 'lm-metric-row';
-        var label = document.createElement('span');
-        label.className = 'lm-metric-label';
-        label.textContent = formatMetricName(m.metric || '');
-        row.appendChild(label);
-        var tickBar = document.createElement('div');
-        tickBar.className = 'lm-tick-bar';
-        tickBar.setAttribute('role', 'meter');
-        tickBar.setAttribute('aria-valuenow', m.score || 0);
-        tickBar.setAttribute('aria-valuemin', 0);
-        tickBar.setAttribute('aria-valuemax', 100);
-        tickBar.setAttribute('aria-label', (m.metric || '') + ' score ' + (m.score || 0));
-        var filledCount = Math.round((m.score || 0) / 10);
-        for (var i = 0; i < 10; i++) {
-          var tick = document.createElement('div');
-          tick.className = 'lm-tick' + (i < filledCount ? ' is-filled' : '');
-          tickBar.appendChild(tick);
-        }
-        row.appendChild(tickBar);
-        var scoreEl = document.createElement('span');
-        scoreEl.className = 'lm-metric-score';
-        scoreEl.textContent = m.score || 0;
-        row.appendChild(scoreEl);
-        group.appendChild(row);
-        if (m.cause) {
-          var cause = document.createElement('p');
-          cause.className = 'lm-metric-cause';
-          cause.textContent = m.cause;
-          group.appendChild(cause);
-        }
-        if (m.fix) {
-          var fix = document.createElement('p');
-          fix.className = 'lm-metric-fix';
-          fix.textContent = m.fix;
-          group.appendChild(fix);
-        }
+    var html = '';
+    if (Array.isArray(report.vectors) && report.vectors.length) {
+      html += sectionLabel('02 · BIOMETRIC GAP ANALYSIS');
+      html += '<p class="lm-block-intro">Twenty-four metrics across five regions. Each finding pairs the clinical root cause with a score and a verdict.</p>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:18px;margin:0 0 var(--mc-sp-5);font-size:12px;color:var(--mc-silver-mid);">';
+      ['actionable', 'leverage', 'fixed'].forEach(function (c) { var mm = clsMeta(c); html += '<span><span style="color:' + mm.col + '">' + mm.g + '</span> ' + mm.t + '</span>'; });
+      html += '</div>';
+      report.vectors.forEach(function (v) {
+        html += '<div class="lm-decomp-group" style="margin-bottom:var(--mc-sp-5);">';
+        html += '<p class="lm-decomp-group__header">VECTOR ' + esc(v.numeral || '') + ' · ' + esc((v.name || '').toUpperCase()) + '</p>';
+        html += '<hr class="mc-hairline mc-hairline--bright" style="margin:0 0 var(--mc-sp-3);">';
+        (v.metrics || []).forEach(function (m) {
+          var mm = clsMeta(m.class);
+          var sc = (typeof m.score10 === 'number' ? m.score10.toFixed(1) : esc(String(m.score10 || '')));
+          html += '<div style="margin:0 0 var(--mc-sp-4);">';
+          html += '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">';
+          html += '<span style="color:var(--mc-silver-bright);font-weight:600;font-size:15px;">' + esc(formatMetricName(m.metric || '')) + (m.visualIndicator ? ' <span style="color:var(--mc-silver-faint)">*</span>' : '') + '</span>';
+          html += '<span style="font-family:var(--mc-font-mono);color:var(--mc-silver-bright);font-size:14px;white-space:nowrap;">' + sc + ' <span style="color:var(--mc-silver-faint)">/10</span></span>';
+          html += '</div>';
+          if (m.subtitle) html += '<div style="color:var(--mc-silver-faint);font-size:12px;font-style:italic;margin-top:1px;">' + esc(m.subtitle) + '</div>';
+          if (m.rootCause) html += '<div style="color:var(--mc-silver-mid);font-size:13px;line-height:1.55;margin-top:4px;">' + esc(m.rootCause) + '</div>';
+          html += '<div style="font-size:11px;letter-spacing:0.04em;margin-top:4px;color:' + mm.col + '">' + mm.g + ' ' + mm.t.toUpperCase() + '</div>';
+          html += '</div>';
+        });
+        html += '</div>';
       });
-      decompEl.appendChild(group);
-    });
-
-    // Biggest lever
-    var lever = report.biggestLever || {};
-    var leverEl = document.getElementById('full-lever');
-    if (lever.rationale) {
-      leverEl.textContent = lever.rationale;
-    } else if (lever.metric) {
-      leverEl.textContent = formatMetricName(lever.metric) + ' — score ' + (lever.score || 0);
     }
 
-    // Quests
-    var quests = report.quests || [];
-    var questsEl = document.getElementById('full-quests');
-    quests.forEach(function (q) {
-      var li = document.createElement('li');
-      li.textContent = q.task || '';
-      questsEl.appendChild(li);
-    });
-
-    // Style & colour
-    var style = report.styleAndColour || {};
-    var styleEl = document.getElementById('full-style');
-    if (style.haircut) {
-      var hRow = document.createElement('div');
-      hRow.className = 'lm-style-row';
-      hRow.innerHTML = '<span class="lm-style-row__key">Haircut</span><span class="lm-style-row__val">' + esc(style.haircut) + '</span>';
-      styleEl.appendChild(hRow);
+    var c = report.chromatic;
+    if (c) {
+      html += sectionLabel('03 · THE CHROMATIC & GROOMING ARSENAL');
+      html += '<p class="lm-block-intro">Colour is the highest-ROI lever — it re-engineers how the skin reads with no physical intervention.</p>';
+      html += '<p style="color:var(--mc-silver-bright);font-weight:600;margin:0 0 4px;">' + esc(c.profile || '') + '</p>';
+      html += '<p style="color:var(--mc-silver-mid);font-size:13px;margin:0 0 var(--mc-sp-5);">Undertone — ' + esc((c.undertone || '') + ' (' + (c.undertoneNote || '') + ')') + ' · Contrast — ' + esc((c.contrast || '') + ' (' + (c.contrastNote || '') + ')') + '</p>';
+      if (c.powerPalette && c.powerPalette.length) { html += '<p class="mc-eyebrow" style="margin-bottom:var(--mc-sp-3)">THE POWER PALETTE</p>'; c.powerPalette.forEach(function (s) { html += swatch(s.hex, s.name, s.note); }); }
+      if (c.supportingNeutrals) html += '<p style="color:var(--mc-silver-faint);font-size:12px;font-style:italic;margin:0 0 var(--mc-sp-4)">Supporting neutrals — ' + esc(c.supportingNeutrals) + '</p>';
+      if (c.antiPalette && c.antiPalette.length) { html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 var(--mc-sp-3)">THE ANTI-PALETTE — NEVER AT THE FACE</p>'; c.antiPalette.forEach(function (s) { html += swatch(s.hex, 'Avoid: ' + (s.name || ''), s.impact); }); }
+      if (c.metals) html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 6px">HARDWARE & METALS</p><p style="color:var(--mc-silver-bright);font-weight:600;margin:0 0 2px">' + esc(c.metals.locked || '') + '</p><p style="color:var(--mc-silver-mid);font-size:13px;margin:0 0 var(--mc-sp-4)">' + esc(c.metals.note || '') + '</p>';
+      if (c.stylingCorrections) html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 6px">STYLING CORRECTIONS</p><p style="color:var(--mc-silver-mid);font-size:13px;line-height:1.6;margin:0 0 var(--mc-sp-4)">' + esc(c.stylingCorrections) + '</p>';
+      if (c.cosmetic) {
+        if (c.cosmetic.lipWardrobe && c.cosmetic.lipWardrobe.length) { html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 var(--mc-sp-3)">THE LIP WARDROBE</p>'; c.cosmetic.lipWardrobe.forEach(function (s) { html += swatch(s.hex, s.name, s.note); }); }
+        if (c.cosmetic.complexion && c.cosmetic.complexion.length) { html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 var(--mc-sp-3)">COMPLEXION · CHEEK · EYE</p>'; c.cosmetic.complexion.forEach(function (it) { html += '<p style="margin:0 0 8px"><span style="color:var(--mc-silver-bright);font-weight:600">' + esc(it.area || '') + '</span> — <span style="color:var(--mc-silver-mid);font-size:13px">' + esc(it.directive || '') + '</span></p>'; }); }
+        html += '<p style="color:var(--mc-silver-faint);font-size:11px;font-style:italic;margin-top:8px">Cosmetic guidance is calibrated to colour biology only and is independent of gender expression.</p>';
+      }
     }
-    if (style.palette && style.palette.length) {
-      var pRow = document.createElement('div');
-      pRow.className = 'lm-style-row';
-      var pLabel = document.createElement('span');
-      pLabel.className = 'lm-style-row__key';
-      pLabel.textContent = 'Palette';
-      var pVal = document.createElement('div');
-      pVal.className = 'lm-style-row__val';
-      var swatches = document.createElement('div');
-      swatches.className = 'lm-palette-swatches';
-      swatches.setAttribute('aria-label', 'Colour palette suggestions');
-      style.palette.forEach(function (colour) {
-        var sw = document.createElement('div');
-        sw.className = 'lm-swatch';
-        // Clamp to greyscale — safety rule per design spec
-        sw.style.background = 'var(--mc-silver-mid)';
-        sw.setAttribute('aria-label', colour);
-        sw.title = colour;
-        swatches.appendChild(sw);
+
+    var iv = report.intervention;
+    if (iv) {
+      html += sectionLabel('04 · THE 90-DAY INTERVENTION BLUEPRINT');
+      html += '<p class="lm-block-intro">Each agent corrects a specific root cause. Items marked Rx are prescription-grade — bring them to your dermatologist; do not self-source.</p>';
+      [['Morning Protocol', iv.morning], ['Night Protocol', iv.night], ['Mechanical Arsenal', iv.mechanical]].forEach(function (b) {
+        var steps = b[1]; if (!steps || !steps.length) return;
+        html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 var(--mc-sp-3)">' + esc(b[0].toUpperCase()) + '</p>';
+        steps.forEach(function (s) {
+          html += '<div style="margin:0 0 var(--mc-sp-3);">';
+          html += '<div style="color:var(--mc-silver-bright);font-weight:600;font-size:14px;">' + esc(s.step || '') + ' · ' + esc(s.agent || '') + (s.rx ? ' <span style="color:var(--mc-silver-faint);font-family:var(--mc-font-mono);font-size:11px;border:1px solid var(--mc-line);padding:1px 5px;border-radius:4px;">Rx</span>' : '') + '</div>';
+          if (s.spec) html += '<div style="color:var(--mc-silver-faint);font-size:12px;font-style:italic;">' + esc(s.spec) + '</div>';
+          if (s.rationale) html += '<div style="color:var(--mc-silver-mid);font-size:13px;line-height:1.55;margin-top:2px;">' + esc(s.rationale) + '</div>';
+          html += '</div>';
+        });
       });
-      pVal.appendChild(swatches);
-      pRow.appendChild(pLabel);
-      pRow.appendChild(pVal);
-      styleEl.appendChild(pRow);
-    }
-    if (style.avoid && style.avoid.length) {
-      var aRow = document.createElement('div');
-      aRow.className = 'lm-style-row';
-      aRow.innerHTML = '<span class="lm-style-row__key">Avoid</span><span class="lm-style-row__val">' + esc(style.avoid.join(', ')) + '</span>';
-      styleEl.appendChild(aRow);
     }
 
-    // Starter plan
-    var plan = report.starterPlan || [];
-    var planEl = document.getElementById('full-plan');
-    plan.forEach(function (day) {
-      var row = document.createElement('div');
-      row.className = 'lm-plan-row';
-      row.innerHTML =
-        '<p class="lm-plan-day">Day ' + esc(String(day.day)) + '</p>' +
-        '<p class="lm-plan-label">Morning</p>' +
-        '<p class="lm-plan-task">' + esc(day.morning || '') + '</p>' +
-        '<p class="lm-plan-label">Evening</p>' +
-        '<p class="lm-plan-task">' + esc(day.evening || '') + '</p>';
-      planEl.appendChild(row);
-    });
+    var p = report.projection;
+    if (p && p.rows) {
+      html += sectionLabel('05 · PROJECTED EVOLUTION');
+      html += '<p class="lm-block-intro">Modelled 90-day outcome under strict adherence. Only actionable vectors move; fixed osseous geometry is held constant.</p>';
+      html += '<div style="font-family:var(--mc-font-mono);font-size:13px;">';
+      html += '<div style="display:flex;justify-content:space-between;color:var(--mc-silver-faint);font-size:10px;letter-spacing:0.08em;border-bottom:1px solid var(--mc-line);padding-bottom:6px;margin-bottom:8px;"><span>VECTOR</span><span>DAY 0 → 90 · GAIN</span></div>';
+      p.rows.forEach(function (r) {
+        html += '<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--mc-silver-mid);"><span style="color:var(--mc-silver-bright);">' + esc(formatMetricName(r.vector)) + '</span><span>' + Number(r.day0).toFixed(1) + ' → <span style="color:var(--mc-silver-bright)">' + Number(r.day90).toFixed(1) + '</span> · <span style="color:#6fae8e">+' + Number(r.delta).toFixed(1) + '</span></span></div>';
+      });
+      if (p.globalDay0 != null && p.globalDay90 != null) {
+        html += '<div style="display:flex;justify-content:space-between;padding:10px 0 4px;border-top:1px solid var(--mc-silver-faint);margin-top:6px;color:var(--mc-silver-bright);font-weight:600;"><span>GLOBAL AURA SCORE</span><span>' + Number(p.globalDay0).toFixed(1) + ' → ' + Number(p.globalDay90).toFixed(1) + ' · <span style="color:#6fae8e">+' + (Number(p.globalDay90) - Number(p.globalDay0)).toFixed(1) + '</span></span></div>';
+      }
+      html += '</div>';
+      if (p.narrative) html += '<p class="mc-serif mc-serif--italic" style="font-size:var(--mc-fs-h3);margin:var(--mc-sp-5) 0 0;line-height:1.5;">' + esc(p.narrative) + '</p>';
+    }
 
-    // Reveal animation
+    if (report.methodology) {
+      html += sectionLabel('METHODOLOGY, SAFETY & LIMITATIONS');
+      html += '<p style="color:var(--mc-silver-faint);font-size:12px;line-height:1.6;">' + esc(report.methodology) + '</p>';
+    }
+
+    var bp = document.getElementById('blueprint-container');
+    if (bp) bp.innerHTML = html;
     initReveal();
-
-    if (window.mc) {
-      window.mc.track('lookmaxing_audit_viewed', { resolution: 'full' });
-    }
+    if (window.mc) window.mc.track('lookmaxing_audit_viewed', { resolution: 'full' });
   }
 
   // ── Tick bar reveal on scroll ──

@@ -136,7 +136,12 @@ function _updateSession(id, updates) {
 
 // ─── PREMIUM blocks (spec §5) ─────────────────────────────────────────────────
 
-const PREMIUM_FIELDS = ['decomposition', 'biggestLever', 'quests', 'styleAndColour', 'starterPlan'];
+// Premium (paid-only) fields stripped from the free reading. Covers the new
+// Bespoke Blueprint schema + the legacy fields (older cached sessions).
+const PREMIUM_FIELDS = [
+  'vectors', 'chromatic', 'intervention', 'projection',           // Blueprint
+  'decomposition', 'biggestLever', 'quests', 'styleAndColour', 'starterPlan', // legacy
+];
 
 // ─── Compatibility score bridge ───────────────────────────────────────────────
 // The existing re-audit engine (routes/reaudit.js) and Daily Mirror (services/vision.js)
@@ -145,16 +150,36 @@ const PREMIUM_FIELDS = ['decomposition', 'biggestLever', 'quests', 'styleAndColo
 // so both engines can read a merged baseline without code changes in reaudit.js.
 // Decision documented in DECISIONS.md (stage-1-audit merge, 2026-05-28).
 
+// Blueprint schema (Bespoke Aesthetic Blueprint): the 8-axis baseline the reaudit
+// engine + Daily Mirror read is derived from the 5 vectors' averages (scores are
+// /10 → mapped to 0-100). Falls back to the legacy decomposition shape, then to
+// auraScore, so it stays resilient across the schema transition.
 const COMPAT_AXES = {
-  skinClarity:    (r) => _scoreFromDecomp(r, 'skin',         'skinClarity'),
-  jawDefinition:  (r) => _scoreFromDecomp(r, 'jawAndFace',   'jawlinePuffiness'),
-  eyeArea:        (r) => _scoreFromDecomp(r, 'jawAndFace',   'underEyePuffiness'),
-  hairDensity:    (r) => _scoreFromDecomp(r, 'hair',         'haircutFaceShapeMatch'),
-  posture:        (r) => _scoreFromDecomp(r, 'bodyAndPosture','postureCarriage'),
-  facialHarmony:  (r) => (r.auraScore || 55),
-  expression:     (r) => _scoreFromDecomp(r, 'jawAndFace',   'expressionTension'),
-  bodyComposition:(r) => _scoreFromDecomp(r, 'bodyAndPosture','shoulderAlignment'),
+  skinClarity:     (r) => _vectorAvg(r, 'dermalSkin',      'skin'),
+  jawDefinition:   (r) => _vectorAvg(r, 'lowerFaceJaw',    'jawAndFace'),
+  eyeArea:         (r) => _vectorAvg(r, 'periorbitalEyes', 'jawAndFace'),
+  hairDensity:     (r) => _vectorAvg(r, 'haloHair',        'hair'),
+  posture:         (r) => _vectorAvg(r, 'postureCarriage', 'bodyAndPosture'),
+  facialHarmony:   (r) => (r.auraScore || 55),
+  expression:      (r) => _vectorAvg(r, 'periorbitalEyes', 'jawAndFace'),
+  bodyComposition: (r) => _vectorAvg(r, 'postureCarriage', 'bodyAndPosture'),
 };
+
+// Average a vector's metric scores on the 0-100 scale (metric scores are /10).
+function _vectorAvg(report, vectorId, legacyRegion) {
+  const v = (report.vectors || []).find((x) => x && x.id === vectorId);
+  if (v && Array.isArray(v.metrics) && v.metrics.length) {
+    const nums = v.metrics.map((m) => Number(m.score10)).filter((n) => Number.isFinite(n));
+    if (nums.length) return Math.round((nums.reduce((s, n) => s + n, 0) / nums.length) * 10);
+  }
+  // Legacy decomposition fallback (old schema): average that region's scores (0-100).
+  const d = report.decomposition;
+  if (legacyRegion && d && Array.isArray(d[legacyRegion]) && d[legacyRegion].length) {
+    const nums = d[legacyRegion].map((m) => Number(m.score)).filter((n) => Number.isFinite(n));
+    if (nums.length) return Math.round(nums.reduce((s, n) => s + n, 0) / nums.length);
+  }
+  return report.auraScore || 55;
+}
 
 function _scoreFromDecomp(report, region, metric) {
   const d = report.decomposition;
@@ -420,15 +445,24 @@ async function _generatePdf(auditId, report) {
       const MUTED    = '#5b5b5b';
       const FAINT    = '#9a9a9a';
       const LINE     = '#e2ddd2';
+      const GREEN    = '#2f6b4f';   // actionable
+      const BLUE     = '#3a5775';   // leverage via state
+      const STONE    = '#8a8576';   // fixed context
 
       const M  = 60;                           // page margin
       const PW = doc.page.width;
+      const PH = doc.page.height;
       const W  = PW - M * 2;                    // content width
 
       const fmtName = (s) => String(s || '')
         .replace(/([A-Z])/g, ' $1').replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim()
         .replace(/^./, (c) => c.toUpperCase());
       const cap = (s) => (s ? String(s).charAt(0).toUpperCase() + String(s).slice(1) : '');
+      const need = (h) => { if (doc.y > PH - h) doc.addPage(); };
+
+      // Backward-compat: if a legacy (pre-Blueprint) report is passed, render the
+      // older sections so cached sessions still produce a PDF.
+      const isBlueprint = Array.isArray(report.vectors) && report.vectors.length > 0;
 
       // Small filled diamond (the ◆ mark, drawn as vector — built-in fonts can't render ◆).
       function diamond(cx, cy, size, color) {
@@ -444,40 +478,194 @@ async function _generatePdf(auditId, report) {
         doc.fillColor(INK);
       }
 
-      // ── Branded header band ──────────────────────────────────────
-      const bandH = 130;
+      // ════════ Blueprint render helpers ════════
+      function sectionTitle(num, title) {
+        need(86); doc.moveDown(0.5);
+        doc.font('Helvetica-Bold').fontSize(9).fillColor(GOLD).text(num, M, doc.y, { continued: true, characterSpacing: 2 })
+           .fillColor(OBSIDIAN).text('   ' + title.toUpperCase(), { characterSpacing: 1 });
+        doc.moveDown(0.35);
+      }
+      function classMeta(cls) {
+        if (cls === 'leverage') return { color: BLUE,  text: 'Leverage via state', shape: 'diamond' };
+        if (cls === 'fixed')    return { color: STONE, text: 'Fixed · context',    shape: 'ring' };
+        return { color: GREEN, text: 'Actionable', shape: 'dot' };
+      }
+      function classGlyph(cls, x, y) {
+        const meta = classMeta(cls);
+        if (meta.shape === 'diamond') diamond(x, y, 6, meta.color);
+        else if (meta.shape === 'ring') doc.circle(x, y, 3).lineWidth(1).strokeColor(meta.color).stroke();
+        else doc.circle(x, y, 3).fill(meta.color);
+        return meta;
+      }
+      function classLegend() {
+        const y = doc.y; let x = M;
+        for (const c of ['actionable', 'leverage', 'fixed']) {
+          const meta = classGlyph(c, x + 3, y + 4);
+          doc.font('Helvetica').fontSize(7.5).fillColor(MUTED).text(meta.text, x + 11, y);
+          x += 150;
+        }
+        doc.y = y + 16; doc.x = M;
+      }
+      function metricRow(m) {
+        need(64); doc.moveDown(0.4);
+        const y0 = doc.y;
+        const meta = classGlyph(m.class, M + 3, y0 + 5);
+        doc.font('Helvetica-Bold').fontSize(9.5).fillColor(INK)
+           .text(fmtName(m.metric) + (m.visualIndicator ? ' *' : ''), M + 13, y0, { continued: true })
+           .font('Times-Bold').fontSize(10).fillColor(GOLD)
+           .text('      ' + (typeof m.score10 === 'number' ? m.score10.toFixed(1) : String(m.score10 || '')) + ' /10');
+        if (m.subtitle) doc.font('Helvetica-Oblique').fontSize(8).fillColor(FAINT).text(m.subtitle, M + 13, doc.y, { width: W - 13 });
+        if (m.rootCause) doc.font('Helvetica').fontSize(8.5).fillColor(MUTED).text(m.rootCause, M + 13, doc.y, { width: W - 13, lineGap: 1 });
+        doc.font('Helvetica').fontSize(6.5).fillColor(meta.color).text(meta.text.toUpperCase(), M + 13, doc.y + 1, { characterSpacing: 1 });
+      }
+      function swatchRow(hex, name, note) {
+        need(48);
+        const y0 = doc.y, sw = 20;
+        const raw = String(hex || '').trim();
+        const safe = /^#?[0-9a-fA-F]{3,8}$/.test(raw) ? (raw[0] === '#' ? raw : '#' + raw) : '#cccccc';
+        doc.rect(M, y0, sw, sw).fill(safe);
+        doc.rect(M, y0, sw, sw).lineWidth(0.5).strokeColor(LINE).stroke();
+        doc.font('Helvetica-Bold').fontSize(9).fillColor(INK).text(name || '', M + sw + 10, y0, { continued: true })
+           .font('Courier').fontSize(8).fillColor(FAINT).text('    ' + safe.toUpperCase());
+        if (note) doc.font('Helvetica').fontSize(8).fillColor(MUTED).text(note, M + sw + 10, doc.y, { width: W - sw - 10, lineGap: 1 });
+        doc.y = Math.max(doc.y, y0 + sw) + 5; doc.x = M;
+      }
+      function chromaticSection(c) {
+        doc.addPage();
+        sectionTitle('03', 'The Chromatic & Grooming Arsenal');
+        doc.font('Helvetica').fontSize(8.5).fillColor(MUTED).text('Colour is the highest-ROI, zero-effort lever — it re-engineers how the skin reads with no physical intervention.', M, doc.y, { width: W, lineGap: 2 });
+        label('Skin-Tone Substrate');
+        if (c.profile) doc.font('Helvetica-Bold').fontSize(10).fillColor(INK).text(c.profile, M, doc.y);
+        doc.font('Helvetica').fontSize(8.5).fillColor(MUTED)
+           .text(`Undertone — ${c.undertone || ''} (${c.undertoneNote || ''})      Contrast — ${c.contrast || ''} (${c.contrastNote || ''})`, M, doc.y, { width: W });
+        if (Array.isArray(c.powerPalette) && c.powerPalette.length) {
+          label('The Power Palette — wear at the collar');
+          for (const s of c.powerPalette) swatchRow(s.hex, s.name, s.note);
+        }
+        if (c.supportingNeutrals) { doc.moveDown(0.2); doc.font('Helvetica-Oblique').fontSize(8).fillColor(FAINT).text('Supporting neutrals — ' + c.supportingNeutrals, M, doc.y, { width: W }); }
+        if (Array.isArray(c.antiPalette) && c.antiPalette.length) {
+          label('The Anti-Palette — never at the face');
+          for (const s of c.antiPalette) swatchRow(s.hex, 'Avoid: ' + s.name, s.impact);
+        }
+        if (c.metals) { label('Hardware & Metals'); if (c.metals.locked) doc.font('Helvetica-Bold').fontSize(9).fillColor(INK).text(c.metals.locked, M, doc.y); if (c.metals.note) doc.font('Helvetica').fontSize(8.5).fillColor(MUTED).text(c.metals.note, M, doc.y, { width: W, lineGap: 1 }); }
+        if (c.stylingCorrections) { label('Styling Corrections'); doc.font('Helvetica').fontSize(8.5).fillColor(MUTED).text(c.stylingCorrections, M, doc.y, { width: W, lineGap: 1 }); }
+        if (c.cosmetic) {
+          if (Array.isArray(c.cosmetic.lipWardrobe) && c.cosmetic.lipWardrobe.length) { label('The Lip Wardrobe'); for (const lp of c.cosmetic.lipWardrobe) swatchRow(lp.hex, lp.name, lp.note); }
+          if (Array.isArray(c.cosmetic.complexion) && c.cosmetic.complexion.length) {
+            label('Complexion · Cheek · Eye');
+            for (const it of c.cosmetic.complexion) { need(40); doc.font('Helvetica-Bold').fontSize(8.5).fillColor(INK).text(it.area || '', M, doc.y); doc.font('Helvetica').fontSize(8.5).fillColor(MUTED).text(it.directive || '', M + 10, doc.y, { width: W - 10, lineGap: 1 }); doc.moveDown(0.2); }
+          }
+          doc.moveDown(0.2); doc.font('Helvetica-Oblique').fontSize(7).fillColor(FAINT).text('Cosmetic guidance is calibrated to colour biology only and is independent of gender expression.', M, doc.y, { width: W });
+        }
+      }
+      function interventionSection(iv) {
+        doc.addPage();
+        sectionTitle('04', 'The 90-Day Intervention Blueprint');
+        doc.font('Helvetica').fontSize(8.5).fillColor(MUTED).text('Two daily routines and a mechanical protocol, each agent chosen to correct a specific root cause. Items marked [Rx] are prescription-grade — bring them to your dermatology consult; do not self-source.', M, doc.y, { width: W, lineGap: 2 });
+        for (const [title, steps] of [['Morning Protocol — Vitality & Defence', iv.morning], ['Night Protocol — Repair & Resurface', iv.night], ['Mechanical Arsenal — Structure & Carriage', iv.mechanical]]) {
+          if (!Array.isArray(steps) || !steps.length) continue;
+          label(title);
+          for (const s of steps) {
+            need(56);
+            doc.font('Times-Bold').fontSize(9).fillColor(GOLD).text(String(s.step || '-'), M, doc.y, { continued: true, width: 22 })
+               .font('Helvetica-Bold').fontSize(9).fillColor(INK).text('  ' + (s.agent || '') + (s.rx ? '   [Rx]' : ''));
+            if (s.spec) doc.font('Helvetica-Oblique').fontSize(8).fillColor(FAINT).text(s.spec, M + 16, doc.y, { width: W - 16 });
+            if (s.rationale) doc.font('Helvetica').fontSize(8.5).fillColor(MUTED).text(s.rationale, M + 16, doc.y, { width: W - 16, lineGap: 1 });
+            doc.moveDown(0.3);
+          }
+        }
+      }
+      function projectionSection(p) {
+        doc.addPage();
+        sectionTitle('05', 'Projected Evolution');
+        doc.font('Helvetica').fontSize(8.5).fillColor(MUTED).text('Modelled 90-day outcome under strict adherence. Only actionable and state vectors move; fixed osseous geometry is held constant — so the ceiling is honest, not inflated.', M, doc.y, { width: W, lineGap: 2 });
+        doc.moveDown(0.5);
+        const c2 = M + W - 150, c3 = M + W - 92, c4 = M + W - 34;
+        const hy = doc.y;
+        doc.font('Helvetica-Bold').fontSize(7).fillColor(FAINT)
+           .text('ACTIONABLE VECTOR', M, hy);
+        doc.font('Helvetica-Bold').fontSize(7).fillColor(FAINT).text('DAY 0', c2, hy, { width: 50, align: 'right' });
+        doc.text('DAY 90', c3, hy, { width: 50, align: 'right' });
+        doc.text('GAIN', c4, hy, { width: 34, align: 'right' });
+        doc.moveTo(M, hy + 11).lineTo(M + W, hy + 11).lineWidth(0.5).strokeColor(LINE).stroke();
+        doc.y = hy + 16; doc.x = M;
+        for (const r of (p.rows || [])) {
+          need(18); const ry = doc.y;
+          doc.font('Helvetica').fontSize(8.5).fillColor(INK).text(fmtName(r.vector), M, ry, { width: W - 160 });
+          doc.font('Courier').fontSize(8.5).fillColor(MUTED).text(Number(r.day0).toFixed(1), c2, ry, { width: 50, align: 'right' });
+          doc.font('Courier').fontSize(8.5).fillColor(INK).text(Number(r.day90).toFixed(1), c3, ry, { width: 50, align: 'right' });
+          doc.font('Courier-Bold').fontSize(8.5).fillColor(GREEN).text('+' + Number(r.delta).toFixed(1), c4, ry, { width: 34, align: 'right' });
+          doc.y = Math.max(doc.y, ry + 13); doc.x = M;
+        }
+        doc.moveTo(M, doc.y + 1).lineTo(M + W, doc.y + 1).lineWidth(0.6).strokeColor(GOLD).stroke();
+        doc.y += 6;
+        if (p.globalDay0 != null && p.globalDay90 != null) {
+          const ry = doc.y;
+          doc.font('Helvetica-Bold').fontSize(9).fillColor(OBSIDIAN).text('GLOBAL AURA SCORE', M, ry);
+          doc.font('Courier').fontSize(9).fillColor(MUTED).text(Number(p.globalDay0).toFixed(1), c2, ry, { width: 50, align: 'right' });
+          doc.font('Courier-Bold').fontSize(9).fillColor(INK).text(Number(p.globalDay90).toFixed(1), c3, ry, { width: 50, align: 'right' });
+          doc.font('Courier-Bold').fontSize(9).fillColor(GREEN).text('+' + (Number(p.globalDay90) - Number(p.globalDay0)).toFixed(1), c4, ry, { width: 34, align: 'right' });
+          doc.y = ry + 15; doc.x = M;
+        }
+        if (p.narrative) { doc.moveDown(0.3); doc.font('Times-Italic').fontSize(10.5).fillColor(INK).text(p.narrative, M, doc.y, { width: W, lineGap: 3 }); }
+      }
+
+      // ── Cover header band ────────────────────────────────────────
+      const bandH = 152;
       doc.rect(0, 0, PW, bandH).fill(OBSIDIAN);
-      diamond(M + 4, 46, 9, GOLD);
-      doc.font('Helvetica-Bold').fontSize(10).fillColor('#e8d9b0')
-         .text('MAINCHARACTER', M + 18, 41, { characterSpacing: 3 });
-      doc.font('Helvetica').fontSize(8).fillColor('#8a8576')
-         .text('THE AURA READING', M, 72, { characterSpacing: 3 });
-      doc.font('Times-Italic').fontSize(24).fillColor(CREAM)
-         .text('Your reading, resolved.', M, 84);
-      doc.font('Helvetica').fontSize(7.5).fillColor('#6f6a5d')
-         .text(`Audit ${auditId.slice(0, 8).toUpperCase()}   ·   ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`, M, 112);
+      diamond(M + 4, 40, 9, GOLD);
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#e8d9b0').text('MAINCHARACTER', M + 18, 35, { characterSpacing: 3 });
+      doc.font('Helvetica').fontSize(7.5).fillColor('#8a8576').text('PILLAR II  ·  ELITE DIAGNOSTIC DIVISION', M, 60, { characterSpacing: 2 });
+      doc.font('Times-Italic').fontSize(25).fillColor(CREAM).text('The Bespoke Aesthetic Blueprint', M, 76);
+      const archetype = report.archetype || cap(report.rank || '');
+      doc.font('Helvetica').fontSize(7.5).fillColor('#9a9486')
+         .text(`SUBJECT ${('A-' + auditId.slice(0, 4)).toUpperCase()}        ARCHETYPE ${archetype.toUpperCase()}        ${report.metricsScored || 24} METRICS        ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit' })}`,
+               M, 116, { characterSpacing: 1 });
+      doc.font('Helvetica').fontSize(6.5).fillColor('#6f6a5d').text('CONFIDENTIAL   ·   BESPOKE · SINGLE SUBJECT   ·   NOT FOR REDISTRIBUTION', M, 134, { characterSpacing: 1 });
 
       doc.y = bandH + 28; doc.x = M;
 
-      // ── Aura Score ───────────────────────────────────────────────
-      doc.font('Helvetica-Bold').fontSize(8).fillColor(GOLD).text('AURA SCORE', M, doc.y, { characterSpacing: 2 });
+      // ── Global Aura Score ────────────────────────────────────────
+      const g10 = (typeof report.globalScore10 === 'number')
+        ? report.globalScore10
+        : (report.auraScore ? +(report.auraScore / 10).toFixed(1) : null);
+      doc.font('Helvetica-Bold').fontSize(8).fillColor(GOLD).text('GLOBAL AURA SCORE', M, doc.y, { characterSpacing: 2 });
       const scoreY = doc.y + 4;
-      doc.font('Times-Bold').fontSize(60).fillColor(INK).text(String(report.auraScore), M, scoreY);
-      doc.font('Helvetica').fontSize(10).fillColor(MUTED)
-         .text(`OUT OF 100        ${String(report.rank || '').toUpperCase()}        ${cap(report.faceShape || '')}`,
-               M, scoreY + 66, { characterSpacing: 1 });
+      doc.font('Times-Bold').fontSize(54).fillColor(INK).text(g10 != null ? g10.toFixed(1) : String(report.auraScore || '—'), M, scoreY, { continued: true })
+         .font('Helvetica').fontSize(15).fillColor(MUTED).text(g10 != null ? '  / 10' : '  / 100');
+      doc.font('Helvetica').fontSize(9.5).fillColor(MUTED)
+         .text(`${report.percentile ? report.percentile + 'th percentile' : ''}${report.faceShape ? '        ' + cap(report.faceShape) : ''}`, M, scoreY + 58, { characterSpacing: 1 });
       doc.moveTo(M, doc.y + 10).lineTo(M + W, doc.y + 10).lineWidth(0.6).strokeColor(GOLD).stroke();
-      doc.y += 18;
+      doc.y += 16;
 
-      // ── First Impression ─────────────────────────────────────────
-      label('First Impression');
-      doc.font('Times-Italic').fontSize(13).fillColor(INK)
-         .text(report.firstImpression || '', M, doc.y, { width: W, lineGap: 4 });
+      // ── First Impression + Status Alert ──────────────────────────
+      if (report.firstImpression) {
+        doc.moveDown(0.5);
+        doc.font('Times-Italic').fontSize(13).fillColor(INK).text(report.firstImpression, M, doc.y, { width: W, lineGap: 4 });
+      }
+      if (report.statusAlert) {
+        label('Status Alert');
+        doc.font('Helvetica').fontSize(9.5).fillColor(MUTED).text(report.statusAlert, M, doc.y, { width: W, lineGap: 2 });
+      }
 
-      // ── The Four Signals ─────────────────────────────────────────
-      label('The Four Signals');
-      doc.font('Helvetica').fontSize(10).fillColor(MUTED)
-         .text((report.freeSignals || []).map((s) => s.label).join('        ·        '), M, doc.y, { width: W });
+      if (isBlueprint) {
+        // ── 02 Biometric Gap Analysis ──────────────────────────────
+        doc.addPage();
+        sectionTitle('02', 'Biometric Gap Analysis');
+        doc.font('Helvetica').fontSize(8.5).fillColor(MUTED).text('A vector-by-vector breakdown of where perceived status is leaking. Each finding pairs the clinical root cause — the mechanism, not the symptom — with a score and a verdict.', M, doc.y, { width: W, lineGap: 2 });
+        doc.moveDown(0.5); classLegend();
+        for (const v of report.vectors) {
+          need(120); doc.moveDown(0.6);
+          doc.font('Helvetica-Bold').fontSize(10).fillColor(OBSIDIAN).text(`VECTOR ${v.numeral || ''} · ${(v.name || '').toUpperCase()}`, M, doc.y, { characterSpacing: 1 });
+          doc.moveTo(M, doc.y + 3).lineTo(M + W, doc.y + 3).lineWidth(0.5).strokeColor(LINE).stroke();
+          doc.moveDown(0.4);
+          for (const m of (v.metrics || [])) metricRow(m);
+        }
+        if (report.chromatic)    chromaticSection(report.chromatic);
+        if (report.intervention) interventionSection(report.intervention);
+        if (report.projection)   projectionSection(report.projection);
+        if (report.methodology) { need(110); label('Methodology, Safety & Limitations'); doc.font('Helvetica').fontSize(7.5).fillColor(FAINT).text(report.methodology, M, doc.y, { width: W, lineGap: 2 }); }
+      } else {
 
       // ── Full Decomposition ───────────────────────────────────────
       if (report.decomposition) {
@@ -555,6 +743,7 @@ async function _generatePdf(auditId, report) {
           doc.moveDown(0.35);
         }
       }
+      } // end legacy fallback
 
       // ── Footers on every page ────────────────────────────────────
       const range = doc.bufferedPageRange();

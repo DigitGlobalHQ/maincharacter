@@ -12,6 +12,7 @@ const { requireLookmaxAuth } = require('../lib/lookmax-auth');
 const User = require('../models/User');
 const { createLogger } = require('../lib/log');
 const events = require('../services/events');
+const razorpay = require('../services/razorpay');
 
 const log = createLogger('TOKENS');
 const router = express.Router();
@@ -78,6 +79,44 @@ router.post('/buy', requireLookmaxAuth, async (req, res) => {
   }
 });
 
+// ─── POST /verify — credit tokens on a verified Razorpay payment ───
+// Webhook-independent: the studio posts the payment id + order id + signature
+// after checkout. Idempotent via a per-user credited-payment guard so the webhook
+// backstop can't double-credit the same payment.
+router.post('/verify', requireLookmaxAuth, async (req, res) => {
+  const { pack, razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body || {};
+  const p = PACKS[pack];
+  if (!p) return res.status(400).json({ error: 'unknown pack' });
+  if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+    return res.status(400).json({ error: 'missing payment fields' });
+  }
+  if (!razorpay.verifyPayment(razorpay_order_id, razorpay_payment_id, razorpay_signature)) {
+    return res.status(400).json({ error: 'signature verification failed' });
+  }
+  const credited = await creditTokensOnce(req.lookmaxUser.phone, p.tokens, razorpay_payment_id);
+  events.trackAnonymous('tokens_verified', { pack, added: credited.added }, req.lookmaxUser.token).catch(() => {});
+  return res.json({ ok: true, tokens: credited.tokens, added: credited.added });
+});
+
+/**
+ * Credit tokens for a payment exactly once. Tracks the payment id on the user
+ * (capped) so the return-verify and the webhook backstop can't double-credit.
+ * Exported so the webhook (routes/api.js) uses the same idempotent path.
+ */
+async function creditTokensOnce(phone, n, paymentId) {
+  const user = await User.getUserByPhone(phone);
+  if (!user) return { tokens: 0, added: 0 };
+  const seen = Array.isArray(user.tokenPayments) ? user.tokenPayments : [];
+  if (paymentId && seen.includes(paymentId)) {
+    return { tokens: user.tokens || 0, added: 0 }; // already credited
+  }
+  const nextSeen = paymentId ? seen.concat(paymentId).slice(-50) : seen;
+  await User.updateUser(phone, { tokens: (user.tokens || 0) + Math.max(0, Math.floor(n || 0)), tokenPayments: nextSeen });
+  const fresh = await User.getUserByPhone(phone);
+  return { tokens: (fresh && fresh.tokens) || 0, added: n };
+}
+
 module.exports = router;
 module.exports.PACKS = PACKS;
 module.exports.TOOL_COSTS = TOOL_COSTS;
+module.exports.creditTokensOnce = creditTokensOnce;

@@ -1323,6 +1323,45 @@ router.post('/pay/test-confirm', async (req, res) => {
   return res.json({ ok: true, testMode: true, auditId, paid: !!(settled && settled.paid) });
 });
 
+// Activate the lookmaxxing subscription entitlement on the owning user.
+async function _activateSubUser(userId) {
+  if (!userId) return;
+  try {
+    const user = await User.getUserByToken(userId);
+    if (!user) return;
+    const u = { lookmaxxingActive: true, subscriptionStatus: 'active' };
+    if (!user.subscribedAt) u.subscribedAt = new Date().toISOString();
+    if (!user.lookmaxxingStartedAt) u.lookmaxxingStartedAt = new Date().toISOString();
+    await User.updateUser(user.phone, u);
+  } catch (err) { log.warn('PAY-VERIFY', `sub user activate failed: ${err.message}`); }
+}
+
+// ─── POST /pay/verify — client-return verification (webhook-independent) ────────
+// After a real Razorpay subscription checkout succeeds, the client posts the
+// payment id + subscription id + signature here. We verify the signature and
+// unlock immediately, so the report opens even if the dashboard webhook lags or
+// isn't configured. The webhook remains a backstop (both paths are idempotent).
+router.post('/pay/verify', async (req, res) => {
+  const actor = resolveActor(req);
+  if (!actor) return res.status(401).json({ error: 'unauthorized' });
+  const { auditId, razorpay_payment_id, razorpay_subscription_id, razorpay_signature } = req.body || {};
+  if (!auditId || !razorpay_payment_id || !razorpay_subscription_id || !razorpay_signature) {
+    return res.status(400).json({ error: 'missing payment fields' });
+  }
+  const session = _getSession(auditId);
+  if (!session) return res.status(404).json({ error: 'audit not found' });
+  if (!canAccess(session, actor)) return res.status(403).json({ error: 'forbidden' });
+
+  const ok = razorpay.verifySubscriptionPayment(razorpay_payment_id, razorpay_subscription_id, razorpay_signature);
+  if (!ok) return res.status(400).json({ error: 'signature verification failed' });
+
+  const settled = await _settlePaidAudit(auditId, { paymentId: razorpay_payment_id });
+  await _activateSubUser(actor.userId);
+  events.trackAnonymous('lookmaxing_pay_verified', { auditId }, actor.userId).catch(() => {});
+  log.info('PAY-VERIFY', `verified unlock for audit ${auditId}`);
+  return res.json({ ok: true, paid: !!(settled && settled.paid) });
+});
+
 // ─── GET /audit/:id/pdf ───────────────────────────────────────────────────────
 
 router.get('/audit/:id/pdf', async (req, res) => {

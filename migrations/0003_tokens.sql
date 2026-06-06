@@ -4,3 +4,7 @@
 
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS tokens INTEGER NOT NULL DEFAULT 0;
+
+-- Credited payment ids (idempotency guard so return-verify + webhook can't double-credit).
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS token_payments JSONB NOT NULL DEFAULT '[]'::jsonb;

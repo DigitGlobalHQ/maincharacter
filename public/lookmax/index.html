@@ -564,6 +564,8 @@
       <div class="badges">
         <span class="badge badge--streak" id="streakBadge">Day 0</span>
         <span class="badge badge--level" id="levelBadge">Raw</span>
+        <button type="button" id="signOutBtn" aria-label="Sign out"
+          style="background:none;border:none;cursor:pointer;font-family:inherit;font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:4px 0;">Sign out</button>
       </div>
     </div>
 
@@ -1652,6 +1654,22 @@
         window.mc.track('journey_section_viewed', {});
       }
     }
+  </script>
+  <script>
+    // Sign out: clear the local session (stateless JWT — no server call needed)
+    // and return to the public entry. Clears all lookmax.* keys for a clean slate.
+    (function () {
+      var btn = document.getElementById('signOutBtn');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        try {
+          ['lookmax.token', 'lookmax.auditId', 'lookmax.push_dismissed'].forEach(function (k) {
+            localStorage.removeItem(k);
+          });
+        } catch (e) { /* ignore storage errors */ }
+        window.location.href = '/lookmaxing';
+      });
+    })();
   </script>
 </body>
 </html>

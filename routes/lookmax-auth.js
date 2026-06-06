@@ -592,6 +592,14 @@ router.get('/me', requireLookmaxAuth, (req, res) => {
   res.json({ user: publicUser(req.lookmaxUser) });
 });
 
+// ─── Delete my account (self-service; the person must sign up again) ───
+router.delete('/account', requireLookmaxAuth, async (req, res) => {
+  const u = req.lookmaxUser;
+  const removed = await User.deleteUser(u.phone);
+  log.info('ACCOUNT-DELETE', `${maskEmail(u.email)} self-deleted account`);
+  res.json({ ok: !!removed, deleted: !!removed });
+});
+
 // ─── Logout (stateless) ───
 
 router.post('/auth/logout', (req, res) => res.json({ ok: true }));

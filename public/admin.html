@@ -508,9 +508,9 @@
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>Email</th><th>Name</th><th>Signed up</th><th>Via</th><th>Last sign-in</th><th>Logins</th><th>Paid ₹99</th><th>Stage</th></tr>
+          <tr><th>Email</th><th>Name</th><th>Signed up</th><th>Via</th><th>Last sign-in</th><th>Logins</th><th>Paid ₹99</th><th>Stage</th><th></th></tr>
         </thead>
-        <tbody id="lmx-users-table"><tr><td colspan="8" style="color:var(--ink-dim)">Loading…</td></tr></tbody>
+        <tbody id="lmx-users-table"><tr><td colspan="9" style="color:var(--ink-dim)">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -669,13 +669,16 @@ function loadLookmaxUsers() {
       document.getElementById('lmx-users-count').textContent =
         `— ${d.count} total · ${d.signedInCount != null ? d.signedInCount + ' signed in · ' : ''}${d.paidCount} paid`;
       const tbody = document.getElementById('lmx-users-table');
-      if (!rows.length) { tbody.innerHTML = '<tr><td colspan="8" style="color:var(--ink-dim)">No sign-ups yet.</td></tr>'; return; }
+      if (!rows.length) { tbody.innerHTML = '<tr><td colspan="9" style="color:var(--ink-dim)">No sign-ups yet.</td></tr>'; return; }
       tbody.innerHTML = rows.map(u => {
         const signed = u.signupAt ? new Date(u.signupAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
         const lastLogin = u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '<span style="color:var(--ink-faint)">never</span>';
         const logins = u.loginCount > 0 ? u.loginCount : '<span style="color:var(--ink-faint)">0</span>';
         const paid = u.paid99 ? '◆ Yes' : '—';
         const comp = u.comp ? ' <span style="color:var(--ink-faint)">(comp)</span>' : '';
+        const del = u.phone
+          ? `<button class="lmx-del-btn" data-phone="${esc(u.phone)}" data-email="${esc(u.email || u.name || u.phone)}" title="Delete user" style="background:none;border:1px solid var(--ink-faint);color:var(--ink-dim);border-radius:6px;padding:4px 9px;cursor:pointer;font-size:0.7rem;">Delete</button>`
+          : '';
         return `<tr>
           <td>${esc(u.email) || '<span style="color:var(--ink-faint)">—</span>'}${comp}</td>
           <td>${esc(u.name)}</td>
@@ -685,10 +688,26 @@ function loadLookmaxUsers() {
           <td>${logins}</td>
           <td>${paid}</td>
           <td>${esc(u.stage)}</td>
+          <td>${del}</td>
         </tr>`;
       }).join('');
+      // Wire delete buttons (delegated would also work; per-button keeps it simple)
+      tbody.querySelectorAll('.lmx-del-btn').forEach(btn => {
+        btn.addEventListener('click', () => deleteLookmaxUser(btn.dataset.phone, btn.dataset.email));
+      });
     })
     .catch(console.error);
+}
+
+function deleteLookmaxUser(phone, label) {
+  if (!confirm('Delete ' + label + '? This is permanent. They will have to sign up again.')) return;
+  fetch('/api/admin/user/' + encodeURIComponent(phone), { method: 'DELETE', headers: authHeaders() })
+    .then(r => r.json())
+    .then(d => {
+      if (d.deleted) { loadLookmaxUsers(); loadData(); }
+      else alert('Could not delete: ' + (d.error || 'unknown error'));
+    })
+    .catch(() => alert('Could not delete (network error).'));
 }
 
 function renderData(data) {

@@ -390,6 +390,7 @@ function _rowToUser(row) {
     notes:                   row.notes || '',
     oratorActive:            row.orator_active,
     lookmaxxingActive:       row.lookmaxxing_active,
+    tokens:                  typeof row.tokens === 'number' ? row.tokens : 0,
     mirrorLevel:             row.mirror_level,
     auditSessionId:          row.audit_session_id || null,
     lookmaxxingStartedAt:    row.lookmaxxing_started_at || null,
@@ -503,6 +504,7 @@ async function _pg_updateUser(phone, updates) {
     // NOW-2 / B2 — Day-30 re-audit
     reAuditCompletedThisCycle: 're_audit_completed_this_cycle',
     reAuditResult: 're_audit_result',
+    tokens: 'tokens', // paid AI image-tool credits
   };
 
   const setClauses = [];
@@ -679,3 +681,26 @@ async function getOrCreateByEmail({ email, name, provider = 'email' }) {
 }
 
 module.exports.getOrCreateByEmail = getOrCreateByEmail;
+
+/**
+ * Token (credit) helpers for the paid AI image tools. Composed from the adapted
+ * getUserByPhone + updateUser, so they work under both JSON and Postgres.
+ */
+async function addTokens(phone, n) {
+  const u = await module.exports.getUserByPhone(phone);
+  if (!u) return null;
+  const cur = typeof u.tokens === 'number' ? u.tokens : 0;
+  return module.exports.updateUser(phone, { tokens: cur + Math.max(0, Math.floor(n || 0)) });
+}
+/** Spend tokens (read-modify-write; single instance). */
+async function spendTokens(phone, n) {
+  const need = Math.max(0, Math.floor(n || 0));
+  const u = await module.exports.getUserByPhone(phone);
+  if (!u) return { ok: false, reason: 'no_user' };
+  const cur = typeof u.tokens === 'number' ? u.tokens : 0;
+  if (cur < need) return { ok: false, reason: 'insufficient', tokens: cur };
+  const updated = await module.exports.updateUser(phone, { tokens: cur - need });
+  return { ok: true, tokens: (updated && typeof updated.tokens === 'number') ? updated.tokens : cur - need };
+}
+module.exports.addTokens = addTokens;
+module.exports.spendTokens = spendTokens;

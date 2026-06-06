@@ -226,11 +226,20 @@ app.get('/lookmaxing/capture',       lookmaxingPage('capture.html'));
 app.get('/lookmaxing/audit/:id',     lookmaxingPage('audit.html'));
 app.get('/lookmaxing/audit/:id/full',lookmaxingPage('audit-full.html'));
 // Free browser-based facial-analysis tools (MediaPipe 478-landmark; runs entirely
-// client-side — no upload). Flagship analyzer; per-tool SEO pages to follow.
-app.get('/lookmaxing/tools',  (req, res) => servePage(res, path.join(__dirname, 'public', 'lookmaxing', 'tools', 'index.html')));
-app.get('/lookmaxing/tools/', (req, res) => servePage(res, path.join(__dirname, 'public', 'lookmaxing', 'tools', 'index.html')));
-// Short, shareable alias.
-app.get('/face',              (req, res) => servePage(res, path.join(__dirname, 'public', 'lookmaxing', 'tools', 'index.html')));
+// client-side — no upload). Hub + flagship + per-tool SEO pages + AI studio.
+const _toolsDir = path.join(__dirname, 'public', 'lookmaxing', 'tools');
+app.get('/lookmaxing/tools',  (req, res) => servePage(res, path.join(_toolsDir, 'index.html'))); // hub
+app.get('/lookmaxing/tools/', (req, res) => servePage(res, path.join(_toolsDir, 'index.html')));
+app.get('/face',              (req, res) => servePage(res, path.join(_toolsDir, 'all.html')));    // flagship combined analyzer
+app.get('/studio',            (req, res) => servePage(res, path.join(_toolsDir, 'studio.html')));  // paid AI image studio
+// Clean per-tool URLs (/lookmaxing/tools/jawline-score → jawline-score.html). Static
+// already serves *.html + JS/CSS; this only catches the extensionless slug.
+app.get('/lookmaxing/tools/:slug', (req, res) => {
+  if (!/^[a-z0-9-]{2,40}$/.test(req.params.slug)) return res.redirect('/lookmaxing/tools');
+  const f = path.join(_toolsDir, req.params.slug + '.html');
+  if (!fs.existsSync(f)) return res.redirect('/lookmaxing/tools');
+  return servePage(res, f);
+});
 // Fork page injects the trial-live flag. The Daily Mirror is live, so the
 // "Start your free 7-day trial" CTA is enabled unless LOOKMAX_TRIAL_LIVE=false.
 // Without this the button was permanently disabled (dead stage-10 CTA). funnel-repair.
@@ -289,6 +298,10 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/audit', auditRoutes);
 // Lookmaxxing PWA API (Night-4). Auth routes are public; the feature router
 // (mirror/protocol/hair/dashboard/reveal) is gated by requireLookmaxAuth.
+// Token/credits + paid AI image tools — specific paths mounted BEFORE the generic
+// /api/lookmax routers so they win.
+app.use('/api/lookmax/tokens', require('./routes/tokens'));
+app.use('/api/lookmax/ai', require('./routes/ai-tools'));
 app.use('/api/lookmax', require('./routes/lookmax-auth'));
 app.use('/api/lookmax', require('./routes/lookmax'));
 // Day-30 re-audit engine (NOW-2 / B2). Gated by requireLookmaxAuth (same as lookmax.js).

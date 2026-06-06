@@ -118,9 +118,32 @@ app.use(express.static(path.join(__dirname, 'public')));
 // PAGE ROUTES
 // ═══════════════════════════════════════════════════════════════════
 
+// Analytics (GA4) + Search Console verification are injected into the <head> of
+// public HTML pages from env (lib/analytics-head). No-op until configured. Pages
+// are read once and cached per-process (env is fixed at boot).
+const { analyticsHead } = require('./lib/analytics-head');
+const _ANALYTICS_HEAD = analyticsHead();
+const _pageCache = new Map();
+function servePage(res, absPath) {
+  let html = _pageCache.get(absPath);
+  if (html === undefined) {
+    try {
+      html = fs.readFileSync(absPath, 'utf8');
+    } catch {
+      res.sendStatus(404);
+      return;
+    }
+    if (_ANALYTICS_HEAD && html.includes('</head>')) {
+      html = html.replace('</head>', _ANALYTICS_HEAD + '</head>');
+    }
+    _pageCache.set(absPath, html);
+  }
+  res.type('html').send(html);
+}
+
 // Homepage
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'landing.html'));
+  servePage(res, path.join(__dirname, 'landing.html'));
 });
 
 // Free Trial Enrollment — cordoned off (stage-1-audit-spec.md §1, Wave 2C)
@@ -189,11 +212,12 @@ app.get('/audit/result/:token', (req, res) => {
 // Wave 2B (frontend-agent) ships the HTML; these routes serve whatever is present.
 // Cited: briefs/stage-1-audit-spec.md §3.
 app.use('/lookmaxing', express.static(path.join(__dirname, 'public', 'lookmaxing')));
+
 const lookmaxingPage = (file) => (req, res) => {
   const p = path.join(__dirname, 'public', 'lookmaxing', file);
-  if (fs.existsSync(p)) return res.sendFile(p);
+  if (fs.existsSync(p)) return servePage(res, p);
   // Fallback to index.html for SPA routing.
-  return res.sendFile(path.join(__dirname, 'public', 'lookmaxing', 'index.html'));
+  return servePage(res, path.join(__dirname, 'public', 'lookmaxing', 'index.html'));
 };
 app.get('/lookmaxing',               lookmaxingPage('index.html'));
 app.get('/lookmaxing/start',         lookmaxingPage('start.html'));
@@ -328,6 +352,10 @@ app.get('/health', async (req, res) => {
         },
         sms: { configured: !!process.env.MSG91_AUTH_KEY },
         email: { configured: !!process.env.RESEND_API_KEY },
+        analytics: {
+          ga: !!process.env.GA_MEASUREMENT_ID,
+          searchConsole: !!process.env.GSC_VERIFICATION,
+        },
       },
       paywall: {
         public: process.env.PAYWALL_PUBLIC === 'true',

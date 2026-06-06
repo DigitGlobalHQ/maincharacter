@@ -3,251 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Free Facial Analysis — Face Shape, Jawline, Symmetry & More · MainCharacter</title>
-  <meta name="description" content="Free facial analysis in your browser — face shape, jawline score, canthal tilt, eye shape, symmetry, golden ratio, facial ratios and an attractiveness score. Your photo never leaves your device.">
+  <title>Free Face Analysis Tools — Face Shape, Jawline, Symmetry, Golden Ratio · MainCharacter</title>
+  <meta name="description" content="A suite of free, browser-based facial analysis tools — face shape detector, jawline score, canthal tilt, eye shape, symmetry checker, attractiveness score, golden ratio and facial ratios. Your photo never leaves your device.">
+  <link rel="canonical" href="https://maincharacter.digitglobalservices.com/lookmaxing/tools">
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Sora:wght@200;300;400;500;600&display=swap" rel="stylesheet">
-  <style>
-    :root{
-      --obsidian:#070708; --panel:#0f0f12; --panel2:#141418; --gold:#e8b84b;
-      --ink:#f4f1ea; --dim:#9b988f; --faint:#5c5a54; --line:rgba(255,255,255,0.10);
-      --good:#7fae8e;
-    }
-    *,*::before,*::after{box-sizing:border-box}
-    body{margin:0;background:var(--obsidian);color:var(--ink);
-      font-family:'Sora',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.6}
-    .nav{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--line)}
-    .nav__brand{display:flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none;font-size:0.8rem;letter-spacing:0.18em;text-transform:uppercase}
-    .nav__brand b{font-weight:600}
-    .nav__cta{color:var(--gold);text-decoration:none;font-size:0.74rem;letter-spacing:0.06em}
-    .wrap{max-width:860px;margin:0 auto;padding:48px 22px 80px}
-    .eyebrow{font-size:0.72rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--gold);margin:0 0 14px}
-    h1{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500;font-size:2.8rem;line-height:1.1;margin:0 0 16px}
-    .sub{color:var(--dim);font-size:1.02rem;max-width:560px;margin:0 0 14px}
-    .privacy{display:inline-flex;align-items:center;gap:8px;font-size:0.8rem;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:8px 16px;margin:8px 0 34px}
-    .privacy b{color:var(--ink);font-weight:500}
-    .drop{border:1px dashed rgba(232,184,75,0.35);border-radius:16px;background:var(--panel);padding:44px 24px;text-align:center}
-    .drop p{color:var(--dim);margin:10px 0 0;font-size:0.9rem}
-    input[type=file]{display:none}
-    .btn{display:inline-block;cursor:pointer;border:none;font-family:inherit;font-weight:600;
-      background:linear-gradient(135deg,#f3d27a,#e8b84b);color:#070708;padding:15px 30px;border-radius:999px;font-size:1rem}
-    .btn--ghost{background:none;border:1px solid var(--line);color:var(--ink);font-weight:400}
-    .stage{display:none;margin-top:28px}
-    .stage.show{display:block}
-    .canvas-wrap{position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#000;max-width:460px;margin:0 auto}
-    canvas{display:block;width:100%;height:auto}
-    .loading{color:var(--gold);text-align:center;padding:30px;font-size:0.9rem;letter-spacing:0.04em}
-    .err{color:#d98b7d;text-align:center;padding:16px;font-size:0.9rem}
-    /* Results */
-    .hero-score{text-align:center;margin:34px 0 10px}
-    .hero-score__num{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:5.2rem;line-height:1;color:var(--gold)}
-    .hero-score__label{font-size:0.72rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);margin-top:4px}
-    .grid{display:grid;grid-template-columns:1fr;gap:14px;margin-top:26px}
-    @media(min-width:640px){.grid{grid-template-columns:1fr 1fr}}
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
-    .card__k{font-size:0.7rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--gold);margin:0 0 8px}
-    .card__v{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.7rem;color:var(--ink);margin:0}
-    .card__sub{color:var(--dim);font-size:0.86rem;margin:6px 0 0}
-    .bar{height:6px;border-radius:3px;background:rgba(255,255,255,0.08);margin:10px 0 0;overflow:hidden}
-    .bar > i{display:block;height:100%;background:linear-gradient(90deg,#f3d27a,#e8b84b)}
-    .rows{margin-top:6px}
-    .rows > div{display:flex;justify-content:space-between;font-size:0.86rem;color:var(--dim);padding:3px 0}
-    .rows b{color:var(--ink);font-weight:500;font-family:'Sora'}
-    .cta{margin-top:40px;text-align:center;background:var(--panel2);border:1px solid rgba(232,184,75,0.25);border-radius:16px;padding:34px 24px}
-    .cta h2{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500;font-size:1.9rem;margin:0 0 10px}
-    .cta p{color:var(--dim);font-size:0.95rem;margin:0 0 22px;max-width:480px;margin-left:auto;margin-right:auto}
-    .actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:22px}
-    .foot{text-align:center;color:var(--gold);letter-spacing:0.18em;font-size:0.7rem;margin-top:50px}
-    .disclaimer{color:var(--faint);font-size:0.74rem;text-align:center;margin-top:14px;line-height:1.6}
-  </style>
+  <link rel="stylesheet" href="/lookmaxing/tools/tools.css">
 </head>
 <body>
-  <nav class="nav">
-    <a class="nav__brand" href="/"><b>◆ MAINCHARACTER</b></a>
-    <a class="nav__cta" href="/lookmaxing">Get your Aura Reading →</a>
-  </nav>
-
+  <nav class="nav"><a class="nav__brand" href="/"><b>◆ MAINCHARACTER</b></a><a class="nav__cta" href="/lookmaxing">Get your Aura Reading →</a></nav>
   <div class="wrap">
     <p class="eyebrow">Free · Browser-Based · No Account</p>
-    <h1>Your face, measured.</h1>
-    <p class="sub">One photo. Nine readings — face shape, jawline, canthal tilt, eye shape, symmetry, golden ratio, facial ratios and your attractiveness score. Computed from 478 facial landmarks.</p>
-    <div class="privacy">◆ <span><b>Private by design.</b> Analysed entirely in your browser — your photo never leaves your device.</span></div>
+    <h1>Free facial analysis tools.</h1>
+    <p class="sub">Map 478 landmarks from one photo and measure what aesthetics communities actually track. Every tool runs entirely in your browser — your photo never leaves your device.</p>
+    <div class="privacy">◆ <span><b>Private by design.</b> Nothing is uploaded.</span></div>
 
-    <div class="drop" id="drop">
-      <label class="btn" for="file">Upload a photo →</label>
-      <input type="file" id="file" accept="image/*">
-      <p>Front-facing, even light, hair off the face. Nothing is uploaded.</p>
+    <div style="margin:10px 0 30px;display:flex;gap:12px;flex-wrap:wrap;"><a class="btn" href="/face">Run the full analysis →</a><a class="btn btn--ghost" href="/studio">Open the AI Studio →</a></div>
+
+    <div class="tool-grid">
+      <a class="tool-link" href="/lookmaxing/tools/attractiveness-score"><h3>Attractiveness Score</h3><p>A 0–100 composite from symmetry, ratios, jawline and tilt.</p></a>
+      <a class="tool-link" href="/lookmaxing/tools/face-shape"><h3>Face Shape Detector</h3><p>Oval, round, square, heart, diamond or oblong — with confidence + hairstyle fit.</p></a>
+      <a class="tool-link" href="/lookmaxing/tools/jawline-score"><h3>Jawline Score Test</h3><p>Gonial angle, taper and symmetry → a jawline score out of 100.</p></a>
+      <a class="tool-link" href="/lookmaxing/tools/canthal-tilt"><h3>Canthal Tilt Calculator</h3><p>The eye-corner angle behind "hunter eyes" — positive, neutral or negative.</p></a>
+      <a class="tool-link" href="/lookmaxing/tools/eye-shape"><h3>Eye Shape Detector</h3><p>Almond, round, upturned, downturned or long — with styling notes.</p></a>
+      <a class="tool-link" href="/lookmaxing/tools/face-symmetry"><h3>Symmetry Checker</h3><p>Left vs right across eyes, nose, mouth and jaw, scored /100.</p></a>
+      <a class="tool-link" href="/lookmaxing/tools/golden-ratio"><h3>Golden Ratio Calculator</h3><p>How close your proportions sit to the 1.618 ideal.</p></a>
+      <a class="tool-link" href="/lookmaxing/tools/facial-ratios"><h3>Facial Ratios Calculator</h3><p>FWHR, midface ratio, vertical thirds and canthal tilt.</p></a>
+      <a class="tool-link" href="/studio"><h3>AI Studio <span class="soon">· tokens</span></h3><p>Hairstyles, glow-up, time machine, procedure previews & a custom look on your photo.</p></a>
     </div>
 
-    <div class="stage" id="stage-analyze">
-      <div class="canvas-wrap"><canvas id="canvas"></canvas></div>
-      <div style="text-align:center;margin-top:18px;">
-        <button class="btn" id="analyzeBtn">Analyse my face →</button>
-        <button class="btn btn--ghost" id="resetBtn" style="margin-left:8px;">Choose another</button>
-      </div>
-      <div class="loading" id="loading" style="display:none;">Mapping 478 landmarks…</div>
-      <div class="err" id="err" style="display:none;"></div>
-    </div>
-
-    <div class="stage" id="stage-results">
-      <div class="hero-score">
-        <div class="hero-score__num" id="attr">—</div>
-        <div class="hero-score__label">Attractiveness Score · out of 100</div>
-      </div>
-      <div class="canvas-wrap" style="max-width:380px;"><canvas id="canvas2"></canvas></div>
-      <div class="grid" id="cards"></div>
-
-      <div class="actions">
-        <button class="btn" id="shareBtn">Share my score card →</button>
-        <button class="btn btn--ghost" id="againBtn">Analyse another photo</button>
-      </div>
-
-      <div class="cta">
-        <p class="eyebrow" style="text-align:center;">The Full Picture</p>
-        <h2>This is the surface. The Blueprint is the plan.</h2>
-        <p>These free readings measure your geometry. The Bespoke Aesthetic Blueprint reads your photo across 24 metrics and hands you the 90-day protocol to move them — skin, jaw, eyes, hair, carriage, colour. ₹99/month.</p>
-        <a class="btn" href="/lookmaxing">Get your Bespoke Blueprint →</a>
-      </div>
-
-      <p class="disclaimer">A geometric, browser-based estimate for grooming and styling guidance — not a medical or clinical assessment. Lighting, angle and expression affect the read.</p>
+    <div class="cta">
+      <p class="eyebrow" style="text-align:center;">Beyond the measurements</p>
+      <h2>The full diagnosis, and the plan.</h2>
+      <p>The free tools measure your geometry. The Bespoke Aesthetic Blueprint reads your photo across 24 metrics and hands you the 90-day protocol — skin, jaw, eyes, hair, carriage, colour. ₹99/month.</p>
+      <a class="btn" href="/lookmaxing">Get your Bespoke Blueprint →</a>
     </div>
 
     <div class="foot">◆ MAINCHARACTER</div>
   </div>
-
-  <script src="/lookmaxing/tools/face-metrics.js"></script>
-  <script type="module">
-    const $ = (id) => document.getElementById(id);
-    const fileInput = $('file'), drop = $('drop');
-    const stageA = $('stage-analyze'), stageR = $('stage-results');
-    const canvas = $('canvas'), ctx = canvas.getContext('2d');
-    const canvas2 = $('canvas2'), ctx2 = canvas2.getContext('2d');
-    let img = null, landmarker = null, lastMetrics = null;
-
-    function showErr(m) { $('err').textContent = m; $('err').style.display = 'block'; $('loading').style.display = 'none'; }
-
-    function loadImage(file) {
-      const url = URL.createObjectURL(file);
-      const image = new Image();
-      image.onload = function () {
-        img = image;
-        // Fit canvas to image (cap width for perf).
-        const maxW = 900, scale = Math.min(1, maxW / image.naturalWidth);
-        canvas.width = Math.round(image.naturalWidth * scale);
-        canvas.height = Math.round(image.naturalHeight * scale);
-        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-        drop.style.display = 'none';
-        stageA.classList.add('show'); stageR.classList.remove('show');
-        $('err').style.display = 'none';
-        URL.revokeObjectURL(url);
-      };
-      image.onerror = function () { showErr('Could not read that image. Try a JPG or PNG.'); };
-      image.src = url;
-    }
-
-    fileInput.addEventListener('change', (e) => { if (e.target.files[0]) loadImage(e.target.files[0]); });
-    $('resetBtn').addEventListener('click', () => { drop.style.display = 'block'; stageA.classList.remove('show'); fileInput.value = ''; });
-    $('againBtn').addEventListener('click', () => { drop.style.display = 'block'; stageA.classList.remove('show'); stageR.classList.remove('show'); fileInput.value = ''; window.scrollTo({ top: 0, behavior: 'smooth' }); });
-
-    async function getLandmarker() {
-      if (landmarker) return landmarker;
-      const V = '0.10.18';
-      const { FaceLandmarker, FilesetResolver } = await import(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${V}`);
-      const fileset = await FilesetResolver.forVisionTasks(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${V}/wasm`);
-      landmarker = await FaceLandmarker.createFromOptions(fileset, {
-        baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task' },
-        runningMode: 'IMAGE', numFaces: 1,
-      });
-      return landmarker;
-    }
-
-    $('analyzeBtn').addEventListener('click', async () => {
-      if (!img) return;
-      $('err').style.display = 'none';
-      $('loading').style.display = 'block';
-      try {
-        const lmk = await getLandmarker();
-        const res = lmk.detect(img);
-        if (!res.faceLandmarks || !res.faceLandmarks.length) {
-          showErr('No face detected. Use a clear, front-facing photo with good light.');
-          return;
-        }
-        const W = canvas.width, H = canvas.height;
-        const px = res.faceLandmarks[0].map((p) => ({ x: p.x * W, y: p.y * H }));
-        const metrics = window.FaceMetrics.computeAllMetrics(px);
-        if (!metrics) { showErr('Could not read enough detail. Try a sharper photo.'); return; }
-        lastMetrics = metrics;
-        drawOverlay(px);
-        renderResults(metrics);
-        $('loading').style.display = 'none';
-        stageA.classList.remove('show'); stageR.classList.add('show');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } catch (e) {
-        showErr('The analyser could not load. Check your connection and try again.');
-      }
-    });
-
-    function drawOverlay(px) {
-      canvas2.width = canvas.width; canvas2.height = canvas.height;
-      ctx2.drawImage(img, 0, 0, canvas2.width, canvas2.height);
-      ctx2.fillStyle = 'rgba(232,184,75,0.55)';
-      px.forEach((p) => { ctx2.beginPath(); ctx2.arc(p.x, p.y, 1.1, 0, 6.283); ctx2.fill(); });
-      const I = window.FaceMetrics.INDICES;
-      ctx2.strokeStyle = 'rgba(232,184,75,0.85)'; ctx2.lineWidth = 1.4;
-      function line(a, b) { ctx2.beginPath(); ctx2.moveTo(px[a].x, px[a].y); ctx2.lineTo(px[b].x, px[b].y); ctx2.stroke(); }
-      line(I.cheekR, I.jawR); line(I.jawR, I.chin); line(I.chin, I.jawL); line(I.jawL, I.cheekL); // jaw
-      line(I.rEyeOuter, I.rEyeInner); line(I.lEyeInner, I.lEyeOuter); // eye lines
-      line(I.foreheadTop, I.chin); // midline
-    }
-
-    function card(k, v, sub, pct) {
-      let bar = '';
-      if (typeof pct === 'number') bar = `<div class="bar"><i style="width:${Math.max(0, Math.min(100, pct))}%"></i></div>`;
-      return `<div class="card"><p class="card__k">${k}</p><p class="card__v">${v}</p>${sub ? `<p class="card__sub">${sub}</p>` : ''}${bar}</div>`;
-    }
-
-    function renderResults(m) {
-      $('attr').textContent = m.attractiveness.score;
-      const fr = m.facialRatios.map((r) => `<div><span>${r.name}</span><b>${r.value}${r.ideal ? ' · ideal ' + r.ideal : ''}</b></div>`).join('');
-      const sy = m.symmetry;
-      const cards = [
-        card('Face Shape', m.faceShape.shape, m.faceShape.recommendation, m.faceShape.confidence),
-        card('Attractiveness', m.attractiveness.score + ' / 100', 'Composite of symmetry, ratios, jawline & tilt.', m.attractiveness.score),
-        card('Jawline Score', m.jawline.score + ' / 100', 'Gonial angle ' + m.jawline.gonialAngle + '° · taper ' + m.jawline.taper, m.jawline.score),
-        card('Symmetry', sy.overall + ' / 100', 'Eyes ' + sy.eyes + ' · Nose ' + sy.nose + ' · Mouth ' + sy.mouth + ' · Jaw ' + sy.jaw, sy.overall),
-        card('Canthal Tilt', m.canthalTilt.degrees + '°', m.canthalTilt.label),
-        card('Eye Shape', m.eyeShape.shape, m.eyeShape.recommendation),
-        card('Golden Ratio', m.goldenRatio.score + ' / 100', 'Proximity to 1.618 across key proportions.', m.goldenRatio.score),
-        '<div class="card"><p class="card__k">Facial Ratios</p><div class="rows">' + fr + '</div></div>',
-      ];
-      $('cards').innerHTML = cards.join('');
-    }
-
-    // ── Shareable score card (client-side canvas → Web Share / download) ──
-    $('shareBtn').addEventListener('click', async () => {
-      if (!lastMetrics) return;
-      const c = document.createElement('canvas'); c.width = 1200; c.height = 630;
-      const g = c.getContext('2d');
-      g.fillStyle = '#070708'; g.fillRect(0, 0, 1200, 630);
-      g.fillStyle = '#9a8f73'; g.font = '26px Georgia'; g.textAlign = 'center';
-      g.fillText('F A C I A L   A N A L Y S I S', 600, 92);
-      g.fillStyle = '#e8b84b'; g.font = 'italic 200px Georgia';
-      g.fillText(String(lastMetrics.attractiveness.score), 600, 320);
-      g.fillStyle = '#9a8f73'; g.font = '24px Georgia';
-      g.fillText('ATTRACTIVENESS · OUT OF 100', 600, 372);
-      g.fillStyle = '#f4f1ea'; g.font = 'italic 40px Georgia';
-      g.fillText(lastMetrics.faceShape.shape + ' · Symmetry ' + lastMetrics.symmetry.overall + ' · Jaw ' + lastMetrics.jawline.score, 600, 462);
-      g.fillStyle = '#e8b84b'; g.font = '26px Georgia';
-      g.fillText('◆ MAINCHARACTER', 600, 560);
-      g.fillStyle = '#6b6660'; g.font = '18px Georgia';
-      g.fillText('maincharacter.digitglobalservices.com', 600, 596);
-      c.toBlob(async (blob) => {
-        const file = new File([blob], 'aura-score.png', { type: 'image/png' });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          try { await navigator.share({ files: [file], text: 'My facial analysis score. Read yours free.' }); return; } catch (e) {}
-        }
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'maincharacter-score.png'; a.click();
-      }, 'image/png');
-    });
-  </script>
+  <script src="/track.js" defer></script>
 </body>
 </html>

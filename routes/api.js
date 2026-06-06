@@ -730,6 +730,24 @@ async function processPaymentEvent(event) {
   const evt = event && event.event;
   const notes = extractNotes(event);
 
+  // ── Token-pack purchase (one-time order, kind=tokens) ────────────────────
+  // Credit the buyer's token balance on capture, then return — independent of
+  // the subscription/pillar logic below.
+  if (notes.kind === 'tokens' && (evt === 'payment.captured' || evt === 'order.paid' || evt === 'payment_link.paid')) {
+    const n = parseInt(notes.tokens, 10) || 0;
+    let u = null;
+    if (notes.userId) u = await User.getUserByToken(notes.userId);
+    if (!u && notes.phone) u = await User.getUserByPhone(notes.phone);
+    if (!u && notes.email) u = await User.getUserByEmail(notes.email);
+    if (u && n > 0) {
+      await User.addTokens(u.phone, n);
+      log('TOKENS', `credited ${n} tokens to ${u.email || u.phone} via ${evt}`);
+      return { handled: true, tokens: n };
+    }
+    log('TOKENS', `token credit skipped (user/n missing) for ${evt}`);
+    return { handled: false };
+  }
+
   // ── Identity resolution ──────────────────────────────────────────────────
   let user = null;
 

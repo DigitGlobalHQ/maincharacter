@@ -1173,3 +1173,20 @@ page (tools/index.html, served at /lookmaxing/tools and /face) lazy-loads MediaP
 FaceLandmarker from CDN and runs ENTIRELY client-side — the photo never leaves the
 device (a real trust/privacy differentiator + zero server cost). Funnels to the ₹99
 Blueprint. Next: a /tools hub + per-tool SEO pages, then tokens + AI image tools.
+
+## 2026-06-06 — Tools hub + per-tool SEO pages + tokens + AI studio (reconciled)
+
+Earlier branch reuse caused Phase 2 (hub/per-tool pages) and Phase 3 (tokens) to be
+lost from main; this change reconciles everything in one branch and was verified
+present in main post-merge (git show --stat).
+
+- Free tools: shared analyzer.js + tools.css; flagship /face (all.html); hub at
+  /lookmaxing/tools; 8 per-tool SEO pages (face-shape, jawline-score, canthal-tilt,
+  eye-shape, face-symmetry, attractiveness-score, golden-ratio, facial-ratios);
+  clean :slug routing; landing footer link.
+- Tokens (₹499=50): User.tokens + add/spendTokens (migration 0003 + colMap/_rowToUser);
+  routes/tokens.js (/api/lookmax/tokens) with bypass-credits-now; webhook credit
+  (notes.kind=tokens) in processPaymentEvent.
+- AI studio: services/gemini-image.js (Gemini 2.5 Flash Image, mock without key),
+  routes/ai-tools.js (/api/lookmax/ai/generate) spend-with-refund-on-failure,
+  studio.html at /studio. Tool costs 1–8 tokens.

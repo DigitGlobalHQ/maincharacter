@@ -948,6 +948,31 @@
         return res.json();
       })
       .then(function (order) {
+        // Demo mode (no live Razorpay keys yet): settle the unlock directly so the
+        // full report + PDF can be experienced before go-live. Server-disabled the
+        // moment live keys are set, after which the Razorpay path below is the only one.
+        if (order.testMode) {
+          fetch('/api/lookmaxing/pay/test-confirm', {
+            method: 'POST',
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ auditId: auditId }),
+          })
+            .then(function (r) { if (!r.ok) throw new Error('test-confirm failed'); return r.json(); })
+            .then(function () {
+              if (window.mc) window.mc.track('lookmaxing_pay_succeeded', { testMode: true });
+              paywallForm.hidden = true;
+              paywallSuccess.hidden = false;
+              pollForPaid(0);
+            })
+            .catch(function () {
+              payBtn.setAttribute('aria-busy', 'false');
+              payBtn.disabled = false;
+              payBtn.innerHTML = '<span class="mc-light-point" aria-hidden="true"></span> Pay ₹99 ◆';
+              paywallError.textContent = 'Could not complete the unlock. Try again.';
+              paywallError.hidden = false;
+            });
+          return;
+        }
         var options = {
           key: order.keyId,
           amount: order.amount,

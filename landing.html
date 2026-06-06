@@ -1213,7 +1213,7 @@ button:focus-visible {
   <span class="nav__right">
     <a href="/lookmaxing/start" id="nav-auth-link" class="nav__auth-link">Sign In</a>
     <!-- stage-1-audit-spec.md §1 Wave 2C: /start → /lookmaxing (Orator cordon-off) -->
-    <a href="/lookmaxing" class="nav__cta js-cta-main">Begin Your Arc →</a>
+    <a href="/lookmaxing" class="nav__cta js-cta-main">Get Your Reading →</a>
   </span>
 </nav>
 
@@ -1224,14 +1224,15 @@ button:focus-visible {
   <div class="hero__mark" aria-hidden="true">
     <img class="hero__mark-img" src="/maincharacter-mark.png" alt="">
   </div>
-  <div class="hero__eyebrow">Personal Growth · Redesigned</div>
+  <div class="hero__eyebrow">The Aura Reading · One Photo · Five Questions</div>
   <h1 class="hero__headline">Become the Main Character</h1>
-  <p class="hero__sub">Most people know who they want to be. They just can't see the gap clearly enough to close it. MainCharacter makes the gap visible, measurable, and closable — one deliberate ritual at a time.</p>
+  <p class="hero__sub">The room reads you before you speak. In sixty seconds — one photo, five questions — your presence is scored across the dimensions that decide how you land, and you see precisely what to change. The reading is free. The full protocol is ₹99.</p>
   <div class="hero__ctas">
-    <!-- stage-1-audit-spec.md §1 Wave 2C: /start → /lookmaxing (Orator cordon-off) -->
-    <a href="/lookmaxing" class="btn--primary js-cta-main">Begin Your Arc →</a>
+    <!-- pivot-to-99: primary CTA enters the free Aura Reading funnel; ₹99 unlocks the full report -->
+    <a href="/lookmaxing" class="btn--primary js-cta-main">Get Your Aura Reading →</a>
     <a href="#gap" class="btn--ghost">See How It Works ↓</a>
   </div>
+  <p class="hero__trust-line" style="margin-top:28px;font-size:0.78rem;letter-spacing:0.04em;color:var(--ink-faint);line-height:1.8;max-width:560px;">Your score in 60 seconds, free · Full report <strong style="color:var(--ink-dim);font-weight:600;">₹99 one-time</strong> · No subscription · Your photo is scored, never published&nbsp;◆</p>
   <div class="hero__scroll" aria-hidden="true">↓</div>
 </section>
 
@@ -1270,11 +1271,11 @@ button:focus-visible {
         <div class="pcard__body">
           <div class="pcard__number">I</div>
           <h3 class="pcard__name">The Orator</h3>
-          <div class="pcard__tag">Communication</div>
+          <div class="pcard__tag">Communication · Coming Soon</div>
           <div class="pcard__stat-bar"><div class="pcard__stat-fill"></div></div>
           <p class="pcard__hook">"The way you sound when it matters."</p>
-          <p class="pcard__promise">By Day 7 you will hear the difference in your own voice.</p>
-          <div class="pcard__cta">Accept the Quest <span>→</span></div>
+          <p class="pcard__promise">Voice, presence, the words that land in the room. The Orator opens next — be first when it does.</p>
+          <div class="pcard__cta">Join the Waitlist <span>→</span></div>
         </div>
       </div>
 
@@ -1409,8 +1410,8 @@ button:focus-visible {
         </div>
       </div>
       <div style="text-align:center;margin-top:40px;padding-top:28px;border-top:1px solid var(--line);">
-        <p style="color:var(--ink-faint);font-size:0.9rem;letter-spacing:0.04em;margin:0 0 20px;">Orator ₹799 · Lookmaxxing ₹1,499 · Aura++ ₹1,999/mo (saves ₹299)</p>
-        <a href="/lookmaxing" style="color:var(--gold);text-decoration:underline;text-underline-offset:5px;font-size:1rem;">Unlock both →</a>
+        <p style="color:var(--ink-faint);font-size:0.9rem;letter-spacing:0.04em;margin:0 0 20px;">Start with the Aura Reading — free to see your score, <strong style="color:var(--ink-dim);font-weight:600;">₹99</strong> for the full report. No subscription required.</p>
+        <a href="/lookmaxing" style="color:var(--gold);text-decoration:underline;text-underline-offset:5px;font-size:1rem;">Get your reading →</a>
       </div>
     </div>
   </div>
@@ -1563,9 +1564,10 @@ button:focus-visible {
     <div class="footer__brand">◆ MAINCHARACTER</div>
     <div class="footer__tagline">Become the Main Character.</div>
     <div class="footer__links">
-      <a href="#">Privacy</a>
-      <a href="#">Terms</a>
-      <a href="#">Contact</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <!-- TODO(founder): confirm this support inbox exists / forwards to you -->
+      <a href="mailto:support@maincharacter.digitglobalservices.com">Contact</a>
     </div>
     <div class="footer__copy">© 2026 MainCharacter by Digit Global Services. All rights reserved.</div>
   </div>

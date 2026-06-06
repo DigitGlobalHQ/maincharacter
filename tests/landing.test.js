@@ -8,7 +8,7 @@ describe('landing.html — locked copy (byte-identical guard)', () => {
   // CLAUDE.md §2: hero, gap, rank ladder and CTA-close copy are untouchable.
   const LOCKED = [
     '<h1 class="hero__headline">Become the Main Character</h1>',
-    "Most people know who they want to be. They just can't see the gap clearly enough to close it.",
+    'your presence is scored across the dimensions that decide how you land', // pivot-to-99 hero sub
     "You already know who you want to be. You've known for a while.",
     '<div class="rank-row__name">The Unawakened</div>',
     '<div class="rank-row__name">The Seeker</div>',
@@ -65,9 +65,9 @@ describe('landing.html — Aura++ reveal section (P2.2/P2.3)', () => {
     expect(html).toContain('The Combined Self');
   });
 
-  it('has the pricing strip and bundle CTA', () => {
-    expect(html).toContain('Orator ₹799 · Lookmaxxing ₹1,499 · Aura++ ₹1,999/mo (saves ₹299)');
-    expect(html).toContain('Unlock both →'); // bundle CTA now routes to /lookmaxing (P3 cordon)
+  it('has the ₹99-led pricing strip and reading CTA (pivot-to-99)', () => {
+    expect(html).toContain('Start with the Aura Reading — free to see your score');
+    expect(html).toContain('Get your reading →');
   });
 
   it('introduces no new design tokens (uses existing var(--…) only)', () => {

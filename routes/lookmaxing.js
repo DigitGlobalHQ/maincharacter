@@ -734,6 +734,55 @@ router.get('/audit/:id', (req, res) => {
   });
 });
 
+// True only when REAL Razorpay keys are configured (test or live). Absent/mock
+// keys => demo mode, where the ₹99 unlock can be settled without a live charge.
+function _razorpayLive() {
+  const key_id     = process.env.RAZORPAY_KEY_ID || '';
+  const key_secret = process.env.RAZORPAY_KEY_SECRET || '';
+  return !!(key_id && key_secret && !key_id.includes('mock'));
+}
+
+// Settle a paid audit: flip paid, credit ₹99, seed the Day-30 baseline. Shared by
+// the Razorpay webhook (real capture) and the demo-mode confirm (no live keys), so
+// the unlock is identical either way and never drifts.
+async function _settlePaidAudit(auditId, { paymentId = null } = {}) {
+  const session = _getSession(auditId);
+  if (!session) return null;
+  if (session.paid) return session;
+
+  _updateSession(auditId, {
+    paid:              true,
+    paidAt:            new Date().toISOString(),
+    razorpayPaymentId: paymentId,
+  });
+
+  if (session.userId) {
+    try {
+      const user = await User.getUserByToken(session.userId);
+      if (user) {
+        const updates = {};
+        const current = typeof user.paywallCredits === 'number' ? user.paywallCredits : 0;
+        updates.paywallCredits = current + 99;
+        if (!user.lookmaxBaseline && session.geminiReport) {
+          const report = session.geminiReport;
+          updates.lookmaxBaseline = {
+            ...report,
+            scores:           _buildCompatScores(report),
+            leverageAxis:     report.biggestLever ? report.biggestLever.metric : null,
+            overall:          report.auraScore || 0,
+            capturedAt:       new Date().toISOString(),
+            photoStorageKeys: session.photoKey ? [session.photoKey] : [],
+          };
+        }
+        await User.updateUser(user.phone, updates);
+      }
+    } catch (err) {
+      log.warn('PAY-SETTLE', `post-payment user update failed: ${err.message}`);
+    }
+  }
+  return _getSession(auditId);
+}
+
 // ─── POST /pay/order ─────────────────────────────────────────────────────────
 
 router.post('/pay/order', async (req, res) => {
@@ -752,14 +801,14 @@ router.post('/pay/order', async (req, res) => {
   }
 
   try {
-    // Razorpay order (₹99 = 9900 paise). Mocked when keys are absent.
-    const key_id     = process.env.RAZORPAY_KEY_ID || 'rzp_test_mock';
-    const key_secret = process.env.RAZORPAY_KEY_SECRET || '';
+    // Razorpay order (₹99 = 9900 paise). Mocked when live keys are absent.
+    const key_id  = process.env.RAZORPAY_KEY_ID || 'rzp_test_mock';
+    const live    = _razorpayLive();
 
     let order;
-    if (key_id && key_secret && !key_id.includes('mock')) {
+    if (live) {
       const Razorpay = require('razorpay'); // eslint-disable-line global-require
-      const rz = new Razorpay({ key_id, key_secret });
+      const rz = new Razorpay({ key_id, key_secret: process.env.RAZORPAY_KEY_SECRET });
       order = await rz.orders.create({
         amount:   9900,
         currency: 'INR',
@@ -767,7 +816,7 @@ router.post('/pay/order', async (req, res) => {
         notes:    { auditId, source: 'lookmaxing_audit_unlock' },
       });
     } else {
-      // Mock order for tests and dev.
+      // Mock order for tests, dev, and the pre-go-live demo window.
       order = {
         id:       `order_mock_${Date.now()}`,
         amount:   9900,
@@ -785,6 +834,7 @@ router.post('/pay/order', async (req, res) => {
       currency: order.currency,
       keyId:    key_id,
       auditId,
+      testMode: !live, // client settles via /pay/test-confirm instead of Razorpay
     });
   } catch (err) {
     log.error('PAY-ORDER', `order create failed for ${auditId}: ${err.message}`);
@@ -828,48 +878,37 @@ router.post('/pay/webhook', async (req, res) => {
     return res.json({ ok: true, ignored: true });
   }
 
-  _updateSession(auditId, {
-    paid:              true,
-    paidAt:            new Date().toISOString(),
-    razorpayPaymentId: paymentId,
-  });
-
-  // ₹99 credit toward month one + set the Day-30 baseline. This is the moment
-  // the guest→user merge used to do (funnel-repair P1: sessions are user-owned
-  // from the start, so the baseline is written directly here, not via /merge).
-  if (session.userId) {
-    try {
-      const user = await User.getUserByToken(session.userId);
-      if (user) {
-        const updates = {};
-        const current = typeof user.paywallCredits === 'number' ? user.paywallCredits : 0;
-        updates.paywallCredits = current + 99;
-
-        // Carry the report into users.lookmaxBaseline if unset. The shape must be
-        // compatible with reaudit.js computeEligibility() (checks .scores) and the
-        // Daily Mirror — see DECISIONS.md (stage-1 merge compat shim).
-        if (!user.lookmaxBaseline && session.geminiReport) {
-          const report = session.geminiReport;
-          updates.lookmaxBaseline = {
-            ...report, // full report for Gemini context pass-through
-            scores:           _buildCompatScores(report),
-            leverageAxis:     report.biggestLever ? report.biggestLever.metric : null,
-            overall:          report.auraScore || 0,
-            capturedAt:       new Date().toISOString(),
-            photoStorageKeys: session.photoKey ? [session.photoKey] : [],
-          };
-        }
-        await User.updateUser(user.phone, updates);
-      }
-    } catch (err) {
-      log.warn('PAY-WEBHOOK', `post-payment user update failed: ${err.message}`);
-    }
-  }
+  // ₹99 credit toward month one + the Day-30 baseline (shared settlement helper).
+  await _settlePaidAudit(auditId, { paymentId });
 
   events.trackAnonymous('lookmaxing_pay_succeeded', { auditId, paymentId }, session.userId).catch(() => {});
 
   log.info('PAY-WEBHOOK', `payment.captured for audit ${auditId}`);
   return res.json({ ok: true });
+});
+
+// ─── POST /pay/test-confirm ────────────────────────────────────────────────────
+// Demo / dogfood ONLY. Lets the ₹99 → full report + PDF be experienced before
+// live Razorpay keys exist. HARD-DISABLED the instant real keys are configured:
+// then a Razorpay-captured payment (via /pay/webhook) is the only path to unlock.
+router.post('/pay/test-confirm', async (req, res) => {
+  if (_razorpayLive()) {
+    return res.status(403).json({ error: 'live payment required' });
+  }
+  const actor = resolveActor(req);
+  if (!actor) return res.status(401).json({ error: 'unauthorized' });
+
+  const { auditId } = req.body || {};
+  if (!auditId) return res.status(400).json({ error: 'auditId required' });
+
+  const session = _getSession(auditId);
+  if (!session) return res.status(404).json({ error: 'audit not found' });
+  if (!canAccess(session, actor)) return res.status(403).json({ error: 'forbidden' });
+
+  const settled = await _settlePaidAudit(auditId, { paymentId: 'test_mode' });
+  events.trackAnonymous('lookmaxing_pay_test_confirmed', { auditId }, actor.userId).catch(() => {});
+  log.info('PAY-TEST', `demo-mode unlock for audit ${auditId}`);
+  return res.json({ ok: true, testMode: true, auditId, paid: !!(settled && settled.paid) });
 });
 
 // ─── GET /audit/:id/pdf ───────────────────────────────────────────────────────

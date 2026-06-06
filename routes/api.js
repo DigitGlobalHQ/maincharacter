@@ -716,21 +716,51 @@ function extractNotes(event) {
 
 /**
  * Apply a verified Razorpay event to the user record. Exported for tests.
+ *
+ * Identity resolution order (supports both Orator phone-primary and Lookmaxing
+ * email/token-primary flows from a single shared webhook endpoint):
+ *   1. notes.phone  → getUserByPhone  (Orator — existing path, no change)
+ *   2. notes.userId → getUserByToken  (Lookmaxing /pay/subscribe new path)
+ *   3. notes.email  → getUserByEmail  (Lookmaxing email fallback)
+ * All existing Orator behaviour (phone path) is preserved unchanged.
+ *
  * @param {object} event parsed Razorpay webhook body
  */
 async function processPaymentEvent(event) {
   const evt = event && event.event;
   const notes = extractNotes(event);
+
+  // ── Identity resolution ──────────────────────────────────────────────────
+  let user = null;
+
+  // 1. Phone (Orator primary path — unchanged)
   const phone = notes.phone;
-  if (!phone) {
-    log('PAYMENT', `No phone in notes for event ${evt}`);
-    return { handled: false };
+  if (phone) {
+    user = await User.getUserByPhone(phone);
+    if (!user) log('PAYMENT', `Phone ${phone} not found for event ${evt}`);
   }
-  const user = await User.getUserByPhone(phone);
+
+  // 2. userId / token (Lookmaxing audit funnel primary path)
+  if (!user && notes.userId) {
+    user = await User.getUserByToken(notes.userId);
+    if (!user) log('PAYMENT', `userId ${notes.userId} not found for event ${evt}`);
+  }
+
+  // 3. email (Lookmaxing fallback)
+  if (!user && notes.email) {
+    user = User.getUserByEmail(notes.email);
+    if (!user) log('PAYMENT', `email ${notes.email} not found for event ${evt}`);
+  }
+
   if (!user) {
-    log('PAYMENT', `Unknown user ${phone} for event ${evt}`);
+    log('PAYMENT', `No resolvable user in notes for event ${evt}`);
     return { handled: false };
   }
+
+  // Normalise phone to the user's actual phone for downstream updateUser calls
+  // (needed because Lookmaxing users have a synthetic phone and notes.phone may
+  // be empty — all User.updateUser calls below use user.phone directly).
+  const userPhone = user.phone;
 
   // Which pillars this event touches: notes.pillars (csv) or derive from plan.
   const pillars = notes.pillars
@@ -794,10 +824,10 @@ async function processPaymentEvent(event) {
               capturedAt: new Date().toISOString(),
               photoStorageKeys,
             };
-            log('LOOKMAX', `lookmaxBaseline snapshotted for ${phone} from audit ${user.auditSessionId}`);
+            log('LOOKMAX', `lookmaxBaseline snapshotted for ${userPhone} from audit ${user.auditSessionId}`);
           }
         } catch (err) {
-          log('LOOKMAX', `lookmaxBaseline snapshot failed for ${phone}: ${err.message}`);
+          log('LOOKMAX', `lookmaxBaseline snapshot failed for ${userPhone}: ${err.message}`);
         }
       }
     }
@@ -806,15 +836,19 @@ async function processPaymentEvent(event) {
     const evtSubId =
       (event.payload && event.payload.subscription && event.payload.subscription.entity && event.payload.subscription.entity.id) || '';
     if (evtSubId && !user.razorpaySubscriptionId) updates.razorpaySubscriptionId = evtSubId;
-    await User.updateUser(phone, updates);
+    await User.updateUser(userPhone, updates);
     const updatedUser = { ...user, ...updates };
     const status = User.computeAuraStatus(updatedUser);
-    log('PAYMENT', `${user.name} (${phone}) → active via ${evt} [${pillars.join(',') || 'orator'}]${status.auraPlusPlus ? ' AURA++' : ''}`);
+    log('PAYMENT', `${user.name} (${userPhone}) → active via ${evt} [${pillars.join(',') || 'orator'}]${status.auraPlusPlus ? ' AURA++' : ''}`);
     // Copy supplied by founder in the autopilot brief (not invented).
-    await whatsapp.sendMessageSafe(
-      phone,
-      `◆ The Chamber is open, ${user.name}.\n\nDay 8 arrives tomorrow at your preferred time.\n\n◆ MainCharacter`
-    );
+    // Lookmaxing-only users may have a synthetic phone (no real WhatsApp) — send
+    // only when the phone looks like a real number (numeric, 10-13 digits).
+    if (/^\d{10,13}$/.test(userPhone)) {
+      await whatsapp.sendMessageSafe(
+        userPhone,
+        `◆ The Chamber is open, ${user.name}.\n\nDay 8 arrives tomorrow at your preferred time.\n\n◆ MainCharacter`
+      );
+    }
     // P4.5: post-payment receipt email (DRY-RUN/allowlist-gated; no-op if no email).
     // Login Gate (P0-1): thread firstLoginToken into the receipt so the email
     // embeds a magic-link backup URL for the F2 failure mode (tab closed after payment).
@@ -841,12 +875,15 @@ async function processPaymentEvent(event) {
     if (pillars.length === 0) updates.subscriptionStatus = 'cancelled';
     const after = { ...user, ...updates };
     if (!after.oratorActive && !after.lookmaxxingActive) updates.subscriptionStatus = 'cancelled';
-    await User.updateUser(phone, updates);
-    log('PAYMENT', `${user.name} (${phone}) → cancelled via ${evt} [${pillars.join(',') || 'all'}]`);
-    await whatsapp.sendMessageSafe(
-      phone,
-      `◆ Your protocol pauses, ${user.name}.\n\nYour lexicon and rank remain yours. Reply RETURN when ready.\n\n◆ MainCharacter`
-    );
+    await User.updateUser(userPhone, updates);
+    log('PAYMENT', `${user.name} (${userPhone}) → cancelled via ${evt} [${pillars.join(',') || 'all'}]`);
+    // Only send WhatsApp cancel message for real phone numbers.
+    if (/^\d{10,13}$/.test(userPhone)) {
+      await whatsapp.sendMessageSafe(
+        userPhone,
+        `◆ Your protocol pauses, ${user.name}.\n\nYour lexicon and rank remain yours. Reply RETURN when ready.\n\n◆ MainCharacter`
+      );
+    }
     return { handled: true, status: 'cancelled', pillars };
   }
 

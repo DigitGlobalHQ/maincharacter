@@ -477,6 +477,11 @@
       <span class="mc-pill" id="face-shape-pill"></span>
       <span class="lm-signal-sep" aria-hidden="true">·</span>
     </div>
+    <!-- Share the free score (viral growth: every share recruits a new visitor) -->
+    <div style="margin-top:var(--mc-sp-4);">
+      <button type="button" id="share-score-btn" class="mc-btn-ghost" style="min-height:46px;" aria-label="Share my Aura Score" data-event="lookmaxing_share_clicked">Share my Aura Score →</button>
+      <span id="share-copied" hidden style="display:block;margin-top:8px;font-size:12px;color:var(--mc-silver-faint);">Link copied. ◆</span>
+    </div>
   </div>
 
   <!-- Gate teaser -->
@@ -678,6 +683,25 @@
 
   var RAZORPAY_POLL_INTERVAL = 1500;
   var RAZORPAY_POLL_MAX = 10;
+
+  // ── Share the free score: Web Share API on mobile, clipboard fallback ──
+  var shareBtn = document.getElementById('share-score-btn');
+  var shareCopied = document.getElementById('share-copied');
+  if (shareBtn) {
+    shareBtn.addEventListener('click', function () {
+      var url = window.location.origin + '/s/' + auditId;
+      if (window.mc) window.mc.track('lookmaxing_share_clicked', {});
+      if (navigator.share) {
+        navigator.share({ title: 'My Aura Reading', text: 'This is what the room sees. Read yours.', url: url }).catch(function () {});
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url)
+          .then(function () { shareCopied.hidden = false; setTimeout(function () { shareCopied.hidden = true; }, 2500); })
+          .catch(function () { window.prompt('Copy your share link:', url); });
+      } else {
+        window.prompt('Copy your share link:', url);
+      }
+    });
+  }
 
   // ── Canonical Aura Score Object builder ──────────────────────────────────────
   // Shared identical pattern with public/lookmax/index.html (dashboard).

@@ -278,6 +278,14 @@ function _canCall() {
  * Returns a structurally valid report with placeholder values.
  */
 function _fallbackReport(quizAnswers) {
+  // Prefer the quiz-aware fallback from the prompts module — it reads the answers
+  // and steers the reading (oily/dry skin, low sleep, posture, thinning) so even
+  // the no-Gemini path feels calibrated. Falls back to the static report below if
+  // the prompts module isn't loaded. (Both are schema-valid and safe by design.)
+  const prompts = getAuditPrompts();
+  if (prompts && typeof prompts.buildFallbackReport === 'function') {
+    try { return prompts.buildFallbackReport(quizAnswers); } catch { /* static below */ }
+  }
   return {
     auraScore: 55,
     rank: 'ascendant',

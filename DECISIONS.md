@@ -29,6 +29,22 @@ The demo-mode confirm previously only flipped `session.paid`. It now also sets `
 
 ---
 
+## 2026-06-06 — ₹1Cr build: viral share, reading quality, ₹99/month copy
+
+### ₹99 is a monthly subscription, not a one-time unlock (founder decision)
+
+The founder confirmed the model is ₹99/MONTH with the free reading as the trial — the only shape that yields ₹1Cr **MRR** (~1 lakh subscribers at ₹99 vs ~6,700 at ₹1,499). All "one-time / no subscription" copy shipped earlier in the funnel walk was flipped to "₹99/month · cancel anytime" on the homepage, entry page, paywall and gate.
+
+### Viral Aura Score share card is the top-of-funnel growth engine
+
+New `routes/share.js` serves a public OG-preview page (`/s/:id`) + a personalised 1200×630 PNG (`/s/:id/card.png`, rendered via `sharp` from an SVG, with an SVG fallback if sharp is unavailable). Read-only; exposes ONLY score + rank — never the photo, report, email, or userId (asserted in tests) — and per-user pages are `noindex`. Share buttons sit on both the free and full report. Rationale: ₹1Cr is gated by traffic, and every shared reading recruits new free visitors at zero CAC.
+
+### Quiz-aware fallback wired into the live route
+
+`routes/lookmaxing.js` `_fallbackReport` now delegates to the prompts module's `buildFallbackReport(quizAnswers)` when available (calibrated to the answers), keeping the static report only as a last resort — so even the no-API / rate-limited path returns a personalised, schema-valid, safe reading.
+
+---
+
 ## 2026-05-28 — Stage-1 Audit Engine (Wave 2A)
 
 ### JSON-file store (AUDIT_V2_STORE_PATH) as the audit_sessions_v2 backing store

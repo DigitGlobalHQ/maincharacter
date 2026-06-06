@@ -1689,12 +1689,21 @@ button:focus-visible {
      dashboard (skip sign-in). Logged-out shows "Sign In" + the funnel CTA. -->
 <script>
 (function () {
-  var signedIn = !!localStorage.getItem('lookmax.token');
+  var token = localStorage.getItem('lookmax.token');
   var authLink = document.getElementById('nav-auth-link');
-  if (signedIn) {
-    if (authLink) { authLink.textContent = 'My Reading'; authLink.setAttribute('href', '/lookmax/'); }
-    var ctas = document.querySelectorAll('.js-cta-main');
-    for (var i = 0; i < ctas.length; i++) ctas[i].setAttribute('href', '/lookmax/');
+  // Logged out: leave "Sign In" + the "Get Your Reading" CTA (sign-up path) as-is.
+  if (!token) return;
+  // Logged in: CTAs go straight to the dashboard, and the auth link becomes the
+  // account entry — showing the user's name, clicking through to Settings.
+  var ctas = document.querySelectorAll('.js-cta-main');
+  for (var i = 0; i < ctas.length; i++) ctas[i].setAttribute('href', '/lookmax/');
+  if (authLink) {
+    authLink.textContent = 'My Account';
+    authLink.setAttribute('href', '/lookmax/settings');
+    fetch('/api/lookmax/me', { headers: { Authorization: 'Bearer ' + token } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d && d.user && d.user.name) authLink.textContent = d.user.name; })
+      .catch(function () {});
   }
 }());
 </script>

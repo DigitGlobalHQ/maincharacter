@@ -175,6 +175,22 @@ function updateUser(phone, updates) {
 }
 
 /**
+ * Permanently delete a user by phone (or synthetic email-id). This frees the
+ * email so the person must sign up again from scratch; their stateless JWT also
+ * stops resolving (getUserByToken → null), so any open session is invalidated.
+ * Returns true if a record was removed, false if no such user.
+ */
+function deleteUser(phone) {
+  phone = phone.replace(/[\s+\-]/g, '');
+  if (phone.length === 10) phone = '91' + phone;
+  const users = loadUsers();
+  if (!users[phone]) return false;
+  delete users[phone];
+  saveUsers(users);
+  return true;
+}
+
+/**
  * Add a score entry for a specific day.
  */
 function addScore(phone, scoreEntry) {
@@ -439,6 +455,12 @@ async function _pg_getUserByToken(token) {
   return _rowToUser(rows[0] || null);
 }
 
+async function _pg_deleteUser(phone) {
+  const normalised = _normalizePhone(phone);
+  const { rowCount } = await _db().query('DELETE FROM users WHERE phone = $1', [normalised]);
+  return rowCount > 0;
+}
+
 async function _pg_getUserByEmail(email) {
   if (!email) return null;
   const target = String(email).trim().toLowerCase();
@@ -615,6 +637,7 @@ module.exports = {
   getUserByEmail:          _adapt(getUserByEmail,          _pg_getUserByEmail),
   getUserBySubscriptionId: _adapt(getUserBySubscriptionId, _pg_getUserBySubscriptionId),
   updateUser:              _adapt(updateUser,              _pg_updateUser),
+  deleteUser:              _adapt(deleteUser,              _pg_deleteUser),
   addScore:                _adapt(addScore,                _pg_addScore),
   addChronicle:            _adapt(addChronicle,            _pg_addChronicle),
   addWordsLearned:         _adapt(addWordsLearned,         _pg_addWordsLearned),

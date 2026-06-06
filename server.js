@@ -250,6 +250,7 @@ const lookmaxPage = (file) => (req, res) =>
   res.sendFile(path.join(__dirname, 'public', 'lookmax', file));
 app.get('/lookmax', lookmaxPage('index.html'));
 app.get('/lookmax/', lookmaxPage('index.html'));
+app.get('/lookmax/settings', lookmaxPage('settings.html'));
 app.get('/lookmax/login', lookmaxPage('login.html'));
 app.get('/lookmax/oauth-complete', lookmaxPage('oauth-complete.html'));
 app.get('/lookmax/admin-login', lookmaxPage('admin-login.html'));

@@ -121,6 +121,16 @@ router.get('/user/:phone', requireAuth, async (req, res) => {
   res.json(user);
 });
 
+// ─── Delete user (hard delete; the person must sign up again) ───
+router.delete('/user/:phone', requireAuth, async (req, res) => {
+  const user = await User.getUserByPhone(req.params.phone);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const removed = await User.deleteUser(req.params.phone);
+  if (!removed) return res.status(404).json({ error: 'User not found' });
+  log('ADMIN', `deleted user ${user.email || req.params.phone} (${user.name || 'unnamed'})`);
+  res.json({ ok: true, deleted: true });
+});
+
 // ─── Send custom message ───
 router.post('/send-message', requireAuth, async (req, res) => {
   const { phone, message } = req.body;
@@ -1008,6 +1018,7 @@ router.get('/lookmax-users', requireAuth, async (req, res) => {
       paid99,
       stage: stageOf(s),
       comp: !!u.comp,
+      phone: u.phone, // delete key (synthetic 'e…' for email users) — admin-only
       // ── PR B: login tracking ──
       lastLoginAt: u.lastLoginAt || null,
       loginCount: u.loginCount || 0,

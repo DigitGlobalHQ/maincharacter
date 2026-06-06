@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account · MainCharacter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --obsidian:#070708; --panel:#0f0f12; --gold:#e8b84b; --ink:#f4f1ea;
+      --muted:#9b988f; --faint:#5c5a54; --line:rgba(255,255,255,0.10); --danger:#c96a5e;
+    }
+    *,*::before,*::after{box-sizing:border-box}
+    body{margin:0;background:var(--obsidian);color:var(--ink);
+      font-family:'Sora',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      min-height:100vh;padding:0 0 56px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;
+      padding:18px 22px;border-bottom:1px solid var(--line)}
+    .topbar a{color:var(--muted);text-decoration:none;font-size:0.74rem;letter-spacing:0.08em;text-transform:uppercase}
+    .topbar a:hover{color:var(--gold)}
+    .brand{font-size:0.74rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted)}
+    .wrap{max-width:560px;margin:0 auto;padding:40px 22px}
+    h1{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500;
+      font-size:2.1rem;margin:0 0 6px;color:var(--ink)}
+    .sub{color:var(--muted);font-size:0.92rem;margin:0 0 34px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+      padding:24px;margin-bottom:20px}
+    .row{display:flex;justify-content:space-between;align-items:baseline;
+      padding:11px 0;border-bottom:1px solid var(--line)}
+    .row:last-child{border-bottom:none}
+    .row .k{color:var(--muted);font-size:0.82rem;letter-spacing:0.04em;text-transform:uppercase}
+    .row .v{color:var(--ink);font-size:0.98rem}
+    .v .plus{color:var(--gold)}
+    .label{font-size:0.72rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--faint);margin:0 0 12px}
+    .btn{display:block;width:100%;text-align:center;text-decoration:none;
+      padding:14px 18px;border-radius:999px;font-size:0.95rem;font-weight:500;
+      cursor:pointer;border:1px solid var(--line);background:none;color:var(--ink);
+      font-family:inherit;margin-top:12px}
+    .btn--primary{background:linear-gradient(135deg,#f3d27a,#e8b84b);color:#070708;border:none;font-weight:600}
+    .btn--ghost{color:var(--muted)}
+    .btn--ghost:hover{color:var(--ink)}
+    .btn--danger{color:var(--danger);border-color:rgba(201,106,94,0.4)}
+    .btn--danger:hover{background:rgba(201,106,94,0.08)}
+    .danger-note{color:var(--faint);font-size:0.78rem;line-height:1.6;margin:18px 0 0}
+    .mark{text-align:center;color:var(--gold);letter-spacing:0.18em;font-size:0.7rem;margin-top:40px}
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="brand">◆ MainCharacter · Lookmaxxing</span>
+    <a href="/lookmax/">← My Reading</a>
+  </div>
+
+  <div class="wrap">
+    <h1>Your account.</h1>
+    <p class="sub">The essentials. Nothing you don't need.</p>
+
+    <div class="card">
+      <p class="label">Account</p>
+      <div class="row"><span class="k">Name</span><span class="v" id="acc-name">—</span></div>
+      <div class="row"><span class="k">Plan</span><span class="v" id="acc-plan">—</span></div>
+      <div class="row"><span class="k">Mirror level</span><span class="v" id="acc-level">—</span></div>
+    </div>
+
+    <div class="card">
+      <p class="label">Session</p>
+      <a href="/lookmax/" class="btn btn--primary">View my reading</a>
+      <button type="button" id="signout" class="btn btn--ghost">Sign out</button>
+    </div>
+
+    <div class="card">
+      <p class="label">Danger zone</p>
+      <button type="button" id="delete" class="btn btn--danger">Delete my account</button>
+      <p class="danger-note">This is permanent. Your reading, progress, and account are removed for good. To return, you would sign up again from scratch.</p>
+    </div>
+
+    <div class="mark">◆ MAINCHARACTER</div>
+  </div>
+
+  <script>
+  (function () {
+    var token = localStorage.getItem('lookmax.token');
+    if (!token) { window.location.replace('/lookmaxing/start'); return; }
+    var auth = { Authorization: 'Bearer ' + token };
+
+    function clearSession() {
+      ['lookmax.token', 'lookmax.auditId', 'lookmax.push_dismissed'].forEach(function (k) {
+        try { localStorage.removeItem(k); } catch (e) {}
+      });
+    }
+
+    // Load account details
+    fetch('/api/lookmax/me', { headers: auth })
+      .then(function (r) { if (!r.ok) throw new Error('unauth'); return r.json(); })
+      .then(function (d) {
+        var u = (d && d.user) || {};
+        document.getElementById('acc-name').textContent = u.name || 'Seeker';
+        var plan = u.auraPlusPlus ? 'Aura++ (both pillars)'
+          : u.lookmaxxingActive ? 'Lookmaxxing · ₹99/month'
+          : 'Free reading';
+        var planEl = document.getElementById('acc-plan');
+        planEl.innerHTML = (u.lookmaxxingActive || u.auraPlusPlus)
+          ? '<span class="plus">' + plan + '</span>' : plan;
+        document.getElementById('acc-level').textContent =
+          (u.mirrorLevel || 'raw').replace(/^./, function (c) { return c.toUpperCase(); });
+      })
+      .catch(function () { window.location.replace('/lookmaxing/start'); });
+
+    document.getElementById('signout').addEventListener('click', function () {
+      clearSession();
+      window.location.href = '/lookmaxing';
+    });
+
+    document.getElementById('delete').addEventListener('click', function () {
+      if (!confirm('Delete your account permanently? You will have to sign up again to return.')) return;
+      var btn = this;
+      btn.disabled = true; btn.textContent = 'Deleting…';
+      fetch('/api/lookmax/account', { method: 'DELETE', headers: auth })
+        .then(function (r) { return r.json(); })
+        .then(function () { clearSession(); window.location.href = '/lookmaxing'; })
+        .catch(function () {
+          btn.disabled = false; btn.textContent = 'Delete my account';
+          alert('Could not delete right now. Try again in a moment.');
+        });
+    });
+  })();
+  </script>
+</body>
+</html>

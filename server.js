@@ -265,6 +265,9 @@ app.use('/api/lookmax', require('./routes/reaudit'));
 // Stage-1 Audit Engine (Wave 2A). Guest + user sessions, resolution gate,
 // Razorpay ₹99 one-time order, PDF generation. Cited: briefs/stage-1-audit-spec.md §8.
 app.use('/api/lookmaxing', require('./routes/lookmaxing'));
+// Viral share cards — public OG-preview pages + personalised PNG score images,
+// mounted at root (/s/:id). Read-only; exposes only score + rank, never PII.
+app.use('/', require('./routes/share'));
 
 // Token-gated photo serving (Night-4, P4/P5). A user can only read their own
 // files: the JWT's userId must match the {userId} path segment. Photos live in

@@ -1127,7 +1127,18 @@
             if (window.mc) window.mc.track('lookmaxing_pay_succeeded', {});
             paywallForm.hidden = true;
             paywallSuccess.hidden = false;
-            pollForPaid(0);
+            // Verify on return so the report unlocks immediately, without waiting
+            // on the Razorpay dashboard webhook. The webhook remains a backstop.
+            fetch('/api/lookmaxing/pay/verify', {
+              method: 'POST',
+              headers: authHeaders({ 'Content-Type': 'application/json' }),
+              body: JSON.stringify({
+                auditId: auditId,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_subscription_id: response.razorpay_subscription_id || order.subscriptionId,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            }).then(function () { pollForPaid(0); }).catch(function () { pollForPaid(0); });
           },
         };
         var rzp = new Razorpay(options);

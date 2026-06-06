@@ -7,6 +7,7 @@
   <meta name="description" content="The MainCharacter AI Studio — try hairstyles, a glow-up, procedure previews, time machine and a custom look on your own photo. Token-based; identity preserved.">
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Sora:wght@200;300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/lookmaxing/tools/tools.css">
+  <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
   <style>
     .bal{display:flex;align-items:center;justify-content:space-between;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin:20px 0}
     .bal b{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.6rem;color:var(--gold)}
@@ -72,7 +73,21 @@
     }
     function buy(pack){
       fetch('/api/lookmax/tokens/buy',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},auth),body:JSON.stringify({pack:pack})})
-        .then(function(r){return r.json();}).then(function(d){ if(d.credited){refresh();$('packs').style.display='none';} else if(d.orderId){ alert('Redirecting to payment is wired for live keys.'); } });
+        .then(function(r){return r.json();}).then(function(d){
+          if(d.credited){ refresh(); $('packs').style.display='none'; return; }       // test/bypass
+          if(d.orderId && window.Razorpay){                                            // live: real checkout
+            var rzp = new Razorpay({
+              key: d.keyId, amount: d.amount, currency: d.currency || 'INR', order_id: d.orderId,
+              name: 'MainCharacter', description: 'Token pack',
+              handler: function(resp){
+                fetch('/api/lookmax/tokens/verify',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},auth),
+                  body:JSON.stringify({pack:pack, razorpay_payment_id:resp.razorpay_payment_id, razorpay_order_id:resp.razorpay_order_id, razorpay_signature:resp.razorpay_signature})})
+                  .then(function(r){return r.json();}).then(function(v){ if(v.tokens!=null)$('bal').textContent=v.tokens; $('packs').style.display='none'; }).catch(function(){ refresh(); });
+              },
+            });
+            rzp.open();
+          } else { alert('Could not start the purchase. Try again.'); }
+        });
     }
     $('buyBtn').addEventListener('click',function(){ var p=$('packs'); p.style.display = p.style.display==='none'?'block':'none'; });
 

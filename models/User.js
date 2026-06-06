@@ -391,6 +391,7 @@ function _rowToUser(row) {
     oratorActive:            row.orator_active,
     lookmaxxingActive:       row.lookmaxxing_active,
     tokens:                  typeof row.tokens === 'number' ? row.tokens : 0,
+    tokenPayments:           row.token_payments || [],
     mirrorLevel:             row.mirror_level,
     auditSessionId:          row.audit_session_id || null,
     lookmaxxingStartedAt:    row.lookmaxxing_started_at || null,
@@ -505,6 +506,7 @@ async function _pg_updateUser(phone, updates) {
     reAuditCompletedThisCycle: 're_audit_completed_this_cycle',
     reAuditResult: 're_audit_result',
     tokens: 'tokens', // paid AI image-tool credits
+    tokenPayments: 'token_payments', // JSONB — idempotency guard for token credits
   };
 
   const setClauses = [];
@@ -513,7 +515,7 @@ async function _pg_updateUser(phone, updates) {
     const col = colMap[key];
     if (!col) continue; // skip unknown keys
     // JSONB columns
-    if (['scores', 'wordsLearned', 'chronicle', 'pushSubscription', 'lookmaxBaseline', 'reAuditResult'].includes(key)) {
+    if (['scores', 'wordsLearned', 'chronicle', 'pushSubscription', 'lookmaxBaseline', 'reAuditResult', 'tokenPayments'].includes(key)) {
       setClauses.push(`${col} = $${params.push(JSON.stringify(val))}`);
     } else {
       setClauses.push(`${col} = $${params.push(val)}`);

@@ -710,6 +710,7 @@ function extractNotes(event) {
     (p.payment_link && p.payment_link.entity) ||
     (p.payment && p.payment.entity) ||
     (p.subscription && p.subscription.entity) ||
+    (p.order && p.order.entity) ||
     {};
   return entity.notes || {};
 }
@@ -740,9 +741,13 @@ async function processPaymentEvent(event) {
     if (!u && notes.phone) u = await User.getUserByPhone(notes.phone);
     if (!u && notes.email) u = await User.getUserByEmail(notes.email);
     if (u && n > 0) {
-      await User.addTokens(u.phone, n);
-      log('TOKENS', `credited ${n} tokens to ${u.email || u.phone} via ${evt}`);
-      return { handled: true, tokens: n };
+      // Idempotent credit (shared with the studio return-verify) so the same
+      // payment can't be credited twice when both paths fire.
+      const pid = (((event.payload || {}).payment || {}).entity || {}).id || notes.paymentId || null;
+      const { creditTokensOnce } = require('./tokens');
+      const r = await creditTokensOnce(u.phone, n, pid);
+      log('TOKENS', `webhook credited ${r.added} tokens to ${u.email || u.phone} via ${evt}`);
+      return { handled: true, tokens: r.added };
     }
     log('TOKENS', `token credit skipped (user/n missing) for ${evt}`);
     return { handled: false };

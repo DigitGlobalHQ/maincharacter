@@ -270,8 +270,15 @@ if (GEMINI_API_KEY) {
       // deterministic structured output; the extra budget absorbs reasoning tokens.
       generationConfig: {
         responseMimeType: 'application/json',
-        maxOutputTokens: 32768,
+        maxOutputTokens: 65536,
         temperature: 0.3,
+        // 2.5-flash spends part of maxOutputTokens on hidden "thinking". The
+        // Bespoke Blueprint JSON is large (24 metrics + chromatic + 90-day +
+        // projection), so thinking was eating the budget and truncating the JSON
+        // mid-object → parse failure → 502. Disable thinking to hand the entire
+        // budget to the structured output (2026-06-06). The prompt is detailed
+        // enough that reasoning tokens aren't needed for a clean extraction.
+        thinkingConfig: { thinkingBudget: 0 },
       },
       // Aesthetic face analysis legitimately trips the default MEDIUM thresholds.
       // Relax to BLOCK_ONLY_HIGH so genuine readings are not silently blocked
@@ -404,8 +411,9 @@ async function _callGemini(quizAnswers, photoBuffer) {
       // JSON mode returns clean JSON; tolerate a stray code-fence just in case.
       const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, text];
       const parsed = JSON.parse(jsonMatch[1].trim());
-      if (typeof parsed.auraScore !== 'number' || !Array.isArray(parsed.freeSignals)) {
-        throw new Error('Gemini response missing required fields (auraScore/freeSignals)');
+      if (typeof parsed.auraScore !== 'number' || !Array.isArray(parsed.freeSignals)
+          || !Array.isArray(parsed.vectors) || !parsed.vectors.length) {
+        throw new Error('Gemini response missing required Blueprint fields (auraScore/freeSignals/vectors)');
       }
       // Keep rank consistent with the score regardless of what the model returned.
       parsed.rank = _rankFromScore(parsed.auraScore);
@@ -415,7 +423,11 @@ async function _callGemini(quizAnswers, photoBuffer) {
       log.warn('GEMINI-CALL', `attempt ${attempt} failed: ${err.message}`);
     }
   }
-  throw lastErr || new Error('Gemini call failed');
+  // Both attempts failed (truncation, safety block, parse error, or outage).
+  // Never dead-end the user: fall back to the full quiz-calibrated Blueprint —
+  // a complete, safe report always beats an error screen. Logged for monitoring.
+  log.error('GEMINI-CALL', `falling back to quiz-calibrated Blueprint after failures: ${lastErr && lastErr.message}`);
+  return _fallbackReport(quizAnswers);
 }
 
 // ─── PDF generation ──────────────────────────────────────────────────────────

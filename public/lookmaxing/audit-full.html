@@ -455,6 +455,29 @@
       statusWrap.hidden = false;
     }
 
+    var bp = document.getElementById('blueprint-container');
+    // Rescue: a paid report with no vectors is incomplete (generated during an
+    // earlier truncation window). Offer a one-tap regeneration through the fixed
+    // pipeline rather than showing a half-empty page.
+    if (!Array.isArray(report.vectors) || !report.vectors.length) {
+      if (bp) bp.innerHTML =
+        '<div class="lm-section-label" aria-hidden="true"><span class="lm-section-label__text">YOUR FULL BLUEPRINT</span><div class="lm-section-label__line"></div></div>'
+        + '<p class="lm-block-intro">Your full diagnostic is being finalised. Generate it now — it takes a few seconds.</p>'
+        + '<button type="button" id="reanalyze-btn" class="mc-btn-primary mc-light-point-glow" style="min-height:52px;">Generate my full Blueprint →</button>'
+        + '<p id="reanalyze-status" style="color:var(--mc-silver-faint);font-size:13px;margin-top:10px;"></p>';
+      var rb = document.getElementById('reanalyze-btn');
+      if (rb) rb.addEventListener('click', function () {
+        rb.disabled = true; rb.textContent = 'Generating…';
+        fetch('/api/lookmaxing/analyze', { method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ auditId: auditId }) })
+          .then(function (r) { if (!r.ok) throw new Error('x'); return r.json(); })
+          .then(function () { window.location.reload(); })
+          .catch(function () { rb.disabled = false; rb.textContent = 'Generate my full Blueprint →'; document.getElementById('reanalyze-status').textContent = 'Try once more in a moment.'; });
+      });
+      initReveal();
+      if (window.mc) window.mc.track('lookmaxing_audit_viewed', { resolution: 'full_incomplete' });
+      return;
+    }
+
     var html = '';
     if (Array.isArray(report.vectors) && report.vectors.length) {
       html += sectionLabel('02 · BIOMETRIC GAP ANALYSIS');

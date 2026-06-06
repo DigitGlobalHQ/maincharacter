@@ -460,11 +460,14 @@
     // earlier truncation window). Offer a one-tap regeneration through the fixed
     // pipeline rather than showing a half-empty page.
     if (!Array.isArray(report.vectors) || !report.vectors.length) {
-      if (bp) bp.innerHTML =
+      if (bp) {
+        bp.innerHTML =
         '<div class="lm-section-label" aria-hidden="true"><span class="lm-section-label__text">YOUR FULL BLUEPRINT</span><div class="lm-section-label__line"></div></div>'
         + '<p class="lm-block-intro">Your full diagnostic is being finalised. Generate it now — it takes a few seconds.</p>'
         + '<button type="button" id="reanalyze-btn" class="mc-btn-primary mc-light-point-glow" style="min-height:52px;">Generate my full Blueprint →</button>'
         + '<p id="reanalyze-status" style="color:var(--mc-silver-faint);font-size:13px;margin-top:10px;"></p>';
+        bp.classList.add('is-visible');
+      }
       var rb = document.getElementById('reanalyze-btn');
       if (rb) rb.addEventListener('click', function () {
         rb.disabled = true; rb.textContent = 'Generating…';
@@ -563,7 +566,13 @@
     }
 
     var bp = document.getElementById('blueprint-container');
-    if (bp) bp.innerHTML = html;
+    if (bp) {
+      bp.innerHTML = html;
+      // The blueprint is very tall; the scroll-reveal observer can never see 10%
+      // of it at once, so reveal the container immediately (its children are not
+      // reveal-gated). Without this it stays opacity:0 and the page looks empty.
+      bp.classList.add('is-visible');
+    }
     initReveal();
     if (window.mc) window.mc.track('lookmaxing_audit_viewed', { resolution: 'full' });
   }
@@ -582,7 +591,7 @@
           observer.unobserve(e.target);
         }
       });
-    }, { threshold: 0.1 });
+    }, { threshold: 0, rootMargin: '0px 0px -10% 0px' });
     document.querySelectorAll('.lm-reveal').forEach(function (el) { observer.observe(el); });
   }
 

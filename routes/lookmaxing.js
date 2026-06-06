@@ -412,109 +412,160 @@ async function _generatePdf(auditId, report) {
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
-      const W = doc.page.width - 120; // content width
+      // ── MainCharacter brand palette (printable on white) ──
+      const OBSIDIAN = '#0b0b0d';
+      const GOLD     = '#a9791f';   // deeper than screen gold so it reads on paper
+      const CREAM    = '#f4f1ea';
+      const INK      = '#161616';
+      const MUTED    = '#5b5b5b';
+      const FAINT    = '#9a9a9a';
+      const LINE     = '#e2ddd2';
 
-      // ── Header ──────────────────────────────────────────────────
-      doc.font('Helvetica-Bold').fontSize(9).fillColor('#888888')
-         .text('THE AURA READING', { align: 'center', characterSpacing: 2 });
-      doc.font('Times-Roman').fontSize(22).fillColor('#111111')
-         .text('Your Reading, Resolved.', { align: 'center' });
-      doc.font('Helvetica').fontSize(8).fillColor('#999999')
-         .text(`MainCharacter  ◆  Audit ${auditId.slice(0, 8)}`, { align: 'center' });
-      doc.moveDown(1);
+      const M  = 60;                           // page margin
+      const PW = doc.page.width;
+      const W  = PW - M * 2;                    // content width
 
-      // ── Block 1 — Aura Score ─────────────────────────────────────
-      doc.font('Helvetica').fontSize(8).fillColor('#999999').text('AURA SCORE', { characterSpacing: 2 });
-      doc.font('Courier-Bold').fontSize(56).fillColor('#111111').text(String(report.auraScore), { align: 'left' });
-      doc.font('Helvetica').fontSize(10).fillColor('#555555').text(`out of 100  ·  ${String(report.rank).toUpperCase()}  ·  ${report.faceShape || ''}`, { align: 'left' });
-      doc.moveDown(0.5);
+      const fmtName = (s) => String(s || '')
+        .replace(/([A-Z])/g, ' $1').replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim()
+        .replace(/^./, (c) => c.toUpperCase());
+      const cap = (s) => (s ? String(s).charAt(0).toUpperCase() + String(s).slice(1) : '');
 
-      // ── Block 2 — First Impression ───────────────────────────────
-      doc.font('Helvetica').fontSize(8).fillColor('#999999').text('FIRST IMPRESSION', { characterSpacing: 2 });
-      doc.font('Times-Roman').fontSize(13).fillColor('#111111')
-         .text(report.firstImpression || '', { width: W, lineGap: 4 });
-      doc.moveDown(0.5);
+      // Small filled diamond (the ◆ mark, drawn as vector — built-in fonts can't render ◆).
+      function diamond(cx, cy, size, color) {
+        doc.save().translate(cx, cy).rotate(45).rect(-size / 2, -size / 2, size, size).fill(color).restore();
+      }
+      // Gold section label, with a page break when near the bottom.
+      function label(text) {
+        if (doc.y > doc.page.height - 96) doc.addPage();
+        doc.moveDown(0.7);
+        doc.font('Helvetica-Bold').fontSize(8).fillColor(GOLD)
+           .text(text.toUpperCase(), M, doc.y, { characterSpacing: 2 });
+        doc.moveDown(0.25);
+        doc.fillColor(INK);
+      }
 
-      // ── Block 3 — Free Signals ───────────────────────────────────
-      doc.font('Helvetica').fontSize(8).fillColor('#999999').text('THE FOUR SIGNALS', { characterSpacing: 2 });
-      const signals = (report.freeSignals || []).map((s) => s.label).join('  ·  ');
-      doc.font('Courier').fontSize(11).fillColor('#333333').text(signals, { width: W });
-      doc.moveDown(0.5);
+      // ── Branded header band ──────────────────────────────────────
+      const bandH = 130;
+      doc.rect(0, 0, PW, bandH).fill(OBSIDIAN);
+      diamond(M + 4, 46, 9, GOLD);
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#e8d9b0')
+         .text('MAINCHARACTER', M + 18, 41, { characterSpacing: 3 });
+      doc.font('Helvetica').fontSize(8).fillColor('#8a8576')
+         .text('THE AURA READING', M, 72, { characterSpacing: 3 });
+      doc.font('Times-Italic').fontSize(24).fillColor(CREAM)
+         .text('Your reading, resolved.', M, 84);
+      doc.font('Helvetica').fontSize(7.5).fillColor('#6f6a5d')
+         .text(`Audit ${auditId.slice(0, 8).toUpperCase()}   ·   ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`, M, 112);
 
-      // ── Block 4 — Full Decomposition ─────────────────────────────
+      doc.y = bandH + 28; doc.x = M;
+
+      // ── Aura Score ───────────────────────────────────────────────
+      doc.font('Helvetica-Bold').fontSize(8).fillColor(GOLD).text('AURA SCORE', M, doc.y, { characterSpacing: 2 });
+      const scoreY = doc.y + 4;
+      doc.font('Times-Bold').fontSize(60).fillColor(INK).text(String(report.auraScore), M, scoreY);
+      doc.font('Helvetica').fontSize(10).fillColor(MUTED)
+         .text(`OUT OF 100        ${String(report.rank || '').toUpperCase()}        ${cap(report.faceShape || '')}`,
+               M, scoreY + 66, { characterSpacing: 1 });
+      doc.moveTo(M, doc.y + 10).lineTo(M + W, doc.y + 10).lineWidth(0.6).strokeColor(GOLD).stroke();
+      doc.y += 18;
+
+      // ── First Impression ─────────────────────────────────────────
+      label('First Impression');
+      doc.font('Times-Italic').fontSize(13).fillColor(INK)
+         .text(report.firstImpression || '', M, doc.y, { width: W, lineGap: 4 });
+
+      // ── The Four Signals ─────────────────────────────────────────
+      label('The Four Signals');
+      doc.font('Helvetica').fontSize(10).fillColor(MUTED)
+         .text((report.freeSignals || []).map((s) => s.label).join('        ·        '), M, doc.y, { width: W });
+
+      // ── Full Decomposition ───────────────────────────────────────
       if (report.decomposition) {
-        doc.font('Helvetica').fontSize(8).fillColor('#999999').text('FULL DECOMPOSITION', { characterSpacing: 2 });
-        doc.moveDown(0.2);
-        const regions = ['skin', 'hair', 'jawAndFace', 'bodyAndPosture', 'lifestyleSignals'];
-        for (const region of regions) {
+        label('Full Decomposition');
+        const REG = { skin: 'Skin', hair: 'Hair', jawAndFace: 'Jaw & Face', bodyAndPosture: 'Body & Posture', lifestyleSignals: 'Lifestyle' };
+        for (const region of Object.keys(REG)) {
           const items = report.decomposition[region] || [];
           if (!items.length) continue;
-          doc.font('Helvetica-Bold').fontSize(9).fillColor('#555555').text(region.toUpperCase(), { characterSpacing: 1 });
+          if (doc.y > doc.page.height - 120) doc.addPage();
+          doc.moveDown(0.35);
+          doc.font('Helvetica-Bold').fontSize(8.5).fillColor(OBSIDIAN).text(REG[region].toUpperCase(), M, doc.y, { characterSpacing: 1 });
+          doc.moveDown(0.2);
           for (const item of items) {
-            doc.font('Courier').fontSize(9).fillColor('#111111')
-               .text(`${item.metric}  ${item.score}/100`, { continued: false });
-            doc.font('Helvetica').fontSize(8).fillColor('#666666')
-               .text(`  ${item.cause}  →  ${item.fix}`, { width: W, indent: 10 });
+            if (doc.y > doc.page.height - 96) doc.addPage();
+            doc.font('Helvetica-Bold').fontSize(9.5).fillColor(INK)
+               .text(fmtName(item.metric), M, doc.y, { continued: true })
+               .font('Courier').fontSize(9).fillColor(GOLD).text(`    ${item.score}/100`);
+            if (item.cause) doc.font('Helvetica').fontSize(8.5).fillColor(MUTED).text(item.cause, M + 12, doc.y, { width: W - 12, lineGap: 1 });
+            if (item.fix) doc.font('Helvetica-Oblique').fontSize(8.5).fillColor('#3a3a3a').text('Fix — ' + item.fix, M + 12, doc.y, { width: W - 12, lineGap: 1 });
+            doc.moveDown(0.4);
           }
-          doc.moveDown(0.3);
         }
       }
 
-      // ── Block 5 — Biggest Lever ──────────────────────────────────
+      // ── Biggest Lever ────────────────────────────────────────────
       if (report.biggestLever) {
-        doc.font('Helvetica').fontSize(8).fillColor('#999999').text('YOUR BIGGEST LEVER', { characterSpacing: 2 });
-        doc.font('Courier-Bold').fontSize(11).fillColor('#111111')
-           .text(`${report.biggestLever.metric}  ${report.biggestLever.score}/100`);
-        doc.font('Helvetica').fontSize(9).fillColor('#444444')
-           .text(report.biggestLever.rationale || '', { width: W });
-        doc.moveDown(0.5);
+        label('Your Biggest Lever');
+        doc.font('Times-Bold').fontSize(13).fillColor(INK).text(fmtName(report.biggestLever.metric), M, doc.y, { continued: true })
+           .font('Courier').fontSize(10).fillColor(GOLD).text(`    ${report.biggestLever.score}/100`);
+        doc.font('Helvetica').fontSize(9.5).fillColor(MUTED).text(report.biggestLever.rationale || '', M, doc.y, { width: W, lineGap: 2 });
       }
 
-      // ── Block 6 — Quests ─────────────────────────────────────────
+      // ── The Quests ───────────────────────────────────────────────
       if (report.quests && report.quests.length) {
-        doc.font('Helvetica').fontSize(8).fillColor('#999999').text('THE QUESTS', { characterSpacing: 2 });
-        doc.moveDown(0.2);
+        label('The Quests');
         for (const q of report.quests) {
-          doc.font('Courier').fontSize(9).fillColor('#111111').text(`◆  ${q.metric}`, { continued: false });
-          doc.font('Helvetica').fontSize(8).fillColor('#555555').text(`   ${q.task}`, { width: W, indent: 10 });
+          if (doc.y > doc.page.height - 90) doc.addPage();
+          diamond(M + 3, doc.y + 5, 4, GOLD);
+          doc.font('Helvetica-Bold').fontSize(9).fillColor(INK).text(fmtName(q.metric), M + 13, doc.y, { width: W - 13 });
+          doc.font('Helvetica').fontSize(8.5).fillColor(MUTED).text(q.task, M + 13, doc.y, { width: W - 13, lineGap: 1 });
+          doc.moveDown(0.35);
         }
-        doc.moveDown(0.5);
       }
 
-      // ── Block 7 — Style & Colour ──────────────────────────────────
+      // ── Style & Colour ───────────────────────────────────────────
       if (report.styleAndColour) {
         const sc = report.styleAndColour;
-        doc.font('Helvetica').fontSize(8).fillColor('#999999').text('STYLE & COLOUR', { characterSpacing: 2 });
-        if (sc.haircut) doc.font('Helvetica').fontSize(9).fillColor('#333333').text(sc.haircut, { width: W });
+        label('Style & Colour');
+        if (sc.haircut) doc.font('Helvetica').fontSize(9.5).fillColor(INK).text(sc.haircut, M, doc.y, { width: W, lineGap: 2 });
         if (sc.palette && sc.palette.length) {
-          doc.font('Courier').fontSize(9).fillColor('#111111')
-             .text('Palette: ' + sc.palette.join('  ·  '), { width: W });
+          doc.moveDown(0.4);
+          const sy = doc.y, sw = 26; let sx = M;
+          for (const c of sc.palette.slice(0, 8)) {
+            const raw = (typeof c === 'string' ? c : (c.hex || '')).trim();
+            const safe = /^#?[0-9a-fA-F]{3,8}$/.test(raw) ? (raw[0] === '#' ? raw : '#' + raw) : '#cccccc';
+            doc.rect(sx, sy, sw, sw).fill(safe);
+            doc.rect(sx, sy, sw, sw).lineWidth(0.5).strokeColor(LINE).stroke();
+            sx += sw + 8;
+          }
+          doc.y = sy + sw + 6; doc.x = M;
+          doc.font('Helvetica').fontSize(8).fillColor(MUTED)
+             .text('Palette — ' + sc.palette.map((c) => (typeof c === 'string' ? c : (c.name || c.hex || ''))).join('  ·  '), M, doc.y, { width: W });
         }
-        if (sc.avoid && sc.avoid.length) {
-          doc.font('Helvetica').fontSize(8).fillColor('#888888')
-             .text('Avoid: ' + sc.avoid.join(', '), { width: W });
-        }
-        doc.moveDown(0.5);
+        if (sc.avoid && sc.avoid.length) doc.font('Helvetica-Oblique').fontSize(8).fillColor(FAINT).text('Avoid — ' + sc.avoid.join(', '), M, doc.y, { width: W });
       }
 
-      // ── Block 8 — 7-Day Starter Plan ─────────────────────────────
+      // ── The 7-Day Starter Plan ───────────────────────────────────
       if (report.starterPlan && report.starterPlan.length) {
-        doc.font('Helvetica').fontSize(8).fillColor('#999999').text('THE 7-DAY STARTER PLAN', { characterSpacing: 2 });
-        doc.moveDown(0.2);
+        label('The 7-Day Starter Plan');
         for (const day of report.starterPlan) {
-          doc.font('Courier-Bold').fontSize(9).fillColor('#111111').text(`Day ${day.day}`, { continued: false });
-          doc.font('Helvetica').fontSize(8).fillColor('#555555')
-             .text(`  Morning: ${day.morning}`, { width: W, indent: 10 });
-          doc.font('Helvetica').fontSize(8).fillColor('#555555')
-             .text(`  Evening: ${day.evening}`, { width: W, indent: 10 });
-          doc.moveDown(0.2);
+          if (doc.y > doc.page.height - 90) doc.addPage();
+          doc.font('Times-Bold').fontSize(10).fillColor(GOLD).text(`Day ${day.day}`, M, doc.y);
+          if (day.morning) doc.font('Helvetica-Bold').fontSize(8.5).fillColor(INK).text('Morning   ', M + 12, doc.y, { continued: true }).font('Helvetica').fillColor(MUTED).text(day.morning, { width: W - 12 });
+          if (day.evening) doc.font('Helvetica-Bold').fontSize(8.5).fillColor(INK).text('Evening   ', M + 12, doc.y, { continued: true }).font('Helvetica').fillColor(MUTED).text(day.evening, { width: W - 12 });
+          doc.moveDown(0.35);
         }
       }
 
-      // ── Footer ────────────────────────────────────────────────────
-      doc.moveDown(1);
-      doc.font('Helvetica').fontSize(8).fillColor('#cccccc')
-         .text('◆ MainCharacter  ·  The reading is yours.', { align: 'center' });
+      // ── Footers on every page ────────────────────────────────────
+      const range = doc.bufferedPageRange();
+      for (let i = 0; i < range.count; i++) {
+        doc.switchToPage(range.start + i);
+        const fy = doc.page.height - 42;
+        doc.font('Helvetica').fontSize(7.5).fillColor(FAINT)
+           .text('MAINCHARACTER   ·   maincharacter.digitglobalservices.com', M, fy, { width: W, align: 'left', lineBreak: false, characterSpacing: 1 });
+        doc.font('Helvetica').fontSize(7.5).fillColor(FAINT)
+           .text(`${i + 1} / ${range.count}`, M, fy, { width: W, align: 'right', lineBreak: false });
+      }
 
       doc.end();
     } catch (err) {
@@ -775,6 +826,19 @@ function _razorpayLive() {
   return !!(key_id && key_secret && !key_id.includes('mock'));
 }
 
+// Whether the ₹99 unlock may be settled WITHOUT a real charge (testing/demo).
+// HARD RULE: never bypass when real LIVE (rzp_live_) keys are set — that is real
+// money, so a captured Razorpay payment is the only path to unlock. In every
+// non-live setup the bypass is ON by default (so the report + PDF can be tested
+// freely pre-launch); set PAYMENT_BYPASS=false to force the real Razorpay
+// (test) checkout instead. Going live = set rzp_live_ keys → bypass auto-off.
+function _paymentBypass() {
+  const keyId = process.env.RAZORPAY_KEY_ID || '';
+  if (keyId.startsWith('rzp_live_')) return false;
+  if (process.env.PAYMENT_BYPASS === 'false') return false;
+  return true;
+}
+
 // Settle a paid audit: flip paid, credit ₹99, seed the Day-30 baseline. Shared by
 // the Razorpay webhook (real capture) and the demo-mode confirm (no live keys), so
 // the unlock is identical either way and never drifts.
@@ -834,9 +898,9 @@ router.post('/pay/order', async (req, res) => {
   }
 
   try {
-    // Razorpay order (₹99 = 9900 paise). Mocked when live keys are absent.
+    // Razorpay order (₹99 = 9900 paise). Mocked when bypassing (testing/demo).
     const key_id  = process.env.RAZORPAY_KEY_ID || 'rzp_test_mock';
-    const live    = _razorpayLive();
+    const live    = !_paymentBypass();
 
     let order;
     if (live) {
@@ -895,6 +959,25 @@ router.post('/pay/subscribe', async (req, res) => {
   const alreadyUnlocked = await _isUnlocked(session);
   if (alreadyUnlocked) {
     return res.json({ alreadyUnlocked: true });
+  }
+
+  // Testing/demo bypass: do not touch Razorpay at all — the client settles via
+  // /pay/test-confirm and the report unlocks directly. (Never with rzp_live_ keys.)
+  // Returns the same shape as the live path so the client + tests are unaffected.
+  if (_paymentBypass()) {
+    const user = session.userId ? await User.getUserByToken(session.userId) : null;
+    const subId = 'sub_bypass_' + Date.now();
+    _updateSession(auditId, { razorpaySubscriptionId: subId });
+    if (user) {
+      await User.updateUser(user.phone, { razorpaySubscriptionId: subId, pendingPlan: 'lookmax99' });
+    }
+    events.trackAnonymous('lookmaxing_subscribe_initiated', { auditId, bypass: true }, actor.userId).catch(() => {});
+    return res.json({
+      subscriptionId: subId,
+      keyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
+      testMode: true,
+      auditId,
+    });
   }
 
   try {
@@ -989,15 +1072,16 @@ router.post('/pay/webhook', async (req, res) => {
 });
 
 // ─── POST /pay/test-confirm ────────────────────────────────────────────────────
-// Demo / dogfood ONLY. Lets the ₹99 → full report + PDF be experienced before
-// live Razorpay keys exist. HARD-DISABLED the instant real keys are configured:
-// then a Razorpay-captured payment (via /pay/webhook) is the only path to unlock.
+// Demo / dogfood ONLY. Lets the ₹99 → full report + PDF be experienced without a
+// real charge. Allowed only when _paymentBypass() is true (PAYMENT_BYPASS=true or
+// no real keys). HARD-DISABLED when real rzp_live_ keys are set — then a
+// Razorpay-captured payment (via /pay/webhook) is the only path to unlock.
 //
 // In demo mode this ALSO simulates the recurring subscription activation on the
 // owning user (lookmaxxingActive=true, subscriptionStatus='active', etc.) so the
 // founder can experience the full recurring-entitlement flow before live keys.
 router.post('/pay/test-confirm', async (req, res) => {
-  if (_razorpayLive()) {
+  if (!_paymentBypass()) {
     return res.status(403).json({ error: 'live payment required' });
   }
   const actor = resolveActor(req);

@@ -501,7 +501,7 @@
 
   <!-- Block 4: Full decomposition (premium, blurred) -->
   <div class="lm-blur-block" id="block-decomposition">
-    <p class="lm-blur-block__header">FULL DECOMPOSITION</p>
+    <p class="lm-blur-block__header">02 · BIOMETRIC GAP ANALYSIS — 24 METRICS</p>
     <div
       class="mc-blur-wrap"
       role="button"
@@ -518,7 +518,7 @@
 
   <!-- Block 5: Biggest lever (premium, blurred) -->
   <div class="lm-blur-block" id="block-biggest-lever">
-    <p class="lm-blur-block__header">YOUR BIGGEST LEVER</p>
+    <p class="lm-blur-block__header">03 · THE CHROMATIC &amp; GROOMING ARSENAL</p>
     <div
       class="mc-blur-wrap"
       role="button"
@@ -535,7 +535,7 @@
 
   <!-- Block 6: Quests (premium, blurred) -->
   <div class="lm-blur-block" id="block-quests">
-    <p class="lm-blur-block__header">THE QUESTS</p>
+    <p class="lm-blur-block__header">04 · THE 90-DAY INTERVENTION</p>
     <div
       class="mc-blur-wrap"
       role="button"
@@ -552,7 +552,7 @@
 
   <!-- Block 7: Style & colour (premium, blurred) -->
   <div class="lm-blur-block" id="block-style">
-    <p class="lm-blur-block__header">STYLE &amp; COLOUR</p>
+    <p class="lm-blur-block__header">05 · PROJECTED EVOLUTION</p>
     <div
       class="mc-blur-wrap"
       role="button"
@@ -569,7 +569,7 @@
 
   <!-- Block 8: 7-day starter plan (premium, blurred) -->
   <div class="lm-blur-block" id="block-plan">
-    <p class="lm-blur-block__header">THE 7-DAY STARTER PLAN</p>
+    <p class="lm-blur-block__header">METHODOLOGY &amp; SAFETY</p>
     <div
       class="mc-blur-wrap"
       role="button"
@@ -887,11 +887,11 @@
 
     // Premium blocks
     var premiumBlocks = [
-      { id: 'decomposition-content', key: 'decomposition', wrapId: 'block-decomposition' },
-      { id: 'biggest-lever-content', key: 'biggestLever', wrapId: 'block-biggest-lever' },
-      { id: 'quests-content', key: 'quests', wrapId: 'block-quests' },
-      { id: 'style-content', key: 'styleAndColour', wrapId: 'block-style' },
-      { id: 'plan-content', key: 'starterPlan', wrapId: 'block-plan' },
+      { id: 'decomposition-content', key: 'vectors',      wrapId: 'block-decomposition' },
+      { id: 'biggest-lever-content', key: 'chromatic',    wrapId: 'block-biggest-lever' },
+      { id: 'quests-content',        key: 'intervention', wrapId: 'block-quests' },
+      { id: 'style-content',         key: 'projection',   wrapId: 'block-style' },
+      { id: 'plan-content',          key: 'methodology',  wrapId: 'block-plan' },
     ];
 
     premiumBlocks.forEach(function (b) {
@@ -951,44 +951,43 @@
   function buildTeaser(key, val) {
     if (!val) return '<p class="lm-teaser-text">· · ·</p>';
     var html = '';
-    if (key === 'decomposition') {
-      var L = { skin: 'Skin', hair: 'Hair', jawAndFace: 'Jaw & Face', bodyAndPosture: 'Body & Posture', lifestyleSignals: 'Lifestyle' };
-      Object.keys(L).forEach(function (r) {
-        var ms = val[r];
-        if (!ms || !ms.length) return;
-        html += '<p class="lm-teaser-head">' + L[r] + '</p>';
-        ms.slice(0, 3).forEach(function (m) {
-          html += row(fmtName(m.metric), maskBar(m.score) + '<span class="lm-teaser-val">' + (m.score || '') + '</span>');
+    if (key === 'vectors') {
+      (val || []).slice(0, 5).forEach(function (v) {
+        html += '<p class="lm-teaser-head">Vector ' + (v.numeral || '') + ' · ' + fmtName(v.name || '') + '</p>';
+        (v.metrics || []).slice(0, 2).forEach(function (m) {
+          var sc = (typeof m.score10 === 'number' ? m.score10.toFixed(1) : (m.score10 || ''));
+          html += row(fmtName(m.metric), maskBar((Number(m.score10) || 5) * 10) + '<span class="lm-teaser-val">' + sc + '</span>');
         });
       });
-      return html || '<p class="lm-teaser-text">Skin · Hair · Jaw · Body · Lifestyle</p>';
+      return html || '<p class="lm-teaser-text">24 metrics across five vectors.</p>';
     }
-    if (key === 'biggestLever') {
-      html += '<p class="lm-teaser-head">' + fmtName(val.metric || 'Your one lever') + '</p>';
-      html += '<p class="lm-teaser-text">' + (val.rationale || 'The single axis the work moves first — and exactly why it changes the room.') + '</p>';
-      return html;
-    }
-    if (key === 'quests') {
-      (val || []).slice(0, 4).forEach(function (q, i) {
-        var t = typeof q === 'string' ? q : (q.text || q.title || '');
-        html += row('Quest ' + (i + 1), '<span class="lm-teaser-text">' + t + '</span>');
-      });
-      return html || '<p class="lm-teaser-text">Specific tasks, tied to your reading.</p>';
-    }
-    if (key === 'styleAndColour') {
-      if (val.haircut) html += row('Haircut', '<span class="lm-teaser-text">' + val.haircut + '</span>');
-      if (val.palette && val.palette.length) {
-        html += '<p class="lm-teaser-head">Your palette</p><span class="lm-teaser-swatches" aria-hidden="true">';
-        val.palette.slice(0, 6).forEach(function (c) { html += '<span class="lm-teaser-swatch" style="background:' + (c.hex || c) + '"></span>'; });
+    if (key === 'chromatic') {
+      if (val.profile) html += '<p class="lm-teaser-head">' + fmtName(val.profile) + '</p>';
+      if (val.powerPalette && val.powerPalette.length) {
+        html += '<span class="lm-teaser-swatches" aria-hidden="true">';
+        val.powerPalette.slice(0, 6).forEach(function (c) { html += '<span class="lm-teaser-swatch" style="background:' + (c.hex || '#888') + '"></span>'; });
         html += '</span>';
       }
-      return html || '<p class="lm-teaser-text">What suits the geometry you have.</p>';
+      html += '<p class="lm-teaser-text">Your power palette, anti-palette, metals, and cosmetic arsenal — calibrated to your substrate.</p>';
+      return html;
     }
-    if (key === 'starterPlan') {
-      (val || []).slice(0, 7).forEach(function (d, i) {
-        html += row('Day ' + (i + 1), '<span class="lm-teaser-text">' + (d.morning || d.title || d.focus || 'Morning & evening protocol') + '</span>');
+    if (key === 'intervention') {
+      ['morning', 'night', 'mechanical'].forEach(function (b) {
+        var steps = val[b];
+        if (!steps || !steps.length) return;
+        html += '<p class="lm-teaser-head">' + (b === 'mechanical' ? 'Mechanical Arsenal' : b.charAt(0).toUpperCase() + b.slice(1) + ' Protocol') + '</p>';
+        steps.slice(0, 2).forEach(function (s) { html += row(fmtName(s.agent || 'Step'), '<span class="lm-teaser-text">' + (s.rationale || '') + '</span>'); });
       });
-      return html || '<p class="lm-teaser-text">Seven days. Morning and evening.</p>';
+      return html || '<p class="lm-teaser-text">Morning, night, and mechanical protocols.</p>';
+    }
+    if (key === 'projection') {
+      (val.rows || []).slice(0, 5).forEach(function (r) {
+        html += row(fmtName(r.vector), '<span class="lm-teaser-val">' + Number(r.day0).toFixed(1) + ' → ' + Number(r.day90).toFixed(1) + '</span>');
+      });
+      return html || '<p class="lm-teaser-text">Your modelled 90-day evolution.</p>';
+    }
+    if (key === 'methodology') {
+      return '<p class="lm-teaser-text">' + String(val).slice(0, 220) + '…</p>';
     }
     return '';
   }

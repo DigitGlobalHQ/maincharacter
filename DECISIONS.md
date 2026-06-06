@@ -1140,3 +1140,24 @@ keys are set — no dead bounce) + email/password + a single "Continue" that sig
 OR signs up. Replaces the dead OTP UI on that surface (OTP backend kept, dormant).
 PWA login.html (re-entry) still to be aligned — fast follow. Full suite 1380 + smoke
 44/44. Visual/flow needs founder eyeball; Google still needs the founder's 2 keys.
+
+## 2026-06-06 — Bespoke Aesthetic Blueprint report (founder spec)
+
+### The ₹99 report is now the founder's Bespoke Aesthetic Blueprint
+
+Per product/bespoke-aesthetic-blueprint-spec.md, the report schema is: globalScore10
+(/10) + percentile + archetype + statusAlert, 5 vectors / 24 metrics (each
+rootCause + score10 + class actionable|leverage|fixed + visualIndicator), the
+chromatic & grooming arsenal, the 90-day intervention (morning/night/mechanical,
+rx deferred to dermatologist), projected evolution, and methodology. auraScore
+(0-100) is kept as round(globalScore10*10) so the share card, Day-30 baseline and
+re-audit are unaffected; the 8-axis compat baseline is derived from vector averages.
+
+### Safety: medical terms are scrubbed by _sanitizeReport
+
+lib/safety-validator flags clinical/prescription/vitamin-C/diagnos*/percentages/
+dose-units; _sanitizeReport replaces any failing string with the qualified-
+professional phrase. The prompt + fallback therefore use drug-class framing
+("dermatologist-grade", "antioxidant brightening serum") and defer rx formulation/
+strength/frequency to a licensed dermatologist. This is intentional and enforced
+by tests — the report reads slightly softer than the source spec by design.

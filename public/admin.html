@@ -533,7 +533,7 @@
   <div class="table-wrap">
     <table>
       <thead>
-        <tr><th>Name</th><th>Phone</th><th>Pillar</th><th>Day</th><th>Streak</th><th>Status</th><th>Rank</th><th>Last Active</th></tr>
+        <tr><th>Name</th><th>Phone</th><th>Pillar</th><th>Day</th><th>Streak</th><th>Status</th><th>Rank</th><th>Last Active</th><th></th></tr>
       </thead>
       <tbody id="users-table"></tbody>
     </table>
@@ -736,8 +736,16 @@ function renderData(data) {
       <td><span class="status-badge ${statusCls}">${u.status}</span></td>
       <td style="color:var(--gold)">${u.rank}</td>
       <td>${lastActive}</td>
+      <td><button class="usr-del-btn" data-phone="${esc(u.phone)}" data-label="${esc(u.name || u.phone)}" title="Delete user" style="background:none;border:1px solid var(--ink-faint,#5c5a54);color:var(--ink-dim,#9b988f);border-radius:6px;padding:4px 9px;cursor:pointer;font-size:0.7rem;">Delete</button></td>
     </tr>`;
   }).join('');
+  // Wire delete buttons — stopPropagation so the row's openDetail() doesn't fire.
+  tbody.querySelectorAll('.usr-del-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteLookmaxUser(btn.dataset.phone, btn.dataset.label);
+    });
+  });
 
   // Export link
   document.getElementById('export-btn').href = '/api/admin/export?token=' + encodeURIComponent(adminToken);

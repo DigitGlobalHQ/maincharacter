@@ -25,6 +25,15 @@ app.use('/api/lookmax', authRouter);
 
 afterAll(() => fs.rmSync(tmpDir, { recursive: true, force: true }));
 
+describe('GET /api/lookmax/me', () => {
+  it('includes the account email (for the settings view)', async () => {
+    const { bearer, user } = await makeSession();
+    const res = await request(app).get('/api/lookmax/me').set('Authorization', bearer);
+    expect(res.status).toBe(200);
+    expect(res.body.user.email).toBe(user.email);
+  });
+});
+
 describe('DELETE /api/lookmax/account', () => {
   it('rejects an unauthenticated caller', async () => {
     const res = await request(app).delete('/api/lookmax/account');

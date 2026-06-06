@@ -5,6 +5,30 @@ Format: date, decision, 2-sentence rationale.
 
 ---
 
+## 2026-06-06 — ₹99/month recurring subscription engine (Lookmaxing Aura Reading)
+
+### lookmax99 is a separate plan key, not a replacement for the existing lookmaxxing plan
+
+`PLANS.lookmax99` (₹99/month) sits alongside `PLANS.lookmaxxing` (₹1,499/month) in `services/razorpay.js`. The two plan keys serve different product surfaces: `lookmax99` is the audit-funnel entry point (free reading → ₹99/month recurring unlock), while `lookmaxxing` is the full PWA daily-mirror + reveal subscription. Keeping them separate preserves all existing tests and allows independent pricing evolution.
+
+### Entitlement is session.paid OR user.lookmaxxingActive — evaluated async at request time
+
+`_isUnlocked(session)` in `routes/lookmaxing.js` checks `session.paid` (legacy one-time path) then falls through to `User.getUserByToken(session.userId)?.lookmaxxingActive`. This means a subscription activation via the Razorpay webhook automatically unlocks all existing sessions for that user without any session-level migration — the entitlement source of truth is the user record, not the session.
+
+### processPaymentEvent resolves user by phone → userId → email (single webhook handles both pillars)
+
+Rather than two separate webhook endpoints for Orator (phone) and Lookmaxing (email/token), the existing `/api/payment/webhook` now tries three identity resolution strategies in sequence. Orator users always have a real phone in notes; Lookmaxing users from `/pay/subscribe` have a userId; the email fallback covers edge cases. All three paths write to `user.phone` (the model key) via `User.updateUser(userPhone, ...)`.
+
+### WhatsApp messages gated on real numeric phone (not synthetic)
+
+Lookmaxing email/OAuth sign-ups receive a synthetic phone id (`e` + 18 hex chars). After identity resolution, outbound WhatsApp messages are only attempted when `/^\d{10,13}$/.test(userPhone)`, so synthetic phones never trigger a WhatsApp send that would silently fail or log a confusing dry-run warning.
+
+### /pay/test-confirm now also activates user.lookmaxxingActive in demo mode
+
+The demo-mode confirm previously only flipped `session.paid`. It now also sets `user.lookmaxxingActive = true` (and `subscriptionStatus`, `subscribedAt`, `lookmaxxingStartedAt`) so the founder experiences the real subscription entitlement flow — the `_isUnlocked` check returns true from the user record, not just from `session.paid`. This behaviour is already hard-disabled when live Razorpay keys are set (the endpoint 403s).
+
+---
+
 ## 2026-05-28 — Stage-1 Audit Engine (Wave 2A)
 
 ### JSON-file store (AUDIT_V2_STORE_PATH) as the audit_sessions_v2 backing store

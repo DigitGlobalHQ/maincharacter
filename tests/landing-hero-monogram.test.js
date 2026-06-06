@@ -48,9 +48,9 @@ describe('PR2 — motion discipline', () => {
 });
 
 describe('PR2 — locked hero copy is preserved', () => {
-  it('keeps the untouchable hero strings verbatim', () => {
+  it('keeps the brand H1 and carries the pivot-to-99 hero copy', () => {
     expect(landing).toContain('Become the Main Character');
-    expect(landing).toContain('Personal Growth · Redesigned');
-    expect(landing).toContain('MainCharacter makes the gap visible, measurable, and closable');
+    expect(landing).toContain('The Aura Reading · One Photo · Five Questions');
+    expect(landing).toContain('The room reads you before you speak');
   });
 });

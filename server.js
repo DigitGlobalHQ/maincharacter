@@ -225,6 +225,12 @@ app.get('/lookmaxing/quiz',          lookmaxingPage('quiz.html'));
 app.get('/lookmaxing/capture',       lookmaxingPage('capture.html'));
 app.get('/lookmaxing/audit/:id',     lookmaxingPage('audit.html'));
 app.get('/lookmaxing/audit/:id/full',lookmaxingPage('audit-full.html'));
+// Free browser-based facial-analysis tools (MediaPipe 478-landmark; runs entirely
+// client-side — no upload). Flagship analyzer; per-tool SEO pages to follow.
+app.get('/lookmaxing/tools',  (req, res) => servePage(res, path.join(__dirname, 'public', 'lookmaxing', 'tools', 'index.html')));
+app.get('/lookmaxing/tools/', (req, res) => servePage(res, path.join(__dirname, 'public', 'lookmaxing', 'tools', 'index.html')));
+// Short, shareable alias.
+app.get('/face',              (req, res) => servePage(res, path.join(__dirname, 'public', 'lookmaxing', 'tools', 'index.html')));
 // Fork page injects the trial-live flag. The Daily Mirror is live, so the
 // "Start your free 7-day trial" CTA is enabled unless LOOKMAX_TRIAL_LIVE=false.
 // Without this the button was permanently disabled (dead stage-10 CTA). funnel-repair.

@@ -1161,3 +1161,15 @@ professional phrase. The prompt + fallback therefore use drug-class framing
 ("dermatologist-grade", "antioxidant brightening serum") and defer rx formulation/
 strength/frequency to a licensed dermatologist. This is intentional and enforced
 by tests — the report reads slightly softer than the source spec by design.
+
+## 2026-06-06 — Free facial-analysis tools (competitor parity: thefacereport.com)
+
+### Flagship analyzer first; pure metrics engine separated from MediaPipe glue
+
+public/lookmaxing/tools/face-metrics.js is a pure, unit-tested geometry engine
+(478 landmark pixel coords → face shape, symmetry, canthal tilt, eye shape,
+jawline/gonial angle, golden ratio, facial ratios, attractiveness). The browser
+page (tools/index.html, served at /lookmaxing/tools and /face) lazy-loads MediaPipe
+FaceLandmarker from CDN and runs ENTIRELY client-side — the photo never leaves the
+device (a real trust/privacy differentiator + zero server cost). Funnels to the ₹99
+Blueprint. Next: a /tools hub + per-tool SEO pages, then tokens + AI image tools.

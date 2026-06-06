@@ -58,6 +58,7 @@
     <div class="card">
       <p class="label">Account</p>
       <div class="row"><span class="k">Name</span><span class="v" id="acc-name">—</span></div>
+      <div class="row"><span class="k">Email</span><span class="v" id="acc-email">—</span></div>
       <div class="row"><span class="k">Plan</span><span class="v" id="acc-plan">—</span></div>
       <div class="row"><span class="k">Mirror level</span><span class="v" id="acc-level">—</span></div>
     </div>
@@ -95,6 +96,7 @@
       .then(function (d) {
         var u = (d && d.user) || {};
         document.getElementById('acc-name').textContent = u.name || 'Seeker';
+        document.getElementById('acc-email').textContent = u.email || '—';
         var plan = u.auraPlusPlus ? 'Aura++ (both pillars)'
           : u.lookmaxxingActive ? 'Lookmaxxing · ₹99/month'
           : 'Free reading';

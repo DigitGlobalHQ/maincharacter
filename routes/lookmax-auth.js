@@ -52,6 +52,7 @@ function publicUser(user) {
     token: user.token,
     name: user.name,
     phone: user.phone,
+    email: user.email || null,
     oratorActive: status.oratorActive,
     lookmaxxingActive: status.lookmaxxingActive,
     auraPlusPlus: status.auraPlusPlus,

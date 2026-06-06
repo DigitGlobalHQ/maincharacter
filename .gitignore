@@ -31,3 +31,4 @@ IMG_*.jpeg
 # Scratch / stray files
 NUL
 probe_tmp.js
+.claude/worktrees/

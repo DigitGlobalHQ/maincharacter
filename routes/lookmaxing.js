@@ -278,6 +278,14 @@ function _canCall() {
  * Returns a structurally valid report with placeholder values.
  */
 function _fallbackReport(quizAnswers) {
+  // Prefer the quiz-aware fallback from the prompts module — it reads the answers
+  // and steers the reading (oily/dry skin, low sleep, posture, thinning) so even
+  // the no-Gemini path feels calibrated. Falls back to the static report below if
+  // the prompts module isn't loaded. (Both are schema-valid and safe by design.)
+  const prompts = getAuditPrompts();
+  if (prompts && typeof prompts.buildFallbackReport === 'function') {
+    try { return prompts.buildFallbackReport(quizAnswers); } catch { /* static below */ }
+  }
   return {
     auraScore: 55,
     rank: 'ascendant',
@@ -708,9 +716,32 @@ router.post('/analyze', async (req, res) => {
   });
 });
 
+/**
+ * Entitlement check: the full report is unlocked when EITHER the session has been
+ * explicitly paid (one-time legacy/demo path) OR the session's owning user has an
+ * active lookmaxxing subscription (user.lookmaxxingActive === true).
+ * This is the source of truth used by GET /audit/:id and GET /audit/:id/pdf.
+ *
+ * @param {object} session — audit session record
+ * @returns {Promise<boolean>}
+ */
+async function _isUnlocked(session) {
+  if (!session) return false;
+  if (session.paid) return true;
+  if (session.userId) {
+    try {
+      const user = await User.getUserByToken(session.userId);
+      if (user && user.lookmaxxingActive === true) return true;
+    } catch (err) {
+      log.warn('ENTITLEMENT', `user lookup failed: ${err.message}`);
+    }
+  }
+  return false;
+}
+
 // ─── GET /audit/:id ───────────────────────────────────────────────────────────
 
-router.get('/audit/:id', (req, res) => {
+router.get('/audit/:id', async (req, res) => {
   const actor = resolveActor(req);
   // Guest may not have a cookie if they're fetching directly — allow no-auth for
   // existing sessions by matching any identity. We still enforce ownership below.
@@ -722,13 +753,15 @@ router.get('/audit/:id', (req, res) => {
     return res.status(403).json({ error: 'forbidden' });
   }
 
+  const unlocked = await _isUnlocked(session);
+
   events.trackAnonymous('lookmaxing_audit_viewed', { auditId: id }, actor.userId).catch(() => {});
 
   return res.json({
     auditId: id,
-    paid: session.paid,
+    paid: unlocked,
     analyzedAt: session.analyzedAt || null,
-    report: applyResolutionGate(session.geminiReport, session.paid),
+    report: applyResolutionGate(session.geminiReport, unlocked),
     quizAnswers: session.quizAnswers,
     consentGiven: session.consentGiven,
   });
@@ -842,6 +875,74 @@ router.post('/pay/order', async (req, res) => {
   }
 });
 
+// ─── POST /pay/subscribe ─────────────────────────────────────────────────────
+// Primary unlock path for the ₹99/month recurring subscription. Creates a
+// Razorpay subscription (lookmax99 plan) and persists the subscription id.
+// The legacy /pay/order + one-time /pay/webhook remain for backward compat.
+
+router.post('/pay/subscribe', async (req, res) => {
+  const actor = resolveActor(req);
+  if (!actor) return res.status(401).json({ error: 'unauthorized' });
+
+  const { auditId } = req.body || {};
+  if (!auditId) return res.status(400).json({ error: 'auditId required' });
+
+  const session = _getSession(auditId);
+  if (!session) return res.status(404).json({ error: 'audit not found' });
+  if (!canAccess(session, actor)) return res.status(403).json({ error: 'forbidden' });
+
+  // Already unlocked — short-circuit without creating a duplicate subscription.
+  const alreadyUnlocked = await _isUnlocked(session);
+  if (alreadyUnlocked) {
+    return res.json({ alreadyUnlocked: true });
+  }
+
+  try {
+    // Load owning user for name / email / phone (needed for Razorpay customer).
+    const user = session.userId ? await User.getUserByToken(session.userId) : null;
+
+    const sub = await razorpay.createSubscription(
+      'lookmax99',
+      {
+        phone: (user && user.phone) || '',
+        name:  (user && user.name)  || '',
+        email: (user && user.email) || '',
+      },
+      {
+        userId:  actor.userId,
+        auditId,
+        source:  'lookmaxing_audit',
+      }
+    );
+
+    // Persist the subscription id on the session and the user record so the
+    // entitlement check can resolve this subscription back to the user on webhook.
+    _updateSession(auditId, { razorpaySubscriptionId: sub.id });
+    if (user) {
+      await User.updateUser(user.phone, {
+        razorpaySubscriptionId: sub.id,
+        pendingPlan: 'lookmax99',
+      });
+    }
+
+    const live = _razorpayLive();
+    const keyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_mock';
+
+    events.trackAnonymous('lookmaxing_subscribe_initiated', { auditId, subscriptionId: sub.id }, actor.userId).catch(() => {});
+
+    log.info('PAY-SUB', `subscription created for audit ${auditId}: ${sub.id}${sub.mock ? ' (mock)' : ''}`);
+
+    return res.json({
+      subscriptionId: sub.id,
+      keyId,
+      testMode: !live,
+    });
+  } catch (err) {
+    log.error('PAY-SUB', `subscription create failed for ${auditId}: ${err.message}`);
+    return res.status(500).json({ error: 'Something has interrupted the work. Try again in a moment.' });
+  }
+});
+
 // ─── POST /pay/webhook ────────────────────────────────────────────────────────
 
 router.post('/pay/webhook', async (req, res) => {
@@ -891,6 +992,10 @@ router.post('/pay/webhook', async (req, res) => {
 // Demo / dogfood ONLY. Lets the ₹99 → full report + PDF be experienced before
 // live Razorpay keys exist. HARD-DISABLED the instant real keys are configured:
 // then a Razorpay-captured payment (via /pay/webhook) is the only path to unlock.
+//
+// In demo mode this ALSO simulates the recurring subscription activation on the
+// owning user (lookmaxxingActive=true, subscriptionStatus='active', etc.) so the
+// founder can experience the full recurring-entitlement flow before live keys.
 router.post('/pay/test-confirm', async (req, res) => {
   if (_razorpayLive()) {
     return res.status(403).json({ error: 'live payment required' });
@@ -906,6 +1011,28 @@ router.post('/pay/test-confirm', async (req, res) => {
   if (!canAccess(session, actor)) return res.status(403).json({ error: 'forbidden' });
 
   const settled = await _settlePaidAudit(auditId, { paymentId: 'test_mode' });
+
+  // Demo-mode subscription activation: set the user's lookmaxxingActive so the
+  // subscription entitlement check (_isUnlocked) immediately returns true for all
+  // this user's sessions — matching the real webhook path.
+  if (session.userId) {
+    try {
+      const user = await User.getUserByToken(session.userId);
+      if (user) {
+        const userUpdates = {
+          lookmaxxingActive: true,
+          subscriptionStatus: 'active',
+        };
+        if (!user.subscribedAt) userUpdates.subscribedAt = new Date().toISOString();
+        if (!user.lookmaxxingStartedAt) userUpdates.lookmaxxingStartedAt = new Date().toISOString();
+        await User.updateUser(user.phone, userUpdates);
+        log.info('PAY-TEST', `demo subscription activated on user ${actor.userId}`);
+      }
+    } catch (err) {
+      log.warn('PAY-TEST', `demo subscription user update failed: ${err.message}`);
+    }
+  }
+
   events.trackAnonymous('lookmaxing_pay_test_confirmed', { auditId }, actor.userId).catch(() => {});
   log.info('PAY-TEST', `demo-mode unlock for audit ${auditId}`);
   return res.json({ ok: true, testMode: true, auditId, paid: !!(settled && settled.paid) });
@@ -921,7 +1048,10 @@ router.get('/audit/:id/pdf', async (req, res) => {
   const session = _getSession(id);
   if (!session) return res.status(404).json({ error: 'audit not found' });
   if (!canAccess(session, actor)) return res.status(403).json({ error: 'forbidden' });
-  if (!session.paid) return res.status(403).json({ error: 'payment required to download PDF' });
+
+  // Entitlement check: session.paid OR active subscription (lookmaxxingActive)
+  const unlocked = await _isUnlocked(session);
+  if (!unlocked) return res.status(403).json({ error: 'payment required to download PDF' });
   if (!session.geminiReport) return res.status(409).json({ error: 'audit report not yet generated' });
 
   // Cache: if PDF already stored, return signed URL or cached bytes.
@@ -1011,3 +1141,4 @@ module.exports._getSession           = _getSession;   // for merge test assertio
 module.exports._putSession           = _putSession;
 module.exports.applyResolutionGate   = applyResolutionGate;
 module.exports._sanitizeReport       = _sanitizeReport; // Phase 1 safety backstop
+module.exports._isUnlocked           = _isUnlocked;   // entitlement check (tests)

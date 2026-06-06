@@ -477,6 +477,11 @@
       <span class="mc-pill" id="face-shape-pill"></span>
       <span class="lm-signal-sep" aria-hidden="true">·</span>
     </div>
+    <!-- Share the free score (viral growth: every share recruits a new visitor) -->
+    <div style="margin-top:var(--mc-sp-4);">
+      <button type="button" id="share-score-btn" class="mc-btn-ghost" style="min-height:46px;" aria-label="Share my Aura Score" data-event="lookmaxing_share_clicked">Share my Aura Score →</button>
+      <span id="share-copied" hidden style="display:block;margin-top:8px;font-size:12px;color:var(--mc-silver-faint);">Link copied. ◆</span>
+    </div>
   </div>
 
   <!-- Gate teaser -->
@@ -491,7 +496,7 @@
       <span class="mc-light-point" aria-hidden="true"></span>
       Generate Full Report ◆
     </button>
-    <p class="lm-gate-teaser__sub">₹99 · one-time · credits toward month one.</p>
+    <p class="lm-gate-teaser__sub">₹99/month · cancel anytime · your free reading is the trial.</p>
   </div>
 
   <!-- Block 4: Full decomposition (premium, blurred) -->
@@ -620,9 +625,9 @@
       </ul>
       <div class="lm-paywall__price-line">
         <span class="lm-paywall__price">₹99</span>
-        <span class="lm-paywall__price-sub">₹99 · one-time · UPI / cards / wallets</span>
+        <span class="lm-paywall__price-sub">₹99/month · cancel anytime · UPI / cards / wallets</span>
       </div>
-      <p class="lm-paywall__trust">The ₹99 credits toward month one if you continue.</p>
+      <p class="lm-paywall__trust">Your reading was free. This continues it — cancel anytime.</p>
       <p class="lm-paywall__secure">Secured by Razorpay · UPI, cards &amp; wallets · 256-bit encrypted.<br>Your photo is scored, never published. ◆</p>
       <div id="paywall-error" class="lm-paywall__error" hidden role="alert" aria-live="polite"></div>
       <button
@@ -678,6 +683,25 @@
 
   var RAZORPAY_POLL_INTERVAL = 1500;
   var RAZORPAY_POLL_MAX = 10;
+
+  // ── Share the free score: Web Share API on mobile, clipboard fallback ──
+  var shareBtn = document.getElementById('share-score-btn');
+  var shareCopied = document.getElementById('share-copied');
+  if (shareBtn) {
+    shareBtn.addEventListener('click', function () {
+      var url = window.location.origin + '/s/' + auditId;
+      if (window.mc) window.mc.track('lookmaxing_share_clicked', {});
+      if (navigator.share) {
+        navigator.share({ title: 'My Aura Reading', text: 'This is what the room sees. Read yours.', url: url }).catch(function () {});
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url)
+          .then(function () { shareCopied.hidden = false; setTimeout(function () { shareCopied.hidden = true; }, 2500); })
+          .catch(function () { window.prompt('Copy your share link:', url); });
+      } else {
+        window.prompt('Copy your share link:', url);
+      }
+    });
+  }
 
   // ── Canonical Aura Score Object builder ──────────────────────────────────────
   // Shared identical pattern with public/lookmax/index.html (dashboard).
@@ -1031,23 +1055,34 @@
     }
   });
 
-  // ── Razorpay checkout ──
+  // ── Razorpay subscription checkout ──
+  // Calls /pay/subscribe (recurring ₹99/month) instead of the legacy /pay/order
+  // (one-time). In demo/test mode the unlock is settled via /pay/test-confirm so
+  // the founder can experience the full flow before live Razorpay keys exist.
   payBtn.addEventListener('click', function () {
     payBtn.setAttribute('aria-busy', 'true');
     payBtn.disabled = true;
     payBtn.textContent = 'One moment…';
     paywallError.hidden = true;
 
-    fetch('/api/lookmaxing/pay/order', {
+    fetch('/api/lookmaxing/pay/subscribe', {
       method: 'POST',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ auditId: auditId }),
     })
       .then(function (res) {
-        if (!res.ok) throw new Error('order create failed');
+        if (!res.ok) throw new Error('subscription create failed');
         return res.json();
       })
       .then(function (order) {
+        // Already unlocked (subscription already active on this account).
+        if (order.alreadyUnlocked) {
+          paywallForm.hidden = true;
+          paywallSuccess.hidden = false;
+          pollForPaid(0);
+          return;
+        }
+
         // Demo mode (no live Razorpay keys yet): settle the unlock directly so the
         // full report + PDF can be experienced before go-live. Server-disabled the
         // moment live keys are set, after which the Razorpay path below is the only one.
@@ -1073,13 +1108,14 @@
             });
           return;
         }
+
+        // Live mode: open Razorpay subscription checkout.
+        // Razorpay subscription checkout uses subscription_id (not order_id).
         var options = {
           key: order.keyId,
-          amount: order.amount,
-          currency: 'INR',
-          order_id: order.orderId,
+          subscription_id: order.subscriptionId,
           name: 'MainCharacter',
-          description: 'Aura Reading — Full Report',
+          description: 'Aura Reading — ₹99/month',
           prefill: {},
           theme: { color: '#000000' },
           modal: { ondismiss: function () {

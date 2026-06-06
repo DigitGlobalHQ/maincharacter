@@ -223,6 +223,25 @@
       margin: 0 0 var(--mc-sp-3);
     }
 
+    /* ── Premium teaser skeleton (rendered under the blur) ── */
+    .lm-teaser-head {
+      font-family: var(--mc-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--mc-silver-mid, #9a9aa3);
+      margin: 12px 0 6px;
+    }
+    .lm-teaser-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+    .lm-teaser-label { flex: 0 0 40%; font-size: 13px; color: var(--mc-silver-bright, #ececf2); }
+    .lm-teaser-text { flex: 1; font-size: 13px; color: var(--mc-silver-mid, #9a9aa3); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .lm-teaser-val { font-family: var(--mc-font-mono); font-size: 12px; color: var(--mc-silver-faint); }
+    .lm-teaser-bar { flex: 1; display: flex; gap: 3px; }
+    .lm-teaser-tick { flex: 1; height: 6px; border-radius: 2px; background: rgba(198,198,207,0.16); }
+    .lm-teaser-tick.is-on { background: var(--mc-silver-mid, #9a9aa3); }
+    .lm-teaser-swatches { display: flex; gap: 6px; margin-top: 4px; }
+    .lm-teaser-swatch { width: 22px; height: 22px; border-radius: 4px; }
+
     /* ── Paywall gate CTA (centred over first blurred block) ── */
     .lm-gate-teaser {
       text-align: center;
@@ -462,7 +481,7 @@
 
   <!-- Gate teaser -->
   <div class="lm-gate-teaser" id="gate-teaser">
-    <p class="lm-gate-teaser__line">The headline is free. The reading itself is one tap away.</p>
+    <p class="lm-gate-teaser__line">Your score is free. The reading that explains it — the full decomposition, your biggest lever, the quests, style &amp; colour, and a 7-day plan — is one tap away.</p>
     <button
       class="mc-btn-primary--filled mc-btn-primary"
       id="unlock-main-btn"
@@ -472,7 +491,7 @@
       <span class="mc-light-point" aria-hidden="true"></span>
       Generate Full Report ◆
     </button>
-    <p class="lm-gate-teaser__sub">₹99. One tap. The whole reading.</p>
+    <p class="lm-gate-teaser__sub">₹99 · one-time · credits toward month one.</p>
   </div>
 
   <!-- Block 4: Full decomposition (premium, blurred) -->
@@ -855,13 +874,11 @@
       var el = document.getElementById(b.id);
       var wrapEl = document.getElementById(b.wrapId);
       var val = report[b.key];
-      if (val) {
-        el.textContent = JSON.stringify(val, null, 2); // raw display — full.html renders properly
-      } else {
-        el.textContent = '· · ·';
-      }
+      // Behind the blur, render a real structured skeleton (true labels, masked
+      // values) so it reads like a premium report — not raw JSON. The full,
+      // legible render lives on audit-full.html after unlock.
+      el.innerHTML = buildTeaser(b.key, val);
       if (paid) {
-        // Remove blur if paid
         el.classList.remove('mc-blur-gate');
         var blurWrap = wrapEl.querySelector('.mc-blur-wrap');
         if (blurWrap) {
@@ -891,6 +908,65 @@
 
   function capitalise(s) {
     return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  }
+
+  // ── Premium teaser: real skeleton, masked values (sits under the blur) ──
+  function fmtName(s) {
+    return (s || '').replace(/([A-Z])/g, ' $1').replace(/[_-]/g, ' ')
+      .replace(/\s+/g, ' ').trim().replace(/^./, function (c) { return c.toUpperCase(); });
+  }
+  function maskBar(score) {
+    var filled = Math.max(1, Math.round((score || 50) / 10));
+    var t = '';
+    for (var i = 0; i < 10; i++) t += '<span class="lm-teaser-tick' + (i < filled ? ' is-on' : '') + '"></span>';
+    return '<span class="lm-teaser-bar" aria-hidden="true">' + t + '</span>';
+  }
+  function row(label, right) {
+    return '<span class="lm-teaser-row"><span class="lm-teaser-label">' + label + '</span>' + right + '</span>';
+  }
+  function buildTeaser(key, val) {
+    if (!val) return '<p class="lm-teaser-text">· · ·</p>';
+    var html = '';
+    if (key === 'decomposition') {
+      var L = { skin: 'Skin', hair: 'Hair', jawAndFace: 'Jaw & Face', bodyAndPosture: 'Body & Posture', lifestyleSignals: 'Lifestyle' };
+      Object.keys(L).forEach(function (r) {
+        var ms = val[r];
+        if (!ms || !ms.length) return;
+        html += '<p class="lm-teaser-head">' + L[r] + '</p>';
+        ms.slice(0, 3).forEach(function (m) {
+          html += row(fmtName(m.metric), maskBar(m.score) + '<span class="lm-teaser-val">' + (m.score || '') + '</span>');
+        });
+      });
+      return html || '<p class="lm-teaser-text">Skin · Hair · Jaw · Body · Lifestyle</p>';
+    }
+    if (key === 'biggestLever') {
+      html += '<p class="lm-teaser-head">' + fmtName(val.metric || 'Your one lever') + '</p>';
+      html += '<p class="lm-teaser-text">' + (val.rationale || 'The single axis the work moves first — and exactly why it changes the room.') + '</p>';
+      return html;
+    }
+    if (key === 'quests') {
+      (val || []).slice(0, 4).forEach(function (q, i) {
+        var t = typeof q === 'string' ? q : (q.text || q.title || '');
+        html += row('Quest ' + (i + 1), '<span class="lm-teaser-text">' + t + '</span>');
+      });
+      return html || '<p class="lm-teaser-text">Specific tasks, tied to your reading.</p>';
+    }
+    if (key === 'styleAndColour') {
+      if (val.haircut) html += row('Haircut', '<span class="lm-teaser-text">' + val.haircut + '</span>');
+      if (val.palette && val.palette.length) {
+        html += '<p class="lm-teaser-head">Your palette</p><span class="lm-teaser-swatches" aria-hidden="true">';
+        val.palette.slice(0, 6).forEach(function (c) { html += '<span class="lm-teaser-swatch" style="background:' + (c.hex || c) + '"></span>'; });
+        html += '</span>';
+      }
+      return html || '<p class="lm-teaser-text">What suits the geometry you have.</p>';
+    }
+    if (key === 'starterPlan') {
+      (val || []).slice(0, 7).forEach(function (d, i) {
+        html += row('Day ' + (i + 1), '<span class="lm-teaser-text">' + (d.morning || d.title || d.focus || 'Morning & evening protocol') + '</span>');
+      });
+      return html || '<p class="lm-teaser-text">Seven days. Morning and evening.</p>';
+    }
+    return '';
   }
 
   // ── Blur click → paywall ──

@@ -516,10 +516,18 @@
   }
 
   function showUploadFallback() {
-    cameraPending.innerHTML = '<p>Camera access not available. Pick a photo from your library.</p>';
+    cameraPending.innerHTML =
+      '<p style="margin-bottom:var(--mc-sp-4);">No camera? No matter. A clear, well-lit photo from your library reads just as well.</p>' +
+      '<button type="button" class="mc-btn-primary" id="fallback-pick" style="width:100%;">Choose a photo →</button>' +
+      '<button type="button" class="mc-btn-ghost" id="fallback-retry" style="width:100%;margin-top:var(--mc-sp-2);">Try the camera again</button>';
+    cameraPending.hidden = false;
     shutterWrap.hidden = true;
     faceGuide.hidden = true;
     cameraTips.hidden = true;
+    var pick = document.getElementById('fallback-pick');
+    var retry = document.getElementById('fallback-retry');
+    if (pick) pick.addEventListener('click', function () { fileInput.click(); });
+    if (retry) retry.addEventListener('click', startCamera);
   }
 
   grantBtn.addEventListener('click', startCamera);

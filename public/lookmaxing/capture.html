@@ -168,6 +168,30 @@
       padding: var(--mc-sp-5);
       text-align: center;
     }
+
+    /* ── Upload-first entry state ── */
+    .lm-camera-frame { border-style: dashed; }
+    .lm-camera-frame.is-live { border-style: solid; }
+    .lm-camera-frame.is-dragover { border-color: var(--mc-silver-mid); background: var(--mc-elev-1); }
+    .lm-upload-zone {
+      display: flex; flex-direction: column; align-items: center; gap: var(--mc-sp-1);
+      width: 100%; max-width: 320px; padding: var(--mc-sp-4) var(--mc-sp-4);
+      border-radius: var(--mc-r-2); cursor: pointer;
+      transition: background-color var(--mc-dur-fast) var(--mc-ease);
+    }
+    .lm-upload-zone:hover, .lm-upload-zone:focus-visible { background: var(--mc-elev-1); outline: none; }
+    .lm-upload-zone__icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 52px; height: 52px; margin-bottom: var(--mc-sp-2);
+      border-radius: var(--mc-r-2); background: var(--mc-elev-2); color: var(--mc-silver-bright);
+    }
+    .lm-upload-zone__title { font-family: var(--mc-font-sans); font-size: var(--mc-fs-body); font-weight: 500; color: var(--mc-silver-bright); }
+    .lm-upload-zone__sub { font-size: var(--mc-fs-small); color: var(--mc-silver-mid); }
+    .lm-upload-zone__hint { font-size: 12px; color: var(--mc-silver-faint); }
+    .lm-upload-or { display: flex; align-items: center; gap: var(--mc-sp-3); width: 64%; }
+    .lm-upload-or .lm-or__rule { flex: 1; height: 1px; background: var(--mc-line); }
+    .lm-upload-or .lm-or__word { font-family: var(--mc-font-mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--mc-silver-faint); }
+    .lm-use-camera { display: inline-flex; align-items: center; justify-content: center; gap: var(--mc-sp-2); }
     .lm-camera-pending p {
       font-family: var(--mc-font-mono);
       font-size: var(--mc-fs-mono);
@@ -245,32 +269,6 @@
       cursor: pointer;
     }
     .lm-consent__label a { color: var(--mc-silver-bright); text-decoration: underline; }
-
-    /* Upload CTA */
-    .lm-upload-section {
-      margin-bottom: var(--mc-sp-4);
-    }
-    .lm-upload-input { display: none; }
-    .lm-upload-label {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--mc-sp-2);
-      min-height: 44px;
-      cursor: pointer;
-      font-family: var(--mc-font-sans);
-      font-size: var(--mc-fs-small);
-      font-weight: 400;
-      letter-spacing: var(--mc-ls-wide);
-      text-transform: uppercase;
-      color: var(--mc-silver-mid);
-      border-bottom: 1px solid transparent;
-      transition: color var(--mc-dur-base) var(--mc-ease),
-                  border-color var(--mc-dur-base) var(--mc-ease);
-    }
-    .lm-upload-label:hover {
-      color: var(--mc-silver-bright);
-      border-bottom-color: var(--mc-silver-bright);
-    }
 
     .lm-privacy {
       font-size: var(--mc-fs-small);
@@ -357,12 +355,21 @@
 
   <!-- Camera frame -->
   <div class="lm-camera-frame" id="camera-frame" aria-label="Camera preview">
-    <!-- Permission pending state -->
+    <!-- Upload-first entry state: drag-and-drop / click to browse, camera is secondary -->
     <div class="lm-camera-pending" id="camera-pending">
-      <p>Awaiting camera.</p>
-      <button class="mc-btn-ghost" id="grant-camera-btn" aria-label="Grant camera access">
-        Grant access →
+      <div class="lm-upload-zone" id="upload-zone" role="button" tabindex="0" aria-label="Upload a photo — drag and drop or click to browse" data-event="lookmaxing_photo_uploaded" data-event-props='{"source":"upload"}'>
+        <span class="lm-upload-zone__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4"/><path d="M8 8l4-4 4 4"/><path d="M5 15v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3"/></svg>
+        </span>
+        <span class="lm-upload-zone__title">Upload a photo</span>
+        <span class="lm-upload-zone__sub">Drag and drop or click to browse</span>
+      </div>
+      <div class="lm-upload-or" aria-hidden="true"><span class="lm-or__rule"></span><span class="lm-or__word">or</span><span class="lm-or__rule"></span></div>
+      <button type="button" class="mc-btn-ghost lm-use-camera" id="use-camera-btn">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5a2 2 0 0 1 2-2h1.6l1.2-1.8h6.4l1.2 1.8H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.2"/></svg>
+        Use camera
       </button>
+      <span class="lm-upload-zone__hint">JPG, PNG up to 10MB</span>
     </div>
 
     <!-- Live video (shown after permission) -->
@@ -420,20 +427,8 @@
     </label>
   </div>
 
-  <!-- Upload fallback -->
-  <div class="lm-upload-section">
-    <input
-      type="file"
-      id="file-input"
-      class="lm-upload-input"
-      accept="image/*"
-      capture="user"
-      aria-label="Pick a photo from your library"
-    >
-    <label for="file-input" class="lm-upload-label" data-event="lookmaxing_photo_uploaded" data-event-props='{"source":"upload"}'>
-      Or pick one from your library →
-    </label>
-  </div>
+  <!-- Hidden file input — triggered by the upload zone (click to browse) -->
+  <input type="file" id="file-input" accept="image/jpeg,image/png,image/*" hidden aria-hidden="true">
 
   <p class="lm-privacy">We score the photo. We do not publish it. ◆</p>
 
@@ -471,7 +466,9 @@
   var previewImg = document.getElementById('preview-img');
   var captureCanvas = document.getElementById('capture-canvas');
   var cameraPending = document.getElementById('camera-pending');
-  var grantBtn = document.getElementById('grant-camera-btn');
+  var cameraFrame = document.getElementById('camera-frame');
+  var uploadZone = document.getElementById('upload-zone');
+  var useCameraBtn = document.getElementById('use-camera-btn');
   var shutterWrap = document.getElementById('shutter-wrap');
   var shutterBtn = document.getElementById('shutter-btn');
   var faceGuide = document.getElementById('face-guide');
@@ -512,10 +509,10 @@
     });
   }
 
-  // ── Camera init ──
+  // ── Upload is the default; camera is opt-in via "Use camera" ──
   function startCamera() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      showUploadFallback();
+      showQualityWarning('Camera is not available here. Upload a photo instead.');
       return;
     }
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
@@ -524,32 +521,36 @@
         videoEl.srcObject = s;
         videoEl.hidden = false;
         cameraPending.hidden = true;
+        cameraFrame.classList.add('is-live');
         shutterWrap.hidden = false;
         faceGuide.hidden = false;
         cameraTips.hidden = false;
       })
       .catch(function () {
-        showUploadFallback();
+        showQualityWarning('Camera permission was blocked. Upload a photo instead.');
       });
   }
 
-  function showUploadFallback() {
-    cameraPending.innerHTML =
-      '<p style="margin-bottom:var(--mc-sp-4);">No camera? No matter. A clear, well-lit photo from your library reads just as well.</p>' +
-      '<button type="button" class="mc-btn-primary" id="fallback-pick" style="width:100%;">Choose a photo →</button>' +
-      '<button type="button" class="mc-btn-ghost" id="fallback-retry" style="width:100%;margin-top:var(--mc-sp-2);">Try the camera again</button>';
-    cameraPending.hidden = false;
-    shutterWrap.hidden = true;
-    faceGuide.hidden = true;
-    cameraTips.hidden = true;
-    var pick = document.getElementById('fallback-pick');
-    var retry = document.getElementById('fallback-retry');
-    if (pick) pick.addEventListener('click', function () { fileInput.click(); });
-    if (retry) retry.addEventListener('click', startCamera);
-  }
+  // Click / keyboard on the zone → browse; the camera button → live camera.
+  uploadZone.addEventListener('click', function () { fileInput.click(); });
+  uploadZone.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+  });
+  useCameraBtn.addEventListener('click', startCamera);
 
-  grantBtn.addEventListener('click', startCamera);
-  startCamera();
+  // Drag-and-drop onto the frame.
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    cameraFrame.addEventListener(ev, function (e) { e.preventDefault(); cameraFrame.classList.add('is-dragover'); });
+  });
+  ['dragleave', 'dragend'].forEach(function (ev) {
+    cameraFrame.addEventListener(ev, function (e) { e.preventDefault(); cameraFrame.classList.remove('is-dragover'); });
+  });
+  cameraFrame.addEventListener('drop', function (e) {
+    e.preventDefault();
+    cameraFrame.classList.remove('is-dragover');
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
 
   // ── Shutter ──
   shutterBtn.addEventListener('click', function () {
@@ -607,19 +608,21 @@
     previewImg.hidden = true;
     previewImg.src = '';
     reviewControls.classList.remove('is-active');
-    faceGuide.hidden = false;
-    cameraTips.hidden = false;
-    shutterWrap.hidden = false;
-    videoEl.hidden = false;
+    videoEl.hidden = true;
+    faceGuide.hidden = true;
+    cameraTips.hidden = true;
+    shutterWrap.hidden = true;
+    if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+    cameraFrame.classList.remove('is-live');
+    cameraPending.hidden = false;   // back to the upload-first entry
     updateAnalyzeBtn();
-    startCamera();
   });
 
-  // ── File upload fallback ──
-  fileInput.addEventListener('change', function () {
-    var file = fileInput.files[0];
+  // ── File handling (used by both click-to-browse and drag-and-drop) ──
+  function handleFile(file) {
     if (!file) return;
-    // Check minimum size via Image
+    if (file.type && file.type.indexOf('image/') !== 0) { showQualityWarning('That is not an image. Use a JPG or PNG.'); return; }
+    if (file.size > 10 * 1024 * 1024) { showQualityWarning('That file is over 10MB. Try a smaller photo.'); return; }
     var img = new Image();
     var url = URL.createObjectURL(file);
     img.onload = function () {
@@ -636,15 +639,16 @@
       cameraTips.hidden = true;
       shutterWrap.hidden = true;
       cameraPending.hidden = true;
+      cameraFrame.classList.add('is-live');
       reviewControls.classList.add('is-active');
       if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); }
       updateAnalyzeBtn();
-      if (window.mc) {
-        window.mc.track('lookmaxing_photo_uploaded', { source: 'upload' });
-      }
+      if (window.mc) { window.mc.track('lookmaxing_photo_uploaded', { source: 'upload' }); }
     };
+    img.onerror = function () { showQualityWarning('That file could not be read. Try another photo.'); URL.revokeObjectURL(url); };
     img.src = url;
-  });
+  }
+  fileInput.addEventListener('change', function () { handleFile(fileInput.files[0]); });
 
   // ── Analysing overlay (no blank screen during the reading) ──
   // NOTE: this script runs before the #analyzing-overlay markup further down the

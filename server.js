@@ -111,8 +111,18 @@ app.use('/api/admin/login', tightLimiter);
 app.use('/api/lookmax/auth', tightLimiter);
 app.use('/api', globalLimiter);
 
+// Direct .html requests (/audit.html, /lookmaxing/tools/x.html, …) → serve through
+// servePage so the light-mode + analytics <head> is injected. Must precede static.
+// Clean-URL routes call servePage directly; non-.html assets fall through.
+app.get(/\.html$/i, (req, res, next) => {
+  const root = path.join(__dirname, 'public') + path.sep;
+  const abs = path.join(__dirname, 'public', req.path);
+  if (!abs.startsWith(root) || !fs.existsSync(abs)) return next();
+  return servePage(res, abs);
+});
+
 // Static files — /public directory
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 // ═══════════════════════════════════════════════════════════════════
 // PAGE ROUTES
@@ -122,7 +132,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 // public HTML pages from env (lib/analytics-head). No-op until configured. Pages
 // are read once and cached per-process (env is fixed at boot).
 const { analyticsHead } = require('./lib/analytics-head');
+const { themeHead } = require('./lib/theme-head');
 const _ANALYTICS_HEAD = analyticsHead();
+const _THEME_HEAD = themeHead();
 const _pageCache = new Map();
 function servePage(res, absPath) {
   let html = _pageCache.get(absPath);
@@ -133,8 +145,8 @@ function servePage(res, absPath) {
       res.sendStatus(404);
       return;
     }
-    if (_ANALYTICS_HEAD && html.includes('</head>')) {
-      html = html.replace('</head>', _ANALYTICS_HEAD + '</head>');
+    if (html.includes('</head>')) {
+      html = html.replace('</head>', _ANALYTICS_HEAD + _THEME_HEAD + '</head>');
     }
     _pageCache.set(absPath, html);
   }
@@ -156,25 +168,25 @@ app.get('/start', (req, res) => {
 
 // Post-Enrollment Welcome
 app.get('/welcome', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'welcome.html'));
+  servePage(res, path.join(__dirname, 'public', 'welcome.html'));
 });
 
 // Audit Funnel (existing)
 app.get('/audit', (req, res) => {
   // Night-2 (P3.4): serve the new Aesthetic Audit funnel. Legacy prototype
   // remains at index.html (served at /audit-legacy) for reference/rollback.
-  res.sendFile(path.join(__dirname, 'public', 'audit.html'));
+  servePage(res, path.join(__dirname, 'public', 'audit.html'));
 });
 
 app.get('/audit-legacy', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  servePage(res, path.join(__dirname, 'index.html'));
 });
 
 // User Dashboard
 app.get('/dashboard/:token', async (req, res) => {
   const user = await User.getUserByToken(req.params.token);
   if (!user) return res.status(404).send('Dashboard not found.');
-  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+  servePage(res, path.join(__dirname, 'public', 'dashboard.html'));
 });
 
 // Paywall (P5) — 3-card subscribe page (Orator / Lookmaxxing / Aura++).
@@ -183,35 +195,35 @@ app.get('/dashboard/:token', async (req, res) => {
 // no live charge can fire during the founder's dogfood window (DECISIONS #1).
 app.get('/paywall', (req, res) => {
   if (process.env.PAYWALL_PUBLIC === 'true') {
-    return res.sendFile(path.join(__dirname, 'public', 'paywall.html'));
+    return servePage(res, path.join(__dirname, 'public', 'paywall.html'));
   }
-  res.sendFile(path.join(__dirname, 'public', 'paywall-waitlist.html'));
+  servePage(res, path.join(__dirname, 'public', 'paywall-waitlist.html'));
 });
 
 // Post-payment confirmation (P6) — Razorpay callback lands here.
 app.get('/payment-confirmed', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'payment-confirmed.html'));
+  servePage(res, path.join(__dirname, 'public', 'payment-confirmed.html'));
 });
 
 // Legal — Terms & Privacy (clean URLs; linked from the sign-in consent line).
 app.get('/terms', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'terms.html'));
+  servePage(res, path.join(__dirname, 'public', 'terms.html'));
 });
 app.get('/privacy', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'privacy.html'));
+  servePage(res, path.join(__dirname, 'public', 'privacy.html'));
 });
 
 // Audit result magic-link target (audit-confirmation email). Serves the audit
 // SPA; deep result rehydration from the link is a V4 item (BACKLOG).
 app.get('/audit/result/:token', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'audit.html'));
+  servePage(res, path.join(__dirname, 'public', 'audit.html'));
 });
 
 // ─── Lookmaxing (Stage-1 Audit Engine, Wave 2A) ───
 // Static assets + pretty-URL routes for the 8-surface audit funnel.
 // Wave 2B (frontend-agent) ships the HTML; these routes serve whatever is present.
 // Cited: briefs/stage-1-audit-spec.md §3.
-app.use('/lookmaxing', express.static(path.join(__dirname, 'public', 'lookmaxing')));
+app.use('/lookmaxing', express.static(path.join(__dirname, 'public', 'lookmaxing'), { index: false }));
 
 const lookmaxingPage = (file) => (req, res) => {
   const p = path.join(__dirname, 'public', 'lookmaxing', file);
@@ -249,10 +261,10 @@ app.get('/lookmaxing/fork', (req, res) => {
   try {
     html = fs.readFileSync(p, 'utf8');
   } catch {
-    return res.sendFile(path.join(__dirname, 'public', 'lookmaxing', 'index.html'));
+    return servePage(res, path.join(__dirname, 'public', 'lookmaxing', 'index.html'));
   }
   const trialLive = process.env.LOOKMAX_TRIAL_LIVE !== 'false';
-  html = html.replace('</head>', `<script>window.LOOKMAX_TRIAL_LIVE=${trialLive};</script></head>`);
+  html = html.replace('</head>', `<script>window.LOOKMAX_TRIAL_LIVE=${trialLive};</script>` + _ANALYTICS_HEAD + _THEME_HEAD + '</head>');
   res.type('html').send(html);
 });
 
@@ -260,9 +272,9 @@ app.get('/lookmaxing/fork', (req, res) => {
 // Static assets (manifest, sw.js, app.css/js, icons, *.html) + pretty-URL routes
 // so the PWA can use clean paths without the .html suffix. Static is mounted
 // first; requests for pretty URLs fall through to the explicit handlers below.
-app.use('/lookmax', express.static(path.join(__dirname, 'public', 'lookmax')));
+app.use('/lookmax', express.static(path.join(__dirname, 'public', 'lookmax'), { index: false }));
 const lookmaxPage = (file) => (req, res) =>
-  res.sendFile(path.join(__dirname, 'public', 'lookmax', file));
+  servePage(res, path.join(__dirname, 'public', 'lookmax', file));
 app.get('/lookmax', lookmaxPage('index.html'));
 app.get('/lookmax/', lookmaxPage('index.html'));
 app.get('/lookmax/settings', lookmaxPage('settings.html'));
@@ -276,17 +288,17 @@ app.get('/lookmax/reveal', lookmaxPage('reveal.html'));
 
 // Upgrade/Pricing
 app.get('/upgrade', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'upgrade.html'));
+  servePage(res, path.join(__dirname, 'public', 'upgrade.html'));
 });
 
 // Paywall (legacy)
 app.get('/evolve', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'upgrade.html'));
+  servePage(res, path.join(__dirname, 'public', 'upgrade.html'));
 });
 
 // Admin Panel
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+  servePage(res, path.join(__dirname, 'public', 'admin.html'));
 });
 
 // ═══════════════════════════════════════════════════════════════════

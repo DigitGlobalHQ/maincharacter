@@ -1252,3 +1252,29 @@ a comment-excluding detector (em-dashes only live in comments or copy) and finis
   audit-page, paywall-email-required) — fix the guard, never revert approved copy.
 - Final classified scan: 0 user-facing dashes remain; 115 intentional (104 LLM
   prompts, 7 admin null-cells, 4 code comments). Full suite 1516 pass; smoke 44/44.
+
+## 2026-06-07 — Opt-in light mode (whole site)
+
+Founder requested a light mode. Dark stays the default/canonical identity; light is
+opt-in (toggle + follows device on first visit, persisted).
+
+- lib/theme-head.js: one injected <head> fragment — (1) no-flash boot sets
+  <html data-theme> before paint from localStorage('mc-theme') or prefers-color-scheme
+  (defaults dark on failure); (2) a single :root[data-theme="light"] block re-points
+  every COLOUR token (both the inline-page `--*` set and the shared tokens.css `--mc-*`
+  set) to a designed ivory/graphite palette — NOT a naive invert; (3) a fixed
+  .mc-theme-toggle (◐/◑) that persists choice. Dark values never redefined → dark is
+  byte-identical. Spacing/font/radius tokens untouched (colour only).
+- Injection through ONE seam: servePage now injects analytics+theme; the 16
+  res.sendFile('*.html') routes converted to servePage; a new app.get(/\.html$/)
+  interceptor covers direct .html; express.static mounts set { index: false } so
+  directory-index pages fall through to servePage (they were bypassing injection).
+- Made the stray brand-literal hexes flip: converted them to var(--token,#dark) inside
+  <style> blocks only (never <script>, never custom-prop definitions) so dark is
+  unchanged and light flips. On the --mc-* (lookmaxing) surfaces the introduced tokens
+  were remapped to --mc-* to satisfy the no-gold brand guard.
+- Tests: tests/theme-head.test.js; integration-verified injection on /, /audit,
+  /paywall, /lookmaxing(/), /lookmax/*, /upgrade, /privacy.html, /lookmaxing/tools.
+  Full suite 1521 pass; smoke 44/44.
+- OPEN: visual QA is the founder's — the palette is correct by construction but a few
+  literal-heavy or inline-style spots may need touch-ups once seen on real pages.

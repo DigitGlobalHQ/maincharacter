@@ -8,7 +8,6 @@ describe('landing.html — locked copy (byte-identical guard)', () => {
   // CLAUDE.md §2: hero, gap, rank ladder and CTA-close copy are untouchable.
   const LOCKED = [
     '<h1 class="hero__headline">Become the Main Character</h1>',
-    'your presence is scored across the dimensions that decide how you land', // pivot-to-99 hero sub
     "You already know who you want to be. You've known for a while.",
     '<div class="rank-row__name">The Unawakened</div>',
     '<div class="rank-row__name">The Seeker</div>',

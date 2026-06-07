@@ -29,18 +29,20 @@
     }
 
     .lm-fork {
-      min-height: calc(100vh - 56px);
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: var(--mc-sp-7) var(--mc-sp-4);
+      padding: var(--mc-sp-5) var(--mc-sp-4);
     }
-    @media (min-width: 768px) { .lm-fork { min-height: calc(100vh - 72px); padding: var(--mc-sp-7) var(--mc-sp-6); } }
+    @media (min-width: 768px) { .lm-fork { padding: var(--mc-sp-5) var(--mc-sp-6); } }
 
     .lm-fork__header {
       text-align: center;
-      margin-bottom: var(--mc-sp-7);
+      margin-bottom: var(--mc-sp-5);
     }
     .lm-fork__eyebrow { margin: 0 0 var(--mc-sp-4); }
     .lm-fork__heading {
@@ -208,6 +210,32 @@
       .lm-spinner span { animation: none; opacity: 1; }
       .lm-email-expand { transition: none; }
     }
+
+    /* ── One-screen layout: the page itself never scrolls; the content column
+       centres and only scrolls internally on a very short viewport. ── */
+    html, body.lookmaxing { height: 100%; }
+    body.lookmaxing { display: flex; flex-direction: column; overflow: hidden; }
+    .lm-nav, .lm-footer { flex-shrink: 0; }
+    .lm-footer { padding: var(--mc-sp-3) var(--mc-sp-4); }
+
+    /* ── Explicit consent checkboxes (compliance) ── */
+    .lm-consent2 { display: flex; flex-direction: column; gap: var(--mc-sp-3); margin: var(--mc-sp-5) 0 0; }
+    .lm-check { display: flex; align-items: flex-start; gap: var(--mc-sp-3); cursor: pointer; }
+    .lm-check input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+    .lm-check__box {
+      flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px;
+      border: 1px solid var(--mc-silver-mid); border-radius: var(--mc-r-1);
+      display: flex; align-items: center; justify-content: center;
+      transition: background-color var(--mc-dur-fast) var(--mc-ease), border-color var(--mc-dur-fast) var(--mc-ease);
+    }
+    .lm-check__box svg { display: none; }
+    .lm-check__box svg path { stroke: var(--mc-black); }
+    .lm-check input:checked + .lm-check__box { background: var(--mc-silver-bright); border-color: var(--mc-silver-bright); }
+    .lm-check input:checked + .lm-check__box svg { display: block; }
+    .lm-check input:focus-visible + .lm-check__box { outline: 2px solid var(--mc-light-point); outline-offset: 2px; }
+    .lm-check__text { font-size: 12.5px; line-height: 1.5; color: var(--mc-silver-mid); }
+    .lm-check__text a { color: var(--mc-silver-bright); text-decoration: underline; text-underline-offset: 2px; }
+    .lm-fork-card__btn[disabled] { opacity: .42; cursor: not-allowed; }
   </style>
 <style>.lm-nav__brand{display:inline-flex;align-items:center;gap:8px;}.lm-nav__logo{width:24px;height:24px;object-fit:contain;}</style>
 </head>
@@ -262,7 +290,21 @@
         <label for="auth-password" class="mc-eyebrow" style="display:block;margin:var(--mc-sp-3) 0 var(--mc-sp-2);">Password</label>
         <input type="password" id="auth-password" class="lm-email-input" placeholder="At least 8 characters" autocomplete="current-password">
 
-        <button class="mc-btn-primary lm-fork-card__btn" id="auth-submit-btn" style="margin-top:var(--mc-sp-4);">
+        <!-- Explicit consent — both required before either sign-in path activates -->
+        <div class="lm-consent2">
+          <label class="lm-check">
+            <input type="checkbox" id="consent-age">
+            <span class="lm-check__box"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M2 6l3 3 5-5" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="lm-check__text">I am 18 years of age or older.</span>
+          </label>
+          <label class="lm-check">
+            <input type="checkbox" id="consent-terms">
+            <span class="lm-check__box"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M2 6l3 3 5-5" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="lm-check__text">I agree to the <a href="/terms" target="_blank" rel="noopener">Terms of Use</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</span>
+          </label>
+        </div>
+
+        <button class="mc-btn-primary lm-fork-card__btn" id="auth-submit-btn" style="margin-top:var(--mc-sp-4);" disabled aria-disabled="true">
           Continue →
         </button>
 
@@ -270,16 +312,10 @@
           New here? A new email creates your account. Returning? Use the same password.
         </p>
         <div id="auth-error" role="alert" aria-live="polite" hidden style="text-align:center;margin-top:var(--mc-sp-2);font-size:13px;color:var(--mc-silver-bright);"></div>
-
-        <p class="lm-fork-card__legal">
-          By continuing you confirm you are 18 or older and agree to the
-          <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.
-        </p>
       </div>
     </div>
   </div>
 
-  <p class="lm-fork__trust">The photo never leaves your reading. We score it. We do not publish it. ◆</p>
 </main>
 
 <footer class="lm-footer">
@@ -296,7 +332,10 @@
   var passEl = document.getElementById('auth-password');
   var submitBtn = document.getElementById('auth-submit-btn');
   var errEl = document.getElementById('auth-error');
+  var ageEl = document.getElementById('consent-age');
+  var termsEl = document.getElementById('consent-terms');
   var NEXT = '/lookmaxing/quiz';
+  var CONSENT_MSG = 'Please confirm your age and accept the Terms and Privacy Policy to continue.';
 
   // Already signed in? Skip straight to the reading.
   if (localStorage.getItem('lookmax.token')) {
@@ -306,6 +345,16 @@
 
   function showError(msg) { errEl.textContent = msg; errEl.hidden = false; }
   function clearError() { errEl.hidden = true; errEl.textContent = ''; }
+
+  // ── Consent gate: both boxes required before any sign-in path activates ──
+  function consented() { return !!(ageEl && ageEl.checked && termsEl && termsEl.checked); }
+  function updateGate() {
+    submitBtn.disabled = !consented();
+    submitBtn.setAttribute('aria-disabled', consented() ? 'false' : 'true');
+  }
+  if (ageEl) ageEl.addEventListener('change', function () { updateGate(); clearError(); });
+  if (termsEl) termsEl.addEventListener('change', function () { updateGate(); clearError(); });
+  updateGate();
 
   // Surface a bounced Google attempt cleanly (no dead-ends).
   var params = new URLSearchParams(location.search);
@@ -319,6 +368,11 @@
     .then(function (d) { googleConfigured = !!(d && d.google); })
     .catch(function () { /* assume not configured */ });
   googleBtn.addEventListener('click', function (e) {
+    if (!consented()) {
+      e.preventDefault();
+      showError(CONSENT_MSG);
+      return;
+    }
     if (!googleConfigured) {
       e.preventDefault();
       showError('Google sign-in is being set up. Use your email below for now.');
@@ -328,6 +382,7 @@
   // ── Email + password: one "Continue" = sign in OR sign up ──
   function submit() {
     clearError();
+    if (!consented()) { showError(CONSENT_MSG); return; }
     var email = (emailEl.value || '').trim();
     var password = passEl.value || '';
     if (!email || email.indexOf('@') < 0) { showError('Enter a valid email address.'); emailEl.focus(); return; }

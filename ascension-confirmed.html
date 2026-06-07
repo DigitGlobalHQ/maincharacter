@@ -16,12 +16,12 @@
     --ink: #f4f1ea;
     --ink-dim: #9b988f;
     --ink-faint: #5c5a54;
-    --gold: #e8b84b;
-    --gold-bright: #f5d07a;
-    --gold-glow: rgba(232,184,75,0.18);
-    --orator: #f0a500;
-    --aesthetic: #b06fd8;
-    --sage: #3dbfa0;
+    --gold: #c0c0c0;
+    --gold-bright: #e8e8e8;
+    --gold-glow: rgba(255,255,255,0.18);
+    --orator: #c0c0c0;
+    --aesthetic: #c0c0c0;
+    --sage: #c0c0c0;
     --border: rgba(255,255,255,0.07);
     --serif: 'Cormorant Garamond', Georgia, serif;
     --sans: 'Sora', system-ui, sans-serif;
@@ -62,7 +62,7 @@
     transform: translate(-50%, -60%);
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, rgba(232,184,75,0.06) 0%, transparent 60%);
+    background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 60%);
     pointer-events: none;
     animation: pulseGlow 4s ease-in-out infinite;
   }
@@ -100,7 +100,7 @@
     position: absolute;
     inset: -8px;
     border-radius: 50%;
-    border: 1px solid rgba(232,184,75,0.15);
+    border: 1px solid rgba(255,255,255,0.15);
     animation: ringPulse 2s ease-in-out 1.5s infinite;
   }
 
@@ -314,7 +314,7 @@
   // SUBTLE GOLD PARTICLES
   // ═══════════════════════════════════════════════════════════════
 
-  const colors = ['#e8b84b', '#f5d07a', '#f0a500', '#b06fd8', '#3dbfa0'];
+  const colors = ['#c0c0c0', '#e8e8e8', '#c0c0c0', '#c0c0c0', '#c0c0c0'];
 
   function createParticle() {
     const particle = document.createElement('div');

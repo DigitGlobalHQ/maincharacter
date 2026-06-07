@@ -101,10 +101,10 @@
   function drawOverlay(px) {
     canvas2.width = canvas.width; canvas2.height = canvas.height;
     ctx2.drawImage(img, 0, 0, canvas2.width, canvas2.height);
-    ctx2.fillStyle = 'rgba(232,184,75,0.55)';
+    ctx2.fillStyle = 'rgba(255,255,255,0.55)';
     px.forEach(function (p) { ctx2.beginPath(); ctx2.arc(p.x, p.y, 1.1, 0, 6.283); ctx2.fill(); });
     var I = window.FaceMetrics.INDICES;
-    ctx2.strokeStyle = 'rgba(232,184,75,0.85)'; ctx2.lineWidth = 1.4;
+    ctx2.strokeStyle = 'rgba(255,255,255,0.85)'; ctx2.lineWidth = 1.4;
     function line(a, b) { ctx2.beginPath(); ctx2.moveTo(px[a].x, px[a].y); ctx2.lineTo(px[b].x, px[b].y); ctx2.stroke(); }
     line(I.cheekR, I.jawR); line(I.jawR, I.chin); line(I.chin, I.jawL); line(I.jawL, I.cheekL);
     line(I.rEyeOuter, I.rEyeInner); line(I.lEyeInner, I.lEyeOuter); line(I.foreheadTop, I.chin);
@@ -152,11 +152,11 @@
     g.textAlign = 'center';
     var h = heroFor(CFG.focus, lastMetrics);
     g.fillStyle = '#9a8f73'; g.font = '26px Georgia'; g.fillText('F A C I A L   A N A L Y S I S', 600, 92);
-    g.fillStyle = '#e8b84b'; g.font = 'italic 180px Georgia'; g.fillText(String(h.num), 600, 320);
+    g.fillStyle = '#c0c0c0'; g.font = 'italic 180px Georgia'; g.fillText(String(h.num), 600, 320);
     g.fillStyle = '#9a8f73'; g.font = '24px Georgia'; g.fillText(String(h.label).toUpperCase(), 600, 372);
     g.fillStyle = '#f4f1ea'; g.font = 'italic 38px Georgia';
     g.fillText(lastMetrics.faceShape.shape + ' · Symmetry ' + lastMetrics.symmetry.overall + ' · Jaw ' + lastMetrics.jawline.score, 600, 462);
-    g.fillStyle = '#e8b84b'; g.font = '26px Georgia'; g.fillText('◆ MAINCHARACTER', 600, 560);
+    g.fillStyle = '#c0c0c0'; g.font = '26px Georgia'; g.fillText('◆ MAINCHARACTER', 600, 560);
     g.fillStyle = '#6b6660'; g.font = '18px Georgia'; g.fillText('maincharacter.digitglobalservices.com', 600, 596);
     c.toBlob(function (blob) {
       var file = new File([blob], 'maincharacter-score.png', { type: 'image/png' });

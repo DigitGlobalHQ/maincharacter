@@ -377,12 +377,11 @@ describe('Surface 2 — start.html', () => {
     expect(SURFACES.start).toContain('Continue with Google');
     expect(SURFACES.start).toContain('/api/lookmax/auth/google/start');
   });
-  it('offers the email + password method that works with no external setup', () => {
-    expect(SURFACES.start).toContain('id="auth-email"');
-    expect(SURFACES.start).toContain('id="auth-password"');
-    expect(SURFACES.start).toContain('/api/lookmax/auth/password');
-  });
-  it('shows both methods on one screen with an "or" divider', () => {
-    expect(SURFACES.start).toContain('class="lm-or"');
+  it('is Google-only (email/password removed) with consent + terms/privacy', () => {
+    expect(SURFACES.start).not.toContain('id="auth-email"');
+    expect(SURFACES.start).not.toContain('id="auth-password"');
+    expect(SURFACES.start).toContain('id="consent-all"');
+    expect(SURFACES.start).toContain('href="/terms"');
+    expect(SURFACES.start).toContain('href="/privacy"');
   });
 });

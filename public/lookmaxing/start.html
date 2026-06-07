@@ -286,26 +286,7 @@
           Continue with Google
         </a>
 
-        <!-- divider -->
-        <div class="lm-or" aria-hidden="true">
-          <span class="lm-or__rule"></span><span class="lm-or__word">or</span><span class="lm-or__rule"></span>
-        </div>
-
-        <!-- Email + password (works with no external setup) -->
-        <label for="auth-email" class="mc-eyebrow" style="display:block;margin-bottom:var(--mc-sp-2);">Email</label>
-        <input type="email" id="auth-email" class="lm-email-input" placeholder="you@somewhere.com" autocomplete="email" inputmode="email">
-
-        <label for="auth-password" class="mc-eyebrow" style="display:block;margin:var(--mc-sp-3) 0 var(--mc-sp-2);">Password</label>
-        <input type="password" id="auth-password" class="lm-email-input" placeholder="At least 8 characters" autocomplete="current-password">
-
-        <button class="mc-btn-primary lm-fork-card__btn" id="auth-submit-btn" style="margin-top:var(--mc-sp-4);" disabled aria-disabled="true">
-          Continue →
-        </button>
-
-        <p id="auth-hint" class="lm-fork-card__body" style="text-align:center;margin-top:var(--mc-sp-3);font-size:12px;color:var(--mc-silver-faint);">
-          New here? A new email creates your account. Returning? Use the same password.
-        </p>
-        <div id="auth-error" role="alert" aria-live="polite" hidden style="text-align:center;margin-top:var(--mc-sp-2);font-size:13px;color:var(--mc-silver-bright);"></div>
+        <div id="auth-error" role="alert" aria-live="polite" hidden style="text-align:center;margin-top:var(--mc-sp-3);font-size:13px;color:var(--mc-silver-bright);"></div>
       </div>
     </div>
   </div>
@@ -322,9 +303,6 @@
   'use strict';
 
   var googleBtn = document.getElementById('google-btn');
-  var emailEl = document.getElementById('auth-email');
-  var passEl = document.getElementById('auth-password');
-  var submitBtn = document.getElementById('auth-submit-btn');
   var errEl = document.getElementById('auth-error');
   var consentEl = document.getElementById('consent-all');
   var NEXT = '/lookmaxing/quiz';
@@ -339,19 +317,14 @@
   function showError(msg) { errEl.textContent = msg; errEl.hidden = false; }
   function clearError() { errEl.hidden = true; errEl.textContent = ''; }
 
-  // ── Consent gate: both boxes required before any sign-in path activates ──
+  // ── Consent gate: required before Google sign-in activates ──
   function consented() { return !!(consentEl && consentEl.checked); }
-  function updateGate() {
-    submitBtn.disabled = !consented();
-    submitBtn.setAttribute('aria-disabled', consented() ? 'false' : 'true');
-  }
-  if (consentEl) consentEl.addEventListener('change', function () { updateGate(); clearError(); });
-  updateGate();
+  if (consentEl) consentEl.addEventListener('change', clearError);
 
   // Surface a bounced Google attempt cleanly (no dead-ends).
   var params = new URLSearchParams(location.search);
-  if (params.get('error') === 'google_unavailable') showError('Google sign-in is being set up. Use your email below for now.');
-  else if (params.get('error') === 'google_signin') showError('That Google sign-in did not complete. Try again, or use your email.');
+  if (params.get('error') === 'google_unavailable') showError('Google sign-in is being set up. Please try again shortly.');
+  else if (params.get('error') === 'google_signin') showError('That Google sign-in did not complete. Try again.');
 
   // Is Google OAuth configured on the server? Until it is, intercept the click.
   var googleConfigured = false;
@@ -367,48 +340,9 @@
     }
     if (!googleConfigured) {
       e.preventDefault();
-      showError('Google sign-in is being set up. Use your email below for now.');
+      showError('Google sign-in is being set up. Please try again shortly.');
     }
   });
-
-  // ── Email + password: one "Continue" = sign in OR sign up ──
-  function submit() {
-    clearError();
-    if (!consented()) { showError(CONSENT_MSG); return; }
-    var email = (emailEl.value || '').trim();
-    var password = passEl.value || '';
-    if (!email || email.indexOf('@') < 0) { showError('Enter a valid email address.'); emailEl.focus(); return; }
-    if (password.length < 8) { showError('Password must be at least 8 characters.'); passEl.focus(); return; }
-
-    submitBtn.setAttribute('aria-busy', 'true');
-    submitBtn.disabled = true;
-
-    fetch('/api/lookmax/auth/password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email, password: password }),
-    })
-      .then(function (r) { return r.json().then(function (b) { return { status: r.status, body: b }; }); })
-      .then(function (res) {
-        if (res.status === 200 && res.body && res.body.token) {
-          localStorage.setItem('lookmax.token', res.body.token);
-          window.location.replace(NEXT);
-          return;
-        }
-        showError((res.body && res.body.error) || 'Could not sign you in. Try again.');
-        submitBtn.setAttribute('aria-busy', 'false');
-        submitBtn.disabled = false;
-      })
-      .catch(function () {
-        showError('Something interrupted that. Try again in a moment.');
-        submitBtn.setAttribute('aria-busy', 'false');
-        submitBtn.disabled = false;
-      });
-  }
-
-  submitBtn.addEventListener('click', submit);
-  emailEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') passEl.focus(); });
-  passEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
 }());
 </script>
 </body>

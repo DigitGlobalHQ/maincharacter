@@ -20,15 +20,15 @@ describe('PR2 — transparent logo assets', () => {
 });
 
 describe('PR2 — landing hero monogram', () => {
-  it('places the silver mark as the hero, using the transparent PNG', () => {
+  it('places the silver mark as the hero, using the transparent 3D PNG', () => {
     expect(landing).toContain('class="hero__mark"');
-    expect(landing).toContain('/maincharacter-mark.png');
+    expect(landing).toContain('/maincharacter-mark-3d.png');
   });
   it('retires the cropped .jpeg from the landing page', () => {
     expect(landing).not.toContain('maincharacter-logo.jpeg');
   });
-  it('the nav uses the transparent mark, not a cropped jpeg', () => {
-    expect(landing).toMatch(/class="nav__logo"[^>]*maincharacter-mark\.png/);
+  it('the nav uses the transparent 3D mark, not a cropped jpeg', () => {
+    expect(landing).toMatch(/class="nav__logo"[^>]*maincharacter-mark-3d\.png/);
   });
 });
 

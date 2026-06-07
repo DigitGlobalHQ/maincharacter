@@ -1190,3 +1190,24 @@ present in main post-merge (git show --stat).
 - AI studio: services/gemini-image.js (Gemini 2.5 Flash Image, mock without key),
   routes/ai-tools.js (/api/lookmax/ai/generate) spend-with-refund-on-failure,
   studio.html at /studio. Tool costs 1–8 tokens.
+
+## 2026-06-07 — Path A hosting: Cloudflare CDN + external pinger (no migration)
+
+Founder weighing Render → Cloudflare for latency. Reality: this is a stateful
+Node + node-cron server; Cloudflare hosts neither Pages nor Workers as a drop-in.
+And every free tier (Render free, Koyeb free) scales-to-zero, which kills the
+in-process cron (landmine #2). Chose **Path A**: keep the host, fix it for ₹0.
+
+- Decoupled the scheduler into `scheduler.tick({source})` — the single source of
+  truth for the per-minute work. node-cron calls it (`source:'cron'`); the new
+  `GET|POST /api/cron/tick` calls it (`source:'http'`) and additionally runs
+  `checkMissedMessages()` windowed catch-up so delivery survives sleep on ANY host.
+- Idempotent throughout (lastMorningSent/awaitingResponse/mirrorForToday guards) →
+  an external pinger hitting it every few minutes is safe and is also what keeps a
+  free dyno awake. Health (`getHealth`) now exposes lastTickSource/lastHttpTickAt
+  so the pinger is verifiable on /health without log access.
+- Gated by `CRON_SECRET` (header `x-cron-secret` or `?key=`); open+warn until set,
+  matching the DRY-RUN-until-creds convention (low-risk: only triggers idempotent
+  sends). Runbook: PATH_A_CLOUDFLARE_PINGER.md.
+- Not done (founder dashboard actions): point DNS through Cloudflare, create the
+  cron-job.org pinger, set CRON_SECRET in Render. No Koyeb migration — lateral move.

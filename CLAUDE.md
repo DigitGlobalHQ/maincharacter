@@ -155,6 +155,7 @@ Set in Render dashboard (NOT in committed `.env`):
 | `REDIS_URL` | new — Upstash Redis for queue/cache | add |
 | `SENTRY_DSN` | new — error monitoring | add |
 | `WHATSAPP_SEND_MODE` | `all` / `allowlist` / `off` — global send guard for WhatsApp+SMS+email (defaults to `allowlist`; legacy `WATI_SEND_MODE` still read for 30 days) | yes |
+| `CRON_SECRET` | shared secret for `/api/cron/tick` (external pinger). Open+warn until set — set it in prod | add |
 | `WEB_PUSH_VAPID_PUBLIC` | VAPID public key for PWA push notifications | add |
 | `WEB_PUSH_VAPID_PRIVATE` | VAPID private key for PWA push notifications | add |
 | `R2_ACCOUNT_ID` | Cloudflare R2 (object storage for daily mirror photos + reveal videos) | add |

@@ -14,6 +14,7 @@ const whatsapp = require('../services/whatsapp');
 const email = require('../services/email');
 const gemini = require('../services/gemini');
 const razorpay = require('../services/razorpay');
+const scheduler = require('../services/scheduler');
 const events = require('../services/events');
 const admin = require('../lib/admin');
 const { DAYS, buildMorningMessage, buildEveningMessage, buildEvolutionReport } = require('../data/orator-content');
@@ -85,6 +86,34 @@ router.post('/events', eventsRateLimit, async (req, res) => {
     .catch(() => {}); // EVENTS-WRITE-FAIL already logged inside the sink
   return res.sendStatus(204);
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// GET|POST /api/cron/tick — external scheduler trigger (Path-A resilience)
+// ═══════════════════════════════════════════════════════════════════
+// An external pinger (e.g. cron-job.org) hits this every few minutes. It both
+// keeps a free-tier host awake AND drives the daily protocol schedule, so
+// delivery survives scale-to-zero / sleep on any host. The work is idempotent
+// (lastMorningSent/awaitingResponse guards), so repeated calls are a safe no-op.
+//
+// Gated by CRON_SECRET when set (header `x-cron-secret` or `?key=`). Open with a
+// warning until configured — matching the repo's DRY-RUN-until-creds convention,
+// and low-risk because the endpoint can only trigger already-idempotent sends.
+async function cronTickHandler(req, res) {
+  const secret = process.env.CRON_SECRET;
+  if (secret) {
+    const provided = req.get('x-cron-secret') || req.query.key;
+    if (provided !== secret) {
+      log('CRON-WARN', `Rejected /cron/tick: bad/absent secret from ${req.ip}`);
+      return res.status(403).json({ ok: false });
+    }
+  } else {
+    log('CRON-WARN', 'CRON_SECRET unset — /cron/tick is open. Set it in prod.');
+  }
+  const result = await scheduler.tick({ source: 'http' });
+  return res.json({ ...result, at: new Date().toISOString() });
+}
+router.get('/cron/tick', cronTickHandler);
+router.post('/cron/tick', cronTickHandler);
 
 // ═══════════════════════════════════════════════════════════════════
 // POST /api/enroll — New user enrollment

@@ -485,6 +485,27 @@
 
   var consentChecked = false;
   var capturedBlob = null;
+
+  // Stash a small resized copy of the chosen photo so the report page can draw the
+  // 478-landmark mesh + geometric KPIs client-side (same session, never uploaded).
+  function stashFacePhoto(src) {
+    try {
+      var url = URL.createObjectURL(src);
+      var im = new Image();
+      im.onload = function () {
+        try {
+          var max = 900, sc = Math.min(1, max / im.naturalWidth);
+          var c = document.createElement('canvas');
+          c.width = Math.round(im.naturalWidth * sc);
+          c.height = Math.round(im.naturalHeight * sc);
+          c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+          sessionStorage.setItem('mc.facePhoto', c.toDataURL('image/jpeg', 0.85));
+        } catch (e) { /* sessionStorage full / blocked — report just skips the mesh */ }
+        URL.revokeObjectURL(url);
+      };
+      im.src = url;
+    } catch (e) { /* ignore */ }
+  }
   var stream = null;
 
   // ── Consent gate ──
@@ -580,6 +601,7 @@
 
     captureCanvas.toBlob(function (blob) {
       capturedBlob = blob;
+      stashFacePhoto(blob);
       var url = URL.createObjectURL(blob);
       previewImg.src = url;
       previewImg.hidden = false;
@@ -633,6 +655,7 @@
         return;
       }
       capturedBlob = file;
+      stashFacePhoto(file);
       previewImg.src = url;
       previewImg.hidden = false;
       videoEl.hidden = true;

@@ -157,9 +157,10 @@ function servePage(res, absPath) {
   res.type('html').send(html);
 }
 
-// Default /favicon.ico request → the 32px PNG (explicit <link rel=icon> tags are
-// injected into every page; this covers browsers that still probe /favicon.ico).
-app.get('/favicon.ico', (req, res) => res.redirect(301, '/favicon-32.png'));
+// Default /favicon.ico request → the 32px PNG. 302 (NOT 301 — a 301 is cached by
+// the browser permanently, which strands a stale icon). Explicit <link rel=icon>
+// tags (versioned) are injected into every page; this only covers bare probes.
+app.get('/favicon.ico', (req, res) => res.redirect(302, '/favicon-32.png?v=4'));
 
 // Homepage
 app.get('/', (req, res) => {

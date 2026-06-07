@@ -20,14 +20,14 @@ const DAYS = {
       { word: 'COMPELLING', definition: 'powerfully persuasive and attention-holding' },
     ],
     technique: null,
-    consultantIntro: (name) => `Good morning, ${name}.\n\nToday's question is your baseline. There are no wrong answers — only honest ones.`,
-    consultantOutro: (name) => `Your first quest arrives tomorrow at your preferred time. Sleep on this: tomorrow's only job is to record one minute on a new prompt, with one filler word less than today.\n\n— Your Orator Consultant`,
+    consultantIntro: (name) => `Good morning, ${name}.\n\nToday's question is your baseline. There are no wrong answers, only honest ones.`,
+    consultantOutro: (name) => `Your first quest arrives tomorrow at your preferred time. Sleep on this: tomorrow's only job is to record one minute on a new prompt, with one filler word less than today.\n\nYour Orator Consultant`,
   },
 
   2: {
     title: 'Day 2 · The Orator Protocol',
     caption: 'First Delta',
-    prompt: `"Explain what you do — your work, your studies, your craft —\nto someone who knows nothing about it.\nMake them understand it in 90 seconds."`,
+    prompt: `"Explain what you do (your work, your studies, your craft)\nto someone who knows nothing about it.\nMake them understand it in 90 seconds."`,
     words: [
       { word: 'NUANCED', definition: 'subtle distinctions that matter' },
       { word: 'LUCID', definition: 'clearly expressed and easy to understand' },
@@ -37,13 +37,13 @@ const DAYS = {
     ],
     technique: null,
     consultantIntro: (name) => `Good morning, ${name}.\n\nYesterday you spoke about something you're proud of.\nToday, you speak about something you find difficult to explain.`,
-    consultantOutro: (name) => `You did the work. Tomorrow's quest arrives at your preferred time.\n\n— Orator Consultant`,
+    consultantOutro: (name) => `You did the work. Tomorrow's quest arrives at your preferred time.\n\nOrator Consultant`,
   },
 
   3: {
     title: 'Day 3 · The Orator Protocol',
     caption: 'Borrowed Technique',
-    prompt: `"Tell me about a decision you made recently that you stand behind completely.\nAfter every major point — pause. Let it sit. Then continue."\n\n(If voice noting: pause 2 full seconds after each point before speaking again)`,
+    prompt: `"Tell me about a decision you made recently that you stand behind completely.\nAfter every major point, pause. Let it sit. Then continue."\n\n(If voice noting: pause 2 full seconds after each point before speaking again)`,
     words: [
       { word: 'DELIBERATE', definition: 'done consciously and intentionally' },
       { word: 'MEASURED', definition: 'careful and restrained in expression' },
@@ -53,17 +53,17 @@ const DAYS = {
     ],
     technique: {
       name: 'THE PAUSE',
-      description: 'Most people fill silence because they\'re afraid of what it reveals. The Orator uses silence deliberately — to let the last sentence land.',
-      instruction: 'Today\'s quest comes paired with one Sage technique I\'d normally reserve for Week 3: The Physiological Sigh.\n\nUse it 30 seconds before recording. Two short inhales through the nose, one long exhale through the mouth. The fastest known way to down-regulate a stress spike.\n\nIt\'s a borrowed unlock — to show you what the other pillars hold. Then record your minute.',
+      description: 'Most people fill silence because they\'re afraid of what it reveals. The Orator uses silence deliberately, to let the last sentence land.',
+      instruction: 'Today\'s quest comes paired with one Sage technique I\'d normally reserve for Week 3: The Physiological Sigh.\n\nUse it 30 seconds before recording. Two short inhales through the nose, one long exhale through the mouth. The fastest known way to down-regulate a stress spike.\n\nIt\'s a borrowed unlock, to show you what the other pillars hold. Then record your minute.',
     },
     consultantIntro: (name) => `Good morning, ${name}.\n\nMost pacing problems aren't pacing problems. They're nerves.`,
-    consultantOutro: (name) => `Tomorrow is the halfway mark. Most quit there.\n\n— Your Consultant`,
+    consultantOutro: (name) => `Tomorrow is the halfway mark. Most quit there.\n\nYour Consultant`,
   },
 
   4: {
     title: 'Day 4 · The Orator Protocol',
     caption: 'The Halfway Mark',
-    prompt: `"Think of a room where you have felt like a spectator —\na meeting, a conversation, a moment where you had something to say\nand didn't say it. Describe what you would have said,\nand say it now, as if you're back in that room."`,
+    prompt: `"Think of a room where you have felt like a spectator:\na meeting, a conversation, a moment where you had something to say\nand didn't say it. Describe what you would have said,\nand say it now, as if you're back in that room."`,
     words: [
       { word: 'SOVEREIGNTY', definition: 'complete authority over oneself' },
       { word: 'FORTHRIGHT', definition: 'direct and outspoken' },
@@ -73,13 +73,13 @@ const DAYS = {
     ],
     technique: null,
     consultantIntro: (name) => `Good morning, ${name}.\n\nMost people quit on Day 4.\nYou did not.`,
-    consultantOutro: (name) => `Most people abandon self-improvement on Day 4. You did not. The work is starting to show.\n\n— Your Consultant`,
+    consultantOutro: (name) => `Most people abandon self-improvement on Day 4. You did not. The work is starting to show.\n\nYour Consultant`,
   },
 
   5: {
     title: 'Day 5 · The Orator Protocol',
     caption: 'The Real Room',
-    prompt: `"Identify one conversation you need to have this week —\na pitch, a request, a confrontation, a difficult message.\nRehearse it here. Say exactly what you would say, to that exact person."\n\nThis is not preparation. This IS the performance.\nThe Consultant will treat it as such.`,
+    prompt: `"Identify one conversation you need to have this week:\na pitch, a request, a confrontation, a difficult message.\nRehearse it here. Say exactly what you would say, to that exact person."\n\nThis is not preparation. This IS the performance.\nThe Consultant will treat it as such.`,
     words: [
       { word: 'PERSUASIVE', definition: 'good at convincing people' },
       { word: 'DIPLOMATIC', definition: 'tactful and sensitive in communication' },
@@ -89,7 +89,7 @@ const DAYS = {
     ],
     technique: null,
     consultantIntro: (name) => `Good morning, ${name}.\n\nToday we leave practice behind.`,
-    consultantOutro: (name) => `Today's recording is the closest yet to the room that matters most to you. The harder it feels, the better the data.\n\n— Your Consultant`,
+    consultantOutro: (name) => `Today's recording is the closest yet to the room that matters most to you. The harder it feels, the better the data.\n\nYour Consultant`,
   },
 
   6: {
@@ -105,18 +105,18 @@ const DAYS = {
     ],
     technique: null,
     consultantIntro: (name) => `Good morning, ${name}.\n\nTomorrow is your Day 7. Your Weekly Evolution Report.\n\nBefore you receive it, do one thing for me: don't listen to your baseline tonight. Don't try to remember how you sounded. I want the comparison tomorrow to surprise you.`,
-    consultantOutro: (name) => `7:45am. Be somewhere you can listen with headphones.\n\n— Your Consultant`,
+    consultantOutro: (name) => `7:45am. Be somewhere you can listen with headphones.\n\nYour Consultant`,
   },
 
   7: {
     title: 'Day 7 · The Final Day',
     caption: 'Evolution Report',
-    prompt: `"Describe the person you were on Day 1.\nThen describe the person speaking right now.\nTell me the difference — in your own words."`,
+    prompt: `"Describe the person you were on Day 1.\nThen describe the person speaking right now.\nTell me the difference, in your own words."`,
     words: [
       { word: 'TRANSFORMED', definition: 'changed in composition or structure' },
       { word: 'REFINED', definition: 'with impurities or unwanted elements removed' },
       { word: 'EVOLVED', definition: 'developed gradually' },
-      { word: 'ARTICULATE', definition: '(you know this one now — use it masterfully)' },
+      { word: 'ARTICULATE', definition: '(you know this one now, use it masterfully)' },
       { word: 'ASCENDANT', definition: 'rising in power and influence' },
     ],
     technique: null,
@@ -144,10 +144,10 @@ function buildMorningMessage(day, userName) {
   msg += `Here are your five words for today. Use at least two of them in your response:\n\n`;
 
   d.words.forEach((w, i) => {
-    msg += `${i + 1}. ${w.word} — ${w.definition}\n`;
+    msg += `${i + 1}. ${w.word}: ${w.definition}\n`;
   });
 
-  msg += `\nReply with your response — voice note or text, both work.\nThe Consultant is listening.`;
+  msg += `\nReply with your response, voice note or text, both work.\nThe Consultant is listening.`;
 
   return msg;
 }
@@ -178,7 +178,7 @@ function buildEveningMessage(day, userName, scores, consultantMessage, previousS
   }
 
   if (day === 1) {
-    msg += `\nThese are your starting numbers.\nBy Day 7, you will see what changed — and why.\n`;
+    msg += `\nThese are your starting numbers.\nBy Day 7, you will see what changed, and why.\n`;
   }
 
   msg += `\nDay ${day + 1 <= 7 ? day + 1 + ' arrives tomorrow at your preferred time.' : '7 is complete.'}\n\n◆ MainCharacter`;
@@ -208,7 +208,7 @@ function buildEvolutionReport(user, consultantAssessment) {
   };
 
   let msg = `◆ THE EVOLUTION REPORT\nMainCharacter · The Orator Protocol · 7 Days\n\n`;
-  msg += `${user.name} — here is your arc.\n\n`;
+  msg += `${user.name}, here is your arc.\n\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
   msg += `YOUR SCORES\n\n`;
   msg += `             Day 1    Day 7    Delta\n`;
@@ -217,7 +217,7 @@ function buildEvolutionReport(user, consultantAssessment) {
   msg += `Vocabulary    ${delta('vocabularyRange')}\n`;
   msg += `Structure     ${delta('structure')}\n\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-  msg += `YOUR LEXICON — ${allWords.length} words forged.\n`;
+  msg += `YOUR LEXICON: ${allWords.length} words forged.\n`;
   msg += allWords.join(', ') + '\n\n';
   msg += `━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
   msg += `THE CONSULTANT'S ASSESSMENT\n\n`;
@@ -225,16 +225,16 @@ function buildEvolutionReport(user, consultantAssessment) {
   msg += `━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
   msg += `RANK UPDATE\n\n`;
   msg += `You arrived as The Unawakened.\n`;
-  msg += `You leave as — THE SEEKER ◆\n\n`;
+  msg += `You leave as THE SEEKER ◆\n\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
   msg += `YOUR DASHBOARD IS READY\n\n`;
   msg += `See your full arc, scores, and lexicon at:\nmaincharacter.digitglobalservices.com/dashboard/${user.token}\n\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
   msg += `THE WORK CONTINUES.\n\n`;
-  msg += `The Orator Protocol proved something to you this week.\nThe question is whether you stop here — or go further.\n\n`;
+  msg += `The Orator Protocol proved something to you this week.\nThe question is whether you stop here, or go further.\n\n`;
   msg += `To continue beyond Day 7:\n\n`;
-  msg += `THE SEEKER PLAN — ₹799/month\n`;
-  msg += `• Daily Orator Protocol — ongoing\n`;
+  msg += `THE SEEKER PLAN: ₹799/month\n`;
+  msg += `• Daily Orator Protocol: ongoing\n`;
   msg += `• Weekly Evolution Reports\n`;
   msg += `• Unlimited Consultant access\n`;
   msg += `• Rank progression to The Sovereign\n`;

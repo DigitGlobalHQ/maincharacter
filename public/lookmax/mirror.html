@@ -7,7 +7,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Lookmaxxing — Mirror</title>
+  <title>Lookmaxxing · Mirror</title>
   <link rel="manifest" href="/lookmax/manifest.json" />
   <meta name="theme-color" content="#070708" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -430,7 +430,7 @@
         const v = (r.axes && r.axes[k]) || 0;
         const dy = dY[k];
         const cls = dy > 0 ? 'up' : dy < 0 ? 'down' : '';
-        const dyTxt = dy == null ? '' : (dy > 0 ? '▲ ' + dy : dy < 0 ? '▼ ' + Math.abs(dy) : '–');
+        const dyTxt = dy == null ? '' : (dy > 0 ? '▲ ' + dy : dy < 0 ? '▼ ' + Math.abs(dy) : '-');
         return `<div class="axis"><div class="axis-row"><span>${AXIS_LABELS[k]}</span><span class="delta ${cls}">${dyTxt}</span></div><div class="bar"><span data-w="${v}"></span></div></div>`;
       }).join('');
 

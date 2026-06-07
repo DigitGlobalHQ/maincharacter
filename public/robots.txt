@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Operational/private surfaces — no SEO value, keep crawlers out.
+Disallow: /admin
+Disallow: /lookmax/
+Disallow: /dashboard/
+Disallow: /payment-confirmed
+Disallow: /uploads/
+Disallow: /api/
+
+Sitemap: https://maincharacter.digitglobalservices.com/sitemap.xml

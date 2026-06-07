@@ -135,10 +135,12 @@ const { analyticsHead } = require('./lib/analytics-head');
 const { themeHead } = require('./lib/theme-head');
 const { authWidgetHead } = require('./lib/auth-widget');
 const { faviconHead } = require('./lib/favicon-head');
+const { markSwapHead } = require('./lib/mark-swap');
 const _ANALYTICS_HEAD = analyticsHead();
 const _THEME_HEAD = themeHead();
 const _AUTH_HEAD = authWidgetHead();
 const _FAVICON_HEAD = faviconHead();
+const _MARK_HEAD = markSwapHead();
 const _pageCache = new Map();
 function servePage(res, absPath) {
   let html = _pageCache.get(absPath);
@@ -150,7 +152,7 @@ function servePage(res, absPath) {
       return;
     }
     if (html.includes('</head>')) {
-      html = html.replace('</head>', _FAVICON_HEAD + _ANALYTICS_HEAD + _THEME_HEAD + _AUTH_HEAD + '</head>');
+      html = html.replace('</head>', _FAVICON_HEAD + _ANALYTICS_HEAD + _THEME_HEAD + _AUTH_HEAD + _MARK_HEAD + '</head>');
     }
     _pageCache.set(absPath, html);
   }
@@ -273,7 +275,7 @@ app.get('/lookmaxing/fork', (req, res) => {
     return servePage(res, path.join(__dirname, 'public', 'lookmaxing', 'index.html'));
   }
   const trialLive = process.env.LOOKMAX_TRIAL_LIVE !== 'false';
-  html = html.replace('</head>', `<script>window.LOOKMAX_TRIAL_LIVE=${trialLive};</script>` + _FAVICON_HEAD + _ANALYTICS_HEAD + _THEME_HEAD + _AUTH_HEAD + '</head>');
+  html = html.replace('</head>', `<script>window.LOOKMAX_TRIAL_LIVE=${trialLive};</script>` + _FAVICON_HEAD + _ANALYTICS_HEAD + _THEME_HEAD + _AUTH_HEAD + _MARK_HEAD + '</head>');
   res.type('html').send(html);
 });
 

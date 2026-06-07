@@ -144,8 +144,8 @@ describe('hair.html — approved copy (#13–#17)', () => {
 // ── Reveal strings (#18–#28) ─────────────────────────────────────────────────
 
 describe('reveal.html — approved copy (#18–#28)', () => {
-  it('#18 share-frame line: "This is what shares — your week as a quiet line."', () => {
-    expect(reveal).toContain('This is what shares — your week as a quiet line.');
+  it('#18 share-frame line: "This is what shares: your week as a quiet line."', () => {
+    expect(reveal).toContain('This is what shares: your week as a quiet line.');
   });
 
   it('#22 day-30 topbar label: "◆ The Second Reading"', () => {
@@ -158,8 +158,8 @@ describe('reveal.html — approved copy (#18–#28)', () => {
 
   it('#24 day-30 photo captions use Day 1 / Day 30 date format', () => {
     // Captions: "Day 1 — DD MMM" / "Day 30 — today"
-    expect(reveal).toContain('Day 1 —');
-    expect(reveal).toContain('Day 30 — today');
+    expect(reveal).toContain('Day 1 ·');
+    expect(reveal).toContain('Day 30 · today');
   });
 
   it('#18–#28: no TODO copy markers remain in reveal.html for these strings', () => {
@@ -191,7 +191,7 @@ describe('reveal constants (server-side template strings #19–#21, #25–#28)',
   });
 
   it('#25 day-30 UP variant template present', () => {
-    expect(revealConstants).toContain('This is not flattery — it is the measurement.');
+    expect(revealConstants).toContain('This is not flattery. It is the measurement.');
   });
 
   it('#26 day-30 FLAT variant template present', () => {

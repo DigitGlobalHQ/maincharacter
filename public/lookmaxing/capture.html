@@ -371,7 +371,7 @@
 
     <!-- Tips overlay -->
     <div class="lm-tips" id="camera-tips" hidden aria-hidden="true">
-      <p>· Daylight is best — face a window.</p>
+      <p>· Daylight is best. Face a window.</p>
       <p>· Hold camera at eye level.</p>
       <p>· Soft mouth. No smile.</p>
     </div>
@@ -686,7 +686,7 @@
 
     // Honest error mapping: a photo problem reads differently from a service outage.
     function messageForStatus(status) {
-      if (status === 413 || status === 400) return 'That photo could not be read. Try another — front-facing, neutral light.';
+      if (status === 413 || status === 400) return 'That photo could not be read. Try another. Front-facing, neutral light.';
       if (status === 401 || status === 403) return 'Your session expired. Return to the start and begin again.';
       if (status >= 500) return 'The reading could not be generated just now. Try again in a moment.';
       return 'Something went wrong. Try again.';

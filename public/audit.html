@@ -156,7 +156,7 @@
 <!-- Scene 5/6: Score + Diagnosis -->
 <section class="scene" id="scene-result">
   <div class="eyebrow">Your Aura Score</div>
-  <div class="score__num" id="score-num">—<small>/100</small></div>
+  <div class="score__num" id="score-num">…<small>/100</small></div>
   <div class="axes" id="axes"></div>
   <div class="diagnosis" id="diagnosis"></div>
   <button class="btn" style="margin-top:2rem;" onclick="toPaywall()">See Your Protocol →</button>
@@ -182,29 +182,29 @@
 
   // Quiz — Q1 verbatim from brief; Q2-12 drafted to spec, pending copy review.
   const QUIZ = [
-    { id: 'skin1', cat: 'Skin', text: 'Your morning ritual when you look at the mirror — what happens after?',
-      opts: ['I cleanse, moisturise, sunscreen', 'Water and out the door', "Nothing — that's not my world yet", 'Skip — I have a routine already'] },
-    { id: 'skin2', cat: 'Skin', text: 'By late afternoon, your skin reads as —',
+    { id: 'skin1', cat: 'Skin', text: 'Your morning ritual when you look at the mirror: what happens after?',
+      opts: ['I cleanse, moisturise, sunscreen', 'Water and out the door', "Nothing, that's not my world yet", 'Skip, I have a routine already'] },
+    { id: 'skin2', cat: 'Skin', text: 'By late afternoon, your skin reads as…',
       opts: ['Even and calm', 'Shiny through the centre', 'Tight and dry', "I've never paid attention"] },
-    { id: 'skin3', cat: 'Skin', text: 'When something flares — a breakout, redness — you —',
+    { id: 'skin3', cat: 'Skin', text: 'When something flares (a breakout, redness), you…',
       opts: ['Treat it deliberately', 'Wait it out', 'Cover it', 'It rarely happens'] },
-    { id: 'hair1', cat: 'Hair', text: 'The hairline you see now, against the one from two years ago —',
+    { id: 'hair1', cat: 'Hair', text: 'The hairline you see now, against the one from two years ago…',
       opts: ['Holding', 'Quietly retreating', 'Clearly thinner', "I avoid the question"] },
-    { id: 'hair2', cat: 'Hair', text: 'Your scalp, most days —',
+    { id: 'hair2', cat: 'Hair', text: 'Your scalp, most days…',
       opts: ['Comfortable', 'Itchy or flaky', 'Oily by evening', 'Unremarkable'] },
-    { id: 'jaw1', cat: 'Jaw & Face', text: 'In a photo, your jawline reads as —',
+    { id: 'jaw1', cat: 'Jaw & Face', text: 'In a photo, your jawline reads as…',
       opts: ['Defined', 'Soft at the edges', 'Lost under the chin', 'Depends on the angle'] },
-    { id: 'jaw2', cat: 'Jaw & Face', text: 'At rest, your mouth and tongue sit —',
+    { id: 'jaw2', cat: 'Jaw & Face', text: 'At rest, your mouth and tongue sit…',
       opts: ['Tongue to the roof, lips closed', 'Mouth slightly open', "I don't know what mine does", 'Jaw tends to clench'] },
-    { id: 'body1', cat: 'Body & Posture', text: 'Catch your reflection walking past glass — your posture is —',
+    { id: 'body1', cat: 'Body & Posture', text: 'Catch your reflection walking past glass, your posture is…',
       opts: ['Tall, shoulders back', 'Rounded forward', 'Head ahead of the spine', 'Better when I notice'] },
-    { id: 'body2', cat: 'Body & Posture', text: 'Your training, honestly —',
+    { id: 'body2', cat: 'Body & Posture', text: 'Your training, honestly…',
       opts: ['Consistent and structured', 'On and off', 'Not currently', 'Just started'] },
-    { id: 'life1', cat: 'Lifestyle', text: 'Your sleep, most nights —',
+    { id: 'life1', cat: 'Lifestyle', text: 'Your sleep, most nights…',
       opts: ['In bed by eleven', 'Midnight or later', 'Irregular', 'Broken'] },
-    { id: 'life2', cat: 'Lifestyle', text: 'Sunlight on your face before nine in the morning —',
+    { id: 'life2', cat: 'Lifestyle', text: 'Sunlight on your face before nine in the morning…',
       opts: ['Most days', 'Sometimes', 'Rarely', 'Never thought about it'] },
-    { id: 'goals', cat: 'Goals', text: 'In your own words — what would you change first, and why?', open: true },
+    { id: 'goals', cat: 'Goals', text: 'In your own words: what would you change first, and why?', open: true },
   ];
 
   function show(id) {

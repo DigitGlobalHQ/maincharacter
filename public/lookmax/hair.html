@@ -131,8 +131,8 @@
         The honest angle, not the angle.
       </p>
 
-      <div class="slot" id="slotFront" data-for="front">Front / hairline photo — tap to add</div>
-      <div class="slot" id="slotCrown" data-for="crown">Crown / from-above photo — tap to add</div>
+      <div class="slot" id="slotFront" data-for="front">Front / hairline photo, tap to add</div>
+      <div class="slot" id="slotCrown" data-for="crown">Crown / from-above photo, tap to add</div>
 
       <input id="fileFront" type="file" accept="image/*" capture="user" class="hidden" />
       <input id="fileCrown" type="file" accept="image/*" capture="environment" class="hidden" />
@@ -257,7 +257,7 @@
       }).join('');
 
       const recession = r.confidence === 'low' || r.recessionMm == null
-        ? 'insufficient data — try better lighting next week'
+        ? 'insufficient data, try better lighting next week'
         : r.recessionMm + ' mm';
       const delta = r.deltaVsFirst != null
         ? ` (${r.deltaVsFirst > 0 ? '+' : ''}${r.deltaVsFirst} vs first reading)`

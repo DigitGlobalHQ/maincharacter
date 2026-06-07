@@ -1233,3 +1233,22 @@ comma-splices and broken parentheticals.
 - Verified: 0 CSS-var lines changed, all TOOL_CONFIG JSON parses, orator-content
   messages build, inline scripts parse, full suite 1516 pass, smoke 44/44.
 - Pass 2 (other AI phrasing tells) — grep + founder sign-off before any rewrite.
+
+## 2026-06-07 — Em-dash cleanup, Pass 1 completion (second wave)
+
+The first pass used a region-tracking helper that under-reported: it skipped ALL
+<script> blocks (missing rendered demo-chat copy in index.html), mis-tracked
+landing.html's body, and my file list omitted data/*.js copy modules. Switched to
+a comment-excluding detector (em-dashes only live in comments or copy) and finished:
+
+- index.html demo WhatsApp chat (~26), landing.html body copy the tracker missed
+  (8), and the long tail across lookmax/lookmaxing/tools/admin (~90).
+- data/reveal-copy-constants.js + data/lookmax-content.js — user-facing copy modules
+  that weren't in the original sweep.
+- Loading placeholders ("—" shown pre-fetch) → "…"; admin DATA-TABLE null-cells kept
+  as "—" (correct "no data" convention, internal tool); LLM prompt modules kept
+  (data/*-prompts.js + orator-content scoring prompt — internal, scoring-drift risk).
+- Updated 4 copy-guard tests to the approved new strings (copy-approved, landing,
+  audit-page, paywall-email-required) — fix the guard, never revert approved copy.
+- Final classified scan: 0 user-facing dashes remain; 115 intentional (104 LLM
+  prompts, 7 admin null-cells, 4 code comments). Full suite 1516 pass; smoke 44/44.

@@ -560,7 +560,7 @@
 <body>
   <div class="page" id="page">
     <div class="topbar">
-      <div class="who">◆ MainCharacter · Lookmaxxing<br /><b id="whoName">—</b></div>
+      <div class="who">◆ MainCharacter · Lookmaxxing<br /><b id="whoName">…</b></div>
       <div class="badges">
         <span class="badge badge--streak" id="streakBadge">Day 0</span>
         <span class="badge badge--level" id="levelBadge">Raw</span>
@@ -730,7 +730,7 @@
           data-event="cross_sell_orator_clicked"
           data-event-props='{"placement":"dashboard"}'
           style="text-decoration:none;display:block"
-          aria-label="Add The Orator — upgrade to bundle">Add The Orator</a>
+          aria-label="Add The Orator: upgrade to bundle">Add The Orator</a>
         <button
           class="cross-sell__dismiss"
           aria-label="Dismiss this offer"
@@ -1027,7 +1027,7 @@
       mirrorTitle:       'THE MIRROR, OVER TIME',
       mirrorCountLabel:  'mornings logged',
       mirrorZeroCaption: 'Your first morning is waiting.',
-      mirrorStreak:      (n) => `Longest streak — ${n} days`,
+      mirrorStreak:      (n) => `Longest streak: ${n} days`,
       hairTitle:         'HAIRLINE',
       hairOneReading:    'Tracking begins now.',
       hairStageHeld:     (stage, n) => `Stage held at ${stage} for ${n} reading${n !== 1 ? 's' : ''}.`,
@@ -1077,7 +1077,7 @@
     function deltaText(val) {
       if (val > 0) return `▲ +${val}`;
       if (val < 0) return `▼ ${val}`;
-      return '—';
+      return '…';
     }
 
     // Build an accessible aria-label for a reading row.
@@ -1098,7 +1098,7 @@
     function buildTimelineRow(r, delta, isFirst) {
       const nodeClass = isFirst ? 'timeline-node current' : 'timeline-node';
       const dClass = delta !== null ? deltaClass(delta) : 'neutral';
-      const dText  = delta !== null ? deltaText(delta) : '—';
+      const dText  = delta !== null ? deltaText(delta) : '…';
       const label  = r.type === 'baseline' ? JOURNEY_COPY.rowBaseline : JOURNEY_COPY.rowReaudit;
       const href   = r.href || '#';
       return `<li class="timeline-item">

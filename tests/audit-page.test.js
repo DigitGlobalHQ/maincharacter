@@ -15,7 +15,7 @@ describe('audit.html — funnel scaffold (P3.1)', () => {
   it('uses the verbatim brief hook + skin question', () => {
     expect(html).toContain('The room reads you before you speak.');
     expect(html).toContain('Five minutes. One reading. Yours.');
-    expect(html).toContain('Your morning ritual when you look at the mirror — what happens after?');
+    expect(html).toContain('Your morning ritual when you look at the mirror: what happens after?');
     expect(html).toContain('I cleanse, moisturise, sunscreen');
   });
 

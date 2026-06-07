@@ -417,7 +417,7 @@
   function renderFull(report) {
     reportEl.hidden = false;
 
-    document.getElementById('full-score-num').textContent = report.auraScore || '—';
+    document.getElementById('full-score-num').textContent = report.auraScore || '…';
     document.getElementById('full-rank').textContent = capitalise(report.rank || '');
     document.getElementById('full-impression').textContent = report.firstImpression || '';
 
@@ -492,7 +492,7 @@
     if (lever.rationale) {
       leverEl.textContent = lever.rationale;
     } else if (lever.metric) {
-      leverEl.textContent = formatMetricName(lever.metric) + ' — score ' + (lever.score || 0);
+      leverEl.textContent = formatMetricName(lever.metric) + ' · score ' + (lever.score || 0);
     }
 
     // Quests

@@ -38,7 +38,7 @@ const WEEKLY_UP = 'The line is up. Week {{week}} held.';
 const WEEKLY_FLAT = 'The line held flat this week. A held line is the floor we work from.';
 
 // COPY APPROVED 2026-05-28 (#21): weekly DOWN variant
-const WEEKLY_DOWN = 'The line moved down. That is data, not verdict — the protocol is the lever, and the lever has not changed. Hold the work into next week.';
+const WEEKLY_DOWN = 'The line moved down. That is data, not verdict. The protocol is the lever, and the lever has not changed. Hold the work into next week.';
 
 // ── Day-30 re-audit Consultant strings ────────────────────────────────────────
 
@@ -46,18 +46,18 @@ const WEEKLY_DOWN = 'The line moved down. That is data, not verdict — the prot
 const REAUDIT_UP =
   'Your {{leverage}} was the leverage point on Day 1. It has moved +{{leverageDelta}}. ' +
   'The composite moved from {{overall1}} to {{overall30}}. ' +
-  'This is not flattery — it is the measurement. Thirty more days compounds it. ◆ MainCharacter';
+  'This is not flattery. It is the measurement. Thirty more days compounds it. ◆ MainCharacter';
 
 // COPY APPROVED 2026-05-28 (#26): Day-30 FLAT variant
 const REAUDIT_FLAT =
   'The reading sits at Day 1. Thirty days is a short measurement window for what we are ' +
-  'measuring — the most honest read of a flat month is that the protocol held the ground ' +
+  'measuring. The most honest read of a flat month is that the protocol held the ground ' +
   'while the slower axes catch up. The work continues. ◆ MainCharacter';
 
 // COPY APPROVED 2026-05-28 (#27): Day-30 DOWN variant (at least one axis held)
 // "The axes that held tell us the protocol held." is included when heldCount > 0.
 const REAUDIT_DOWN =
-  'Day 30 reads below Day 1. Read that carefully — a single photograph carries the ' +
+  'Day 30 reads below Day 1. Read that carefully. A single photograph carries the ' +
   'lighting, the morning, and the angle as much as it carries the work, and thirty days ' +
   'against a small unknown of those conditions can read as motion that is not there. ' +
   'The axes that held tell us the protocol held. ' +
@@ -66,7 +66,7 @@ const REAUDIT_DOWN =
 // COPY APPROVED 2026-05-28 (#27 branched): Day-30 DOWN variant when heldCount === 0
 // Third sentence ("The axes that held...") is dropped per brief — coordinate with B2.
 const REAUDIT_DOWN_NO_HELD_AXES =
-  'Day 30 reads below Day 1. Read that carefully — a single photograph carries the ' +
+  'Day 30 reads below Day 1. Read that carefully. A single photograph carries the ' +
   'lighting, the morning, and the angle as much as it carries the work, and thirty days ' +
   'against a small unknown of those conditions can read as motion that is not there. ' +
   'The axes that fell tell us the lever for the next thirty. We aim there. ◆ MainCharacter';

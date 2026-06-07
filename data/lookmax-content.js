@@ -52,10 +52,10 @@ const PROTOCOL_LIBRARY = {
   ],
   jaw: [
     { id: 'jaw-1', axis: 'jawDefinition', category: 'do', title: 'Reduce evening salt and alcohol', instruction: 'Both drive overnight facial water retention. Easing them sharpens the morning read of the lower face.' },
-    { id: 'jaw-2', axis: 'jawDefinition', category: 'do', title: 'Rest the tongue on the palate', instruction: 'Let the tongue rest lightly on the roof of the mouth. Rest it — never strain or push.' },
+    { id: 'jaw-2', axis: 'jawDefinition', category: 'do', title: 'Rest the tongue on the palate', instruction: 'Let the tongue rest lightly on the roof of the mouth. Rest it. Never strain or push.' },
     { id: 'jaw-3', axis: 'jawDefinition', category: 'do', title: 'Hold the head level', instruction: 'A neutral head carriage with a light chin position reads as composure and lengthens the jawline in photos.' },
     { id: 'jaw-dn-1', axis: 'jawDefinition', category: 'do-not', title: 'DO NOT use jaw exercisers', instruction: 'No good reason to believe they sharpen the jaw, and they risk jaw-joint strain. Skip them.' },
-    { id: 'jaw-dn-2', axis: 'jawDefinition', category: 'do-not', title: 'DO NOT chew gum aggressively for "definition"', instruction: 'Overworking the chewing muscles widens the lower face — it does not sharpen it.' },
+    { id: 'jaw-dn-2', axis: 'jawDefinition', category: 'do-not', title: 'DO NOT chew gum aggressively for "definition"', instruction: 'Overworking the chewing muscles widens the lower face. It does not sharpen it.' },
   ],
   posture: [
     { id: 'posture-1', axis: 'posture', category: 'do', title: 'Two minutes of thoracic extension', instruction: 'Gently open the upper back over a chair edge for two minutes daily. It counters the forward hunch from screens.' },
@@ -77,6 +77,6 @@ const PROTOCOL_LIBRARY = {
 // Surfaced when a hair reading suggests the user may want professional input.
 // Safe referral only — no drug names, no prescriptions (Phase 1).
 const PROFESSIONAL_REFERRAL_NOTE =
-  'If the hairline is a real concern for you, this is one for a qualified professional — a dermatologist can give you an objective baseline.';
+  'If the hairline is a real concern for you, this is one for a qualified professional. A dermatologist can give you an objective baseline.';
 
 module.exports = { PROTOCOL_LIBRARY, AXIS_TO_BUCKET, PROFESSIONAL_REFERRAL_NOTE };

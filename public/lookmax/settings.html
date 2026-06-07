@@ -96,7 +96,7 @@
       .then(function (d) {
         var u = (d && d.user) || {};
         document.getElementById('acc-name').textContent = u.name || 'Seeker';
-        document.getElementById('acc-email').textContent = u.email || '—';
+        document.getElementById('acc-email').textContent = u.email || '…';
         var plan = u.auraPlusPlus ? 'Aura++ (both pillars)'
           : u.lookmaxxingActive ? 'Lookmaxxing · ₹99/month'
           : 'Free reading';

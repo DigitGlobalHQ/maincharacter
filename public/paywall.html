@@ -224,7 +224,7 @@
         <div class="hint">Your protocol arrives here. Indian mobile, 10 digits.</div>
       </div>
       <div class="field">
-        <label for="email" id="emailLabel">Email <span id="emailOptional" style="opacity:.6">(optional — for receipts)</span></label>
+        <label for="email" id="emailLabel">Email <span id="emailOptional" style="opacity:.6">(optional, for receipts)</span></label>
         <input id="email" type="email" autocomplete="email" placeholder="you@example.com" data-required="lookmax" />
       </div>
       <div class="err" id="err"></div>
@@ -271,7 +271,7 @@
 
   // Pre-select Aura++ context when arriving with intent=bundle.
   if (params.get('intent') === 'bundle') {
-    document.getElementById('selectedNote').textContent = 'Aura++ pre-selected — both pillars, saves ₹299/mo.';
+    document.getElementById('selectedNote').textContent = 'Aura++ pre-selected: both pillars, saves ₹299/mo.';
     document.getElementById('card-aura').classList.add('is-selected');
     if (window.mc) window.mc.track('bundle_intent', { placement: 'paywall' });
   }
@@ -345,7 +345,7 @@
     if (!/^[6-9]\d{9}$/.test(phone10)) { err.textContent = 'Enter a valid 10-digit Indian mobile number.'; return; }
     // Email is required when Lookmaxxing is selected (login arrives via email magic link)
     if (requireEmail && !email) {
-      err.textContent = 'Email is required for Lookmaxxing — you enter the work through it.';
+      err.textContent = 'Email is required for Lookmaxxing. You enter the work through it.';
       document.getElementById('email').focus();
       return;
     }

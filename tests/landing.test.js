@@ -17,7 +17,7 @@ describe('landing.html — locked copy (byte-identical guard)', () => {
     '<div class="rank-row__name">The Sovereign</div>',
     '<div class="ranks__rule reveal">Ranks are never lost. Return is always welcomed.</div>',
     '<h2>Your arc begins with one question.</h2>',
-    '"In a room full of your peers, do you feel like the protagonist — or a spectator?"',
+    '"In a room full of your peers, do you feel like the protagonist, or a spectator?"',
   ];
   for (const snippet of LOCKED) {
     it(`preserves locked copy: ${snippet.slice(0, 48)}…`, () => {
@@ -66,7 +66,7 @@ describe('landing.html — Aura++ reveal section (P2.2/P2.3)', () => {
   });
 
   it('has the ₹99-led pricing strip and reading CTA (pivot-to-99)', () => {
-    expect(html).toContain('Start with the Aura Reading — free to see your score');
+    expect(html).toContain('Start with the Aura Reading, free to see your score');
     expect(html).toContain('Get your reading →');
   });
 

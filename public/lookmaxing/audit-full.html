@@ -297,9 +297,9 @@
   <h1 id="full-report-heading" class="mc-serif mc-serif--italic" style="font-size:var(--mc-fs-h1);margin:0 0 var(--mc-sp-5);">Here is what the room sees.</h1>
 
   <div class="lm-full-score-header">
-    <span class="lm-full-score-num" id="full-score-num">—</span>
+    <span class="lm-full-score-num" id="full-score-num">…</span>
     <span class="lm-full-score-sep" aria-hidden="true">·</span>
-    <span class="lm-full-rank" id="full-rank">—</span>
+    <span class="lm-full-rank" id="full-rank">…</span>
   </div>
 
   <!-- Share (viral growth: every share recruits a new free visitor) -->
@@ -442,7 +442,7 @@
   function renderFull(report) {
     reportEl.hidden = false;
     var g10 = (typeof report.globalScore10 === 'number') ? report.globalScore10 : (report.auraScore ? report.auraScore / 10 : null);
-    document.getElementById('full-score-num').textContent = g10 != null ? g10.toFixed(1) : (report.auraScore || '—');
+    document.getElementById('full-score-num').textContent = g10 != null ? g10.toFixed(1) : (report.auraScore || '…');
     var rankBits = [];
     if (report.archetype) rankBits.push(report.archetype);
     else if (report.rank) rankBits.push(capitalise(report.rank));
@@ -463,7 +463,7 @@
       if (bp) {
         bp.innerHTML =
         '<div class="lm-section-label" aria-hidden="true"><span class="lm-section-label__text">YOUR FULL BLUEPRINT</span><div class="lm-section-label__line"></div></div>'
-        + '<p class="lm-block-intro">Your full diagnostic is being finalised. Generate it now — it takes a few seconds.</p>'
+        + '<p class="lm-block-intro">Your full diagnostic is being finalised. Generate it now. It takes a few seconds.</p>'
         + '<button type="button" id="reanalyze-btn" class="mc-btn-primary mc-light-point-glow" style="min-height:52px;">Generate my full Blueprint →</button>'
         + '<p id="reanalyze-status" style="color:var(--mc-silver-faint);font-size:13px;margin-top:10px;"></p>';
         bp.classList.add('is-visible');
@@ -512,17 +512,17 @@
     var c = report.chromatic;
     if (c) {
       html += sectionLabel('03 · THE CHROMATIC & GROOMING ARSENAL');
-      html += '<p class="lm-block-intro">Colour is the highest-ROI lever — it re-engineers how the skin reads with no physical intervention.</p>';
+      html += '<p class="lm-block-intro">Colour is the highest-ROI lever. It re-engineers how the skin reads with no physical intervention.</p>';
       html += '<p style="color:var(--mc-silver-bright);font-weight:600;margin:0 0 4px;">' + esc(c.profile || '') + '</p>';
-      html += '<p style="color:var(--mc-silver-mid);font-size:13px;margin:0 0 var(--mc-sp-5);">Undertone — ' + esc((c.undertone || '') + ' (' + (c.undertoneNote || '') + ')') + ' · Contrast — ' + esc((c.contrast || '') + ' (' + (c.contrastNote || '') + ')') + '</p>';
+      html += '<p style="color:var(--mc-silver-mid);font-size:13px;margin:0 0 var(--mc-sp-5);">Undertone: ' + esc((c.undertone || '') + ' (' + (c.undertoneNote || '') + ')') + ' · Contrast: ' + esc((c.contrast || '') + ' (' + (c.contrastNote || '') + ')') + '</p>';
       if (c.powerPalette && c.powerPalette.length) { html += '<p class="mc-eyebrow" style="margin-bottom:var(--mc-sp-3)">THE POWER PALETTE</p>'; c.powerPalette.forEach(function (s) { html += swatch(s.hex, s.name, s.note); }); }
-      if (c.supportingNeutrals) html += '<p style="color:var(--mc-silver-faint);font-size:12px;font-style:italic;margin:0 0 var(--mc-sp-4)">Supporting neutrals — ' + esc(c.supportingNeutrals) + '</p>';
-      if (c.antiPalette && c.antiPalette.length) { html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 var(--mc-sp-3)">THE ANTI-PALETTE — NEVER AT THE FACE</p>'; c.antiPalette.forEach(function (s) { html += swatch(s.hex, 'Avoid: ' + (s.name || ''), s.impact); }); }
+      if (c.supportingNeutrals) html += '<p style="color:var(--mc-silver-faint);font-size:12px;font-style:italic;margin:0 0 var(--mc-sp-4)">Supporting neutrals: ' + esc(c.supportingNeutrals) + '</p>';
+      if (c.antiPalette && c.antiPalette.length) { html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 var(--mc-sp-3)">THE ANTI-PALETTE · NEVER AT THE FACE</p>'; c.antiPalette.forEach(function (s) { html += swatch(s.hex, 'Avoid: ' + (s.name || ''), s.impact); }); }
       if (c.metals) html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 6px">HARDWARE & METALS</p><p style="color:var(--mc-silver-bright);font-weight:600;margin:0 0 2px">' + esc(c.metals.locked || '') + '</p><p style="color:var(--mc-silver-mid);font-size:13px;margin:0 0 var(--mc-sp-4)">' + esc(c.metals.note || '') + '</p>';
       if (c.stylingCorrections) html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 6px">STYLING CORRECTIONS</p><p style="color:var(--mc-silver-mid);font-size:13px;line-height:1.6;margin:0 0 var(--mc-sp-4)">' + esc(c.stylingCorrections) + '</p>';
       if (c.cosmetic) {
         if (c.cosmetic.lipWardrobe && c.cosmetic.lipWardrobe.length) { html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 var(--mc-sp-3)">THE LIP WARDROBE</p>'; c.cosmetic.lipWardrobe.forEach(function (s) { html += swatch(s.hex, s.name, s.note); }); }
-        if (c.cosmetic.complexion && c.cosmetic.complexion.length) { html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 var(--mc-sp-3)">COMPLEXION · CHEEK · EYE</p>'; c.cosmetic.complexion.forEach(function (it) { html += '<p style="margin:0 0 8px"><span style="color:var(--mc-silver-bright);font-weight:600">' + esc(it.area || '') + '</span> — <span style="color:var(--mc-silver-mid);font-size:13px">' + esc(it.directive || '') + '</span></p>'; }); }
+        if (c.cosmetic.complexion && c.cosmetic.complexion.length) { html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 var(--mc-sp-3)">COMPLEXION · CHEEK · EYE</p>'; c.cosmetic.complexion.forEach(function (it) { html += '<p style="margin:0 0 8px"><span style="color:var(--mc-silver-bright);font-weight:600">' + esc(it.area || '') + '</span> · <span style="color:var(--mc-silver-mid);font-size:13px">' + esc(it.directive || '') + '</span></p>'; }); }
         html += '<p style="color:var(--mc-silver-faint);font-size:11px;font-style:italic;margin-top:8px">Cosmetic guidance is calibrated to colour biology only and is independent of gender expression.</p>';
       }
     }
@@ -530,7 +530,7 @@
     var iv = report.intervention;
     if (iv) {
       html += sectionLabel('04 · THE 90-DAY INTERVENTION BLUEPRINT');
-      html += '<p class="lm-block-intro">Each agent corrects a specific root cause. Items marked Rx are prescription-grade — bring them to your dermatologist; do not self-source.</p>';
+      html += '<p class="lm-block-intro">Each agent corrects a specific root cause. Items marked Rx are prescription-grade. Bring them to your dermatologist; do not self-source.</p>';
       [['Morning Protocol', iv.morning], ['Night Protocol', iv.night], ['Mechanical Arsenal', iv.mechanical]].forEach(function (b) {
         var steps = b[1]; if (!steps || !steps.length) return;
         html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 var(--mc-sp-3)">' + esc(b[0].toUpperCase()) + '</p>';

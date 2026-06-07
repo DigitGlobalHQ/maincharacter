@@ -1948,7 +1948,7 @@ body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radiu
     const names = { orator: "The Orator's", aesthetic: "The Aesthetic's", sage: "The Sage's" };
     const confirm = document.getElementById('pillar-confirm');
     const text = document.getElementById('pillar-confirm-text');
-    text.innerHTML = `You have accepted <span class="text-gold">${names[pillar]}</span> quest. The other two remain — but not for you, not this week.`;
+    text.innerHTML = `You have accepted <span class="text-gold">${names[pillar]}</span> quest. The other two remain, but not for you, not this week.`;
     confirm.classList.add('show');
   };
 
@@ -2055,7 +2055,7 @@ body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radiu
     
     // Wati Business number
     const watiNumber = '919958533994';
-    const message = encodeURIComponent('YES — I just completed the MainCharacter audit. Begin my protocol.');
+    const message = encodeURIComponent('YES. I just completed the MainCharacter audit. Begin my protocol.');
     
     // Open WhatsApp in new tab
     window.open(`https://wa.me/${watiNumber}?text=${message}`, '_blank');
@@ -2073,13 +2073,13 @@ body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radiu
 
   // ===== PHASE 5 — 7-DAY TRIAL =====
   const dayCaptions = {
-    1: "Day 1 · Evening (8:00pm) — The Baseline Reading",
-    2: "Day 2 · Morning + Evening — First Loop, First Win",
-    3: "Day 3 · Morning — The Sage Borrow",
-    4: "Day 4 · Evening — The Halfway Marker",
-    5: "Day 5 · Morning — The Hardest Day",
-    6: "Day 6 · Evening — The Set-Up",
-    7: "Day 7 · Morning (7:45am) — The Weekly Evolution Report — The Paywall",
+    1: "Day 1 · Evening (8:00pm): The Baseline Reading",
+    2: "Day 2 · Morning + Evening: First Loop, First Win",
+    3: "Day 3 · Morning: The Sage Borrow",
+    4: "Day 4 · Evening: The Halfway Marker",
+    5: "Day 5 · Morning: The Hardest Day",
+    6: "Day 6 · Evening: The Set-Up",
+    7: "Day 7 · Morning (7:45am): The Weekly Evolution Report · The Paywall",
   };
 
   function audioWaveHTML(label) {
@@ -2105,7 +2105,7 @@ body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radiu
     1: [
       { type: 'date', text: 'TODAY · 8:00 PM' },
       { type: 'in', text: "Welcome to your line, Aarav. I'm your Orator Consultant. I've reviewed your baseline.", time: '8:00 PM' },
-      { type: 'in', text: "Your Day 1 reading arrives in two minutes — would you like it now, or at 8pm tonight when you have a moment?", time: '8:00 PM' },
+      { type: 'in', text: "Your Day 1 reading arrives in two minutes. Would you like it now, or at 8pm tonight when you have a moment?", time: '8:00 PM' },
       { type: 'qr', options: ['Send it now', 'Tonight at 8pm'] },
       { type: 'out', text: 'Send it now', time: '8:01 PM' },
       { type: 'in', text: 'Your Baseline Mark is in.' + statsCardHTML([
@@ -2113,27 +2113,27 @@ body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radiu
         ['Strongest meter', 'Vocabulary · 88', ''],
         ['Weakest meter', 'Filler Frequency · 51', ''],
       ]), time: '8:01 PM' },
-      { type: 'in', text: 'I counted 9 fillers in 60 seconds — most around moments of transition. Solid foundation with room to climb.', time: '8:02 PM' },
-      { type: 'in', text: "Your first quest arrives tomorrow at 7:45am. Sleep on this: tomorrow's only job is to record one minute on the same prompt, with one filler word less than today.<br><br><em>— Your Orator Consultant</em>", time: '8:03 PM' },
+      { type: 'in', text: 'I counted 9 fillers in 60 seconds, most around moments of transition. Solid foundation with room to climb.', time: '8:02 PM' },
+      { type: 'in', text: "Your first quest arrives tomorrow at 7:45am. Sleep on this: tomorrow's only job is to record one minute on the same prompt, with one filler word less than today.<br><br><em>Your Orator Consultant</em>", time: '8:03 PM' },
     ],
     2: [
       { type: 'date', text: 'DAY 2 · 7:45 AM' },
-      { type: 'in', text: "Morning, Aarav. Today's prompt: <em>'Describe a project you're proud of — in 60 seconds.'</em>", time: '7:45 AM' },
-      { type: 'in', text: 'Before you record — one micro-quest: before your first meeting today, breathe once and pause two seconds before your opening sentence. That\'s it.', time: '7:45 AM' },
-      { type: 'out', html: audioWaveHTML('Day 2 — 0:60'), time: '8:14 AM' },
+      { type: 'in', text: "Morning, Aarav. Today's prompt: <em>'Describe a project you're proud of, in 60 seconds.'</em>", time: '7:45 AM' },
+      { type: 'in', text: 'Before you record, one micro-quest: before your first meeting today, breathe once and pause two seconds before your opening sentence. That\'s it.', time: '7:45 AM' },
+      { type: 'out', html: audioWaveHTML('Day 2 · 0:60'), time: '8:14 AM' },
       { type: 'date', text: 'DAY 2 · 8:00 PM' },
       { type: 'in', text: "Today's reading." + statsCardHTML([
         ['Fluency', '67 → 71', '+4'],
         ['Fillers', '9 → 6', ''],
-      ], 'Headline win: you held the opening pause — Day 2'), time: '8:00 PM' },
-      { type: 'in', text: "You did the work. Tomorrow's quest at 7:45.<br><br><em>— Orator Consultant</em>", time: '8:00 PM' },
+      ], 'Headline win: you held the opening pause, Day 2'), time: '8:00 PM' },
+      { type: 'in', text: "You did the work. Tomorrow's quest at 7:45.<br><br><em>Orator Consultant</em>", time: '8:00 PM' },
     ],
     3: [
       { type: 'date', text: 'DAY 3 · 7:45 AM' },
-      { type: 'in', text: "Aarav — most pacing problems aren't pacing problems. They're nerves.", time: '7:45 AM' },
+      { type: 'in', text: "Aarav, most pacing problems aren't pacing problems. They're nerves.", time: '7:45 AM' },
       { type: 'in', text: "Today's quest comes paired with one Sage technique I'd normally reserve for Week 3: <strong>The Physiological Sigh.</strong>", time: '7:45 AM' },
       { type: 'in', text: "Use it 30 seconds before recording. Two short inhales through the nose, one long exhale through the mouth. The fastest known way to down-regulate a stress spike.", time: '7:45 AM' },
-      { type: 'in', text: "It's a borrowed unlock — to show you what the other pillars hold. Then record your minute.<br><br><em>— Your Consultant</em>", time: '7:46 AM' },
+      { type: 'in', text: "It's a borrowed unlock, to show you what the other pillars hold. Then record your minute.<br><br><em>Your Consultant</em>", time: '7:46 AM' },
       { type: 'out', text: 'Got it. Recording in 5.', time: '8:22 AM' },
     ],
     4: [
@@ -2142,28 +2142,28 @@ body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radiu
       { type: 'in', text: 'Four days ago you recorded a baseline. Today\'s reading:' + statsCardHTML([
         ['Fluency', '67 → 74', '+7'],
       ]), time: '8:00 PM' },
-      { type: 'in', text: "Most people abandon self-improvement on Day 4. You did not. The work is starting to show.<br><br><em>— Your Consultant</em>", time: '8:01 PM' },
+      { type: 'in', text: "Most people abandon self-improvement on Day 4. You did not. The work is starting to show.<br><br><em>Your Consultant</em>", time: '8:01 PM' },
     ],
     5: [
       { type: 'date', text: 'DAY 5 · 7:45 AM' },
       { type: 'in', text: 'Different prompt today.', time: '7:45 AM' },
       { type: 'in', text: 'Imagine you\'re opening that Monday leadership stand-up you told me about. Go.', time: '7:45 AM' },
       { type: 'in', text: "Don't perform. Speak.", time: '7:45 AM' },
-      { type: 'in', text: "Today's recording is the closest yet to the room that matters most to you. The harder it feels, the better the data.<br><br><em>— Your Consultant</em>", time: '7:46 AM' },
+      { type: 'in', text: "Today's recording is the closest yet to the room that matters most to you. The harder it feels, the better the data.<br><br><em>Your Consultant</em>", time: '7:46 AM' },
     ],
     6: [
       { type: 'date', text: 'DAY 6 · 8:00 PM' },
       { type: 'in', text: "Tomorrow is your Day 7. Your Weekly Evolution Report.", time: '8:00 PM' },
       { type: 'in', text: "Before you receive it, do one thing for me: don't listen to your baseline tonight.", time: '8:00 PM' },
       { type: 'in', text: "Don't try to remember how you sounded. I want the comparison tomorrow to surprise you.", time: '8:01 PM' },
-      { type: 'in', text: "7:45am. Be somewhere you can listen with headphones.<br><br><em>— Your Consultant</em>", time: '8:01 PM' },
+      { type: 'in', text: "7:45am. Be somewhere you can listen with headphones.<br><br><em>Your Consultant</em>", time: '8:01 PM' },
     ],
     7: [
       { type: 'date', text: 'DAY 7 · 7:45 AM' },
       { type: 'in', text: 'Day 7. Your Weekly Evolution Report.', time: '7:45 AM' },
       { type: 'in', text: 'Before I show you the numbers, I want you to hear something.', time: '7:45 AM' },
-      { type: 'in', html: audioWaveHTML('Day 1 — Your Baseline · 0:60'), time: '7:45 AM' },
-      { type: 'in', html: audioWaveHTML('Day 7 — This Morning · 0:60'), time: '7:45 AM' },
+      { type: 'in', html: audioWaveHTML('Day 1: Your Baseline · 0:60'), time: '7:45 AM' },
+      { type: 'in', html: audioWaveHTML('Day 7: This Morning · 0:60'), time: '7:45 AM' },
       { type: 'in', text: 'Play them in order. Headphones if you can.', time: '7:46 AM' },
       { type: 'in', text: "You don't have to take my word for what changed." + statsCardHTML([
         ['Fluency Score', '67 → 81', '+14'],
@@ -2173,7 +2173,7 @@ body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radiu
         ['Confidence Tone', '60 → 79', '+19'],
         ['Filler Frequency', '51 → 74', '+23'],
       ]), time: '7:48 AM' },
-      { type: 'in', text: "The single biggest shift was pacing. You stopped racing your sentences. The Monday stand-up sounds different now — because <em>you</em> sound different.", time: '7:48 AM' },
+      { type: 'in', text: "The single biggest shift was pacing. You stopped racing your sentences. The Monday stand-up sounds different now, because <em>you</em> sound different.", time: '7:48 AM' },
       { type: 'in', text: "This is what one pillar, seven days, five minutes a day can do. Now imagine ninety.", time: '7:48 AM' },
       { type: 'paywall' },
     ],
@@ -2222,15 +2222,15 @@ body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radiu
         const el = document.createElement('div');
         el.className = 'wa-bubble incoming';
         el.innerHTML = `<div class="paywall-card">
-          <div class="pw-header">— Continue the ASCEND Protocol —</div>
+          <div class="pw-header">Continue the ASCEND Protocol</div>
           <div class="pw-body">Your Day 8 quest is already prepared. To receive it, and to unlock:</div>
           <ul>
-            <li>All three pillars — Orator, Aesthetic, Sage</li>
+            <li>All three pillars: Orator, Aesthetic, Sage</li>
             <li>The full Wisdom skill tree (60+ nodes remain)</li>
             <li>Weekly Evolution Reports, indefinitely</li>
             <li>Your concierge, every morning, on this line</li>
           </ul>
-          <div class="pw-price">The Protocol — ₹1,499 / month</div>
+          <div class="pw-price">The Protocol: ₹1,499 / month</div>
           <div class="pw-annual">or 30% off annual · ₹12,499/year</div>
           <button class="pw-cta">Continue My Ascension →</button>
           <div class="pw-fine">"If you do nothing, your concierge goes quiet at midnight tonight. We do not chase. We do not discount."</div>

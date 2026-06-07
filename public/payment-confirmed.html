@@ -173,7 +173,7 @@
       <hr class="pc-divider" />
 
       <!-- Collapsed receipt line (single line per design spec §2.3) -->
-      <div class="pc-receipt-line" id="pcReceiptLine">—</div>
+      <div class="pc-receipt-line" id="pcReceiptLine">…</div>
       <!-- Hidden compatibility elements — retain ids so existing tests and server
            integrations that reference rPlan/rAmount/rNext continue to pass.
            Populated by renderConfirmed() alongside the visible receipt line. -->
@@ -227,12 +227,12 @@
   }
 
   function fmtINR(paise) {
-    if (paise == null) return '—';
+    if (paise == null) return '…';
     return '₹' + Math.round(paise / 100).toLocaleString('en-IN');
   }
   function fmtDate(iso) {
     try { return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
-    catch (_e) { return '—'; }
+    catch (_e) { return '…'; }
   }
 
   function showError() {
@@ -345,14 +345,14 @@
     renderSteps(d);
 
     // Collapsed receipt line (single line per design spec §2.3)
-    var planLabel = d.planLabel || '—';
-    var amount = d.amount != null ? fmtINR(d.amount) + '/mo' : '—';
+    var planLabel = d.planLabel || '…';
+    var amount = d.amount != null ? fmtINR(d.amount) + '/mo' : '…';
     var nextDate = fmtDate(d.nextBillingDate);
     document.getElementById('pcReceiptLine').textContent =
       planLabel + ' · ' + amount + ' · next billing ' + nextDate;
     // Also populate hidden compat elements (preserves existing test/server contracts)
-    document.getElementById('rPlan').textContent = d.planLabel || '—';
-    document.getElementById('rAmount').textContent = d.amount != null ? fmtINR(d.amount) + ' / month' : '—';
+    document.getElementById('rPlan').textContent = d.planLabel || '…';
+    document.getElementById('rAmount').textContent = d.amount != null ? fmtINR(d.amount) + ' / month' : '…';
     document.getElementById('rNext').textContent = nextDate;
 
     // Wire mirror button

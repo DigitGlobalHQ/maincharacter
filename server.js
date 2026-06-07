@@ -331,7 +331,8 @@ app.use('/api/lookmax', require('./routes/lookmax'));
 app.use('/api/lookmax', require('./routes/reaudit'));
 // Stage-1 Audit Engine (Wave 2A). Guest + user sessions, resolution gate,
 // Razorpay ₹99 one-time order, PDF generation. Cited: briefs/stage-1-audit-spec.md §8.
-app.use('/api/lookmaxing', require('./routes/lookmaxing'));
+const lookmaxingRoutes = require('./routes/lookmaxing');
+app.use('/api/lookmaxing', lookmaxingRoutes);
 // Viral share cards — public OG-preview pages + personalised PNG score images,
 // mounted at root (/s/:id). Read-only; exposes only score + rank, never PII.
 app.use('/', require('./routes/share'));
@@ -383,6 +384,10 @@ app.get('/health', async (req, res) => {
         // funnel-repair: validity, not just presence. A leaked/revoked key (403)
         // surfaces as 'leaked'/'invalid_key' here while `gemini` above stays true.
         geminiKey: geminiHealth.getStatus().status,
+        // Aura-engine reality check: how many readings were genuine Gemini Vision
+        // analyses vs the quiz-only fallback. If `fallback` climbs while `gemini`
+        // stays 0, every reading is the near-constant fallback (same score for all).
+        auraEngine: lookmaxingRoutes.getAnalyzeStats ? lookmaxingRoutes.getAnalyzeStats() : null,
         razorpay: !!process.env.RAZORPAY_KEY_ID,
         adminPhone: adminLib.getAdminPhones().length > 0,
         adminCount: adminLib.getAdminPhones().length,

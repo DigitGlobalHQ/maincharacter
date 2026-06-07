@@ -305,6 +305,26 @@ function _canCall() {
   return _rpm.length < 10;
 }
 
+// ── Aura-engine observability ────────────────────────────────────────────────
+// Every reading is either a genuine Gemini Vision analysis (face-personalised) or
+// the quiz-only fallback (NOT face-personalised — near-constant score for everyone,
+// the cause of "two people get the same score"). These counters make the split
+// visible on /health so the founder can tell, at a glance, whether real readings
+// are being generated. lastFallbackReason names WHY the most recent fallback fired.
+const _analyzeStats = { gemini: 0, fallback: 0, lastFallbackReason: null, lastFallbackAt: null };
+function getAnalyzeStats() { return Object.assign({}, _analyzeStats); }
+function _recordFallback(reason) {
+  _analyzeStats.fallback += 1;
+  _analyzeStats.lastFallbackReason = reason;
+  _analyzeStats.lastFallbackAt = new Date().toISOString();
+}
+// STRICT mode (opt-in): once a valid GEMINI_API_KEY is confirmed, set
+// AUDIT_STRICT_GEMINI=true so a configured-key call failure surfaces an honest
+// 502 (retry) instead of silently fabricating a quiz-only reading. Off by default
+// so a key outage degrades rather than dead-ends the funnel.
+const STRICT_GEMINI = process.env.AUDIT_STRICT_GEMINI === 'true';
+
+
 /**
  * Synthetic fallback report when Gemini is unavailable.
  * Returns a structurally valid report with placeholder values.
@@ -385,10 +405,19 @@ function _rankFromScore(score) {
  */
 async function _callGemini(quizAnswers, photoBuffer) {
   const prompts = getAuditPrompts();
-  if (!prompts) return _fallbackReport(quizAnswers);
-  if (!_geminiModel) return _fallbackReport(quizAnswers);
+  if (!prompts) { _recordFallback('prompts_module_missing'); return _fallbackReport(quizAnswers); }
+  if (!_geminiModel) {
+    // No usable model. This is the #1 cause of "everyone gets a similar score":
+    // GEMINI_API_KEY is unset or failed to initialise, so NO face analysis happens
+    // and the quiz-only fallback (near-constant) is returned. Loud so it is obvious.
+    _recordFallback('gemini_not_configured');
+    log.error('GEMINI-CALL', 'NO Gemini model (GEMINI_API_KEY unset/invalid) — reading is quiz-only fallback, NOT face-personalised. Check /health.config.geminiKey.');
+    return _fallbackReport(quizAnswers);
+  }
   if (!_canCall()) {
+    _recordFallback('rate_limited');
     log.warn('GEMINI-RPM', 'rate limit reached — using fallback');
+    if (STRICT_GEMINI) throw new Error('gemini_rate_limited');
     return _fallbackReport(quizAnswers);
   }
 
@@ -417,16 +446,19 @@ async function _callGemini(quizAnswers, photoBuffer) {
       }
       // Keep rank consistent with the score regardless of what the model returned.
       parsed.rank = _rankFromScore(parsed.auraScore);
+      _analyzeStats.gemini += 1;          // genuine, face-personalised reading
       return _sanitizeReport(parsed);
     } catch (err) {
       lastErr = err;
       log.warn('GEMINI-CALL', `attempt ${attempt} failed: ${err.message}`);
     }
   }
-  // Both attempts failed (truncation, safety block, parse error, or outage).
-  // Never dead-end the user: fall back to the full quiz-calibrated Blueprint —
-  // a complete, safe report always beats an error screen. Logged for monitoring.
-  log.error('GEMINI-CALL', `falling back to quiz-calibrated Blueprint after failures: ${lastErr && lastErr.message}`);
+  // Both attempts failed with a CONFIGURED key (truncation, safety block, parse
+  // error, or outage). This produced a fabricated-looking quiz-only reading for a
+  // real user — loud so it is never invisible.
+  _recordFallback('gemini_call_failed');
+  log.error('GEMINI-CALL', `CONFIGURED key but call failed twice (${lastErr && lastErr.message}). ${STRICT_GEMINI ? 'STRICT: surfacing 502.' : 'Falling back to quiz-only Blueprint (NOT face-personalised).'}`);
+  if (STRICT_GEMINI) throw new Error('gemini_call_failed: ' + (lastErr && lastErr.message));
   return _fallbackReport(quizAnswers);
 }
 
@@ -1466,3 +1498,4 @@ module.exports._putSession           = _putSession;
 module.exports.applyResolutionGate   = applyResolutionGate;
 module.exports._sanitizeReport       = _sanitizeReport; // Phase 1 safety backstop
 module.exports._isUnlocked           = _isUnlocked;   // entitlement check (tests)
+module.exports.getAnalyzeStats       = getAnalyzeStats; // aura-engine gemini/fallback counters

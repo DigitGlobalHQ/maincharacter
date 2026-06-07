@@ -1211,3 +1211,25 @@ in-process cron (landmine #2). Chose **Path A**: keep the host, fix it for ₹0.
   sends). Runbook: PATH_A_CLOUDFLARE_PINGER.md.
 - Not done (founder dashboard actions): point DNS through Cloudflare, create the
   cron-job.org pinger, set CRON_SECRET in Render. No Koyeb migration — lateral move.
+
+## 2026-06-07 — Remove em/en-dashes from user-facing copy (AI-tell cleanup, Pass 1)
+
+Founder: em-dashes read as AI-generated; remove from the whole website. Resolved
+each contextually (per-sentence), NOT a blind swap — a single rule would create
+comma-splices and broken parentheticals.
+
+- Conventions: period or comma between clauses (fits the short-sentence Consultant
+  cadence); colon for "Label: detail" and list intros; parentheses for bracketed
+  asides; middot · for "Section · MainCharacter" page titles (matches existing
+  convention); period for brand-first marketing titles; … for dynamic UI
+  placeholders (heroNum, acc-*, user-name); hyphen for numeric ranges (0-100, 8-30)
+  and the flat delta indicator.
+- Scope: VISIBLE rendered copy only across 44 files (landing, audit funnel,
+  orator-content.js WhatsApp messages, all lookmax/lookmaxing + tools pages, legal,
+  dashboards). 159 replacements.
+- Deliberately KEPT (not user-facing): the Gemini system prompt in orator-content.js
+  (3 dashes — internal scoring brain, owned by gemini-prompt-engineer; changing it
+  risks scoring drift), CSS custom properties (--vars), and code comments.
+- Verified: 0 CSS-var lines changed, all TOOL_CONFIG JSON parses, orator-content
+  messages build, inline scripts parse, full suite 1516 pass, smoke 44/44.
+- Pass 2 (other AI phrasing tells) — grep + founder sign-off before any rewrite.

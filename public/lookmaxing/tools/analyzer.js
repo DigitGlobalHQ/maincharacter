@@ -16,7 +16,7 @@
     '<p class="eyebrow">' + esc(CFG.eyebrow) + '</p>',
     '<h1>' + esc(CFG.h1) + '</h1>',
     '<p class="sub">' + esc(CFG.sub) + '</p>',
-    '<div class="privacy">◆ <span><b>Private by design.</b> Analysed entirely in your browser — your photo never leaves your device.</span></div>',
+    '<div class="privacy">◆ <span><b>Private by design.</b> Analysed entirely in your browser. Your photo never leaves your device.</span></div>',
     '<div class="drop" id="drop"><label class="btn" for="file">Upload a photo →</label>',
     '<input type="file" id="file" accept="image/*"><p>Front-facing, even light, hair off the face. Nothing is uploaded.</p></div>',
     '<div class="stage" id="stage-analyze"><div class="canvas-wrap"><canvas id="canvas"></canvas></div>',
@@ -25,7 +25,7 @@
     '<div class="loading" id="loading" style="display:none;">Mapping 478 landmarks…</div>',
     '<div class="err" id="err" style="display:none;"></div></div>',
     '<div class="stage" id="stage-results">',
-    '<div class="hero-score"><div class="hero-score__num" id="heroNum">—</div>',
+    '<div class="hero-score"><div class="hero-score__num" id="heroNum">…</div>',
     '<div class="hero-score__label" id="heroLabel"></div><div class="hero-score__sub" id="heroSub"></div></div>',
     '<div class="canvas-wrap" style="max-width:380px;"><canvas id="canvas2"></canvas></div>',
     '<div class="grid" id="cards"></div>',
@@ -33,9 +33,9 @@
     '<button class="btn btn--ghost" id="againBtn">Analyse another photo</button></div>',
     '<div class="cta"><p class="eyebrow" style="text-align:center;">The Full Picture</p>',
     '<h2>This is the surface. The Blueprint is the plan.</h2>',
-    '<p>These free readings measure your geometry. The Bespoke Aesthetic Blueprint reads your photo across 24 metrics and hands you the 90-day protocol to move them — skin, jaw, eyes, hair, carriage, colour. ₹99/month.</p>',
+    '<p>These free readings measure your geometry. The Bespoke Aesthetic Blueprint reads your photo across 24 metrics and hands you the 90-day protocol to move them: skin, jaw, eyes, hair, carriage, colour. ₹99/month.</p>',
     '<a class="btn" href="/lookmaxing">Get your Bespoke Blueprint →</a></div>',
-    '<p class="disclaimer">A geometric, browser-based estimate for grooming and styling guidance — not a medical or clinical assessment. Lighting, angle and expression affect the read.</p>',
+    '<p class="disclaimer">A geometric, browser-based estimate for grooming and styling guidance, not a medical or clinical assessment. Lighting, angle and expression affect the read.</p>',
     '</div>',
   ].join('');
 
@@ -115,10 +115,10 @@
       case 'faceShape':   return { num: m.faceShape.shape, label: 'Face Shape · ' + m.faceShape.confidence + '% confidence', sub: m.faceShape.recommendation };
       case 'jawline':     return { num: m.jawline.score, label: 'Jawline Score · out of 100', sub: 'Gonial angle ' + m.jawline.gonialAngle + '° · taper ' + m.jawline.taper + ' · symmetry ' + m.jawline.symmetry };
       case 'symmetry':    return { num: m.symmetry.overall, label: 'Facial Symmetry · out of 100', sub: 'Eyes ' + m.symmetry.eyes + ' · Nose ' + m.symmetry.nose + ' · Mouth ' + m.symmetry.mouth + ' · Jaw ' + m.symmetry.jaw };
-      case 'canthalTilt': return { num: m.canthalTilt.degrees + '°', label: 'Canthal Tilt', sub: m.canthalTilt.label + ' — the eye-corner angle behind "hunter eyes".' };
+      case 'canthalTilt': return { num: m.canthalTilt.degrees + '°', label: 'Canthal Tilt', sub: m.canthalTilt.label + ': the eye-corner angle behind "hunter eyes".' };
       case 'eyeShape':    return { num: m.eyeShape.shape, label: 'Eye Shape', sub: m.eyeShape.recommendation };
       case 'goldenRatio': return { num: m.goldenRatio.score, label: 'Golden Ratio · out of 100', sub: 'Proximity to the 1.618 ideal across your key facial proportions.' };
-      case 'facialRatios':return { num: (m.facialRatios[0] && m.facialRatios[0].value) || '—', label: 'FWHR · width-to-height', sub: 'Plus midface, thirds and canthal tilt — see the full set below.' };
+      case 'facialRatios':return { num: (m.facialRatios[0] && m.facialRatios[0].value) || '…', label: 'FWHR · width-to-height', sub: 'Plus midface, thirds and canthal tilt. See the full set below.' };
       default:            return { num: m.attractiveness.score, label: 'Attractiveness Score · out of 100', sub: 'A composite of symmetry, golden-ratio proportions, jawline and canthal tilt.' };
     }
   }

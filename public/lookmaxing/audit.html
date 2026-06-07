@@ -864,6 +864,27 @@
 
     reportEl.hidden = false;
 
+    // ── Your face, measured: KPI cards from Gemini's faceMeasured (if present),
+    //    with a best-effort 478-landmark mesh overlay on the same-session photo. ──
+    (function () {
+      var fSection = document.getElementById('face-embed-section');
+      var fRoot = document.getElementById('face-embed-root');
+      if (!fSection || !fRoot) return;
+      var fPhoto = null;
+      try { fPhoto = sessionStorage.getItem('mc.facePhoto'); } catch (e) { /* blocked */ }
+      var fm = report.faceMeasured || null;
+      if (!fm && !fPhoto) { fSection.style.display = 'none'; return; }
+      (function go() {
+        if (!window.FaceEmbed) return setTimeout(go, 80);
+        window.FaceEmbed.run({
+          metrics: fm,
+          photo: fPhoto,
+          root: fRoot,
+          onDone: function (ok) { if (!ok) fSection.style.display = 'none'; },
+        });
+      }());
+    }());
+
     // Canonical score object — build and inject, then animate.
     var finalScore = report.auraScore || 0;
     var scoreObjContainer = document.getElementById('score-obj-container');
@@ -1201,26 +1222,9 @@
   }
 }());
 </script>
-<!-- Free geometric facial analysis (478-landmark mesh + KPI cards), reusing the /face engine -->
+<!-- "Your face, measured": KPI cards from Gemini's faceMeasured + a best-effort mesh
+     overlay on the same-session photo. Driven from renderReport(report). -->
 <script src="/lookmaxing/tools/face-metrics.js" defer></script>
 <script src="/lookmaxing/tools/face-embed.js" defer></script>
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    var section = document.getElementById('face-embed-section');
-    var root = document.getElementById('face-embed-root');
-    if (!section || !root) return;
-    var photo = null;
-    try { photo = sessionStorage.getItem('mc.facePhoto'); } catch (e) { /* blocked */ }
-    if (!photo) { section.style.display = 'none'; return; }
-    (function go() {
-      if (!window.FaceEmbed) return setTimeout(go, 100);
-      window.FaceEmbed.run({
-        photo: photo,
-        root: root,
-        onDone: function (ok) { if (!ok) section.style.display = 'none'; },
-      });
-    }());
-  });
-</script>
 </body>
 </html>

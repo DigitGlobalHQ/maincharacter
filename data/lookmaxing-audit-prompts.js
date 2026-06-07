@@ -619,6 +619,9 @@ If the image is too dark, blurry, off-angle, or partially occluded to read a met
 - firstImpression: one sentence that names something genuinely particular to THIS face in THIS photo and lands with quiet authority. Not a compliment, not a verdict on worth. It may nod to what they reported. No exclamation, no emoji.
 - statusAlert: 2-3 sentences — how they rank (percentile), the few modifiable imbalances bleeding perceived status, and the honest 90-day upside if executed. Chosen for them, tied to the photo and at least one answer.
 
+[GEOMETRIC FACE ESTIMATES — faceMeasured]
+Also estimate the geometric face metrics directly from the photograph and return them in faceMeasured: the face shape, the jawline (gonial angle in degrees, taper, symmetry, a 0-100 jaw score), an overall and per-feature symmetry read (eyes, nose, mouth, jaw), the canthal tilt in degrees with its label, the eye shape, a golden-ratio proximity score, the four facial ratios (FWHR, midface, lower-to-upper thirds, canthal tilt °), and an attractiveness composite (1-99). These are VISUAL ESTIMATES read from the image, not landmark-precise measurements — read them honestly and conservatively, and if the angle or lighting prevents a confident read, keep the values mid-range. If no photograph is provided, base these on the calibration answers and keep face-shape confidence lower. The two recommendation lines (faceShape, eyeShape) are grooming and styling directives ONLY — no medical, surgical, procedural, or dose language. The geometric numbers are presented as observed context; they never shame an unchangeable trait.
+
 [OUTPUT SCHEMA]
 Return ONLY valid JSON matching this exact shape. No prose before or after. No markdown. No code fences.
 {
@@ -628,6 +631,21 @@ Return ONLY valid JSON matching this exact shape. No prose before or after. No m
   "rank": one of ["unawakened","seeker","ascendant","luminary","sovereign"],
   "archetype": string,
   "faceShape": string,
+  "faceMeasured": {
+    "faceShape":   { "shape": string, "confidence": integer 0-100, "recommendation": string (one short line, grooming/styling only) },
+    "symmetry":    { "overall": integer 0-100, "eyes": integer 0-100, "nose": integer 0-100, "mouth": integer 0-100, "jaw": integer 0-100 },
+    "canthalTilt": { "degrees": number one decimal (typically -10.0..+12.0), "label": "Positive (upturned)"|"Neutral"|"Negative (downturned)" },
+    "eyeShape":    { "shape": string, "recommendation": string (one short line, styling only) },
+    "jawline":     { "gonialAngle": integer degrees ~110-140, "taper": number 0-1 two decimals, "symmetry": integer 0-100, "score": integer 0-100 },
+    "goldenRatio": { "score": integer 0-100 },
+    "facialRatios": [
+      { "name": "FWHR (width-to-height)", "value": number, "ideal": "1.9" },
+      { "name": "Midface ratio",          "value": number, "ideal": "1.0" },
+      { "name": "Lower-to-upper thirds",   "value": number, "ideal": "1.0" },
+      { "name": "Canthal tilt °",          "value": number (= canthalTilt.degrees), "ideal": "+5" }
+    ],
+    "attractiveness": { "score": integer 1-99 }
+  },
   "firstImpression": string (one sentence, observed),
   "statusAlert": string (2-3 sentences),
   "metricsScored": 24,
@@ -987,6 +1005,51 @@ function buildFallbackReport(quizAnswers) {
 
   const projectionNarrative = `Executed strictly for 90 days, this blueprint projects a Global Aura Score near ${globalDay90.toFixed(1)} — a measured move toward the upper tier, achieved entirely through the vectors within your control. The bone was never the constraint. The fluid, the surface, and the carriage were. Correct them, and the room recalculates you on sight.`;
 
+  // Geometric face estimates (visual estimates, not landmark measurements).
+  // Plausible mid-range values so the no-Gemini path still renders the panel.
+  // Recommendation/label strings are grooming/styling only — they pass isSafe.
+  const canthalDeg = 4.5; // neutral-to-positive, bone-set; never framed as a deficit
+  const faceMeasured = {
+    faceShape: {
+      shape: 'Oval',
+      confidence: 72,
+      recommendation: 'An oval reads as balanced — keep volume at the sides over height, and let a defined brow and beard line carry the frame.',
+    },
+    symmetry: {
+      overall: 82,
+      eyes: 84,
+      nose: 80,
+      mouth: 83,
+      jaw: 79,
+    },
+    canthalTilt: {
+      degrees: canthalDeg,
+      label: 'Positive (upturned)',
+    },
+    eyeShape: {
+      shape: 'Almond',
+      recommendation: 'Almond eyes frame well — a tidied brow with a lifted tail opens the upper face and sharpens the read.',
+    },
+    jawline: {
+      gonialAngle: 124,
+      taper: 0.72,
+      symmetry: 80,
+      score: 68,
+    },
+    goldenRatio: {
+      score: 74,
+    },
+    facialRatios: [
+      { name: 'FWHR (width-to-height)', value: 1.9, ideal: '1.9' },
+      { name: 'Midface ratio', value: 1.02, ideal: '1.0' },
+      { name: 'Lower-to-upper thirds', value: 1.04, ideal: '1.0' },
+      { name: 'Canthal tilt °', value: canthalDeg, ideal: '+5' },
+    ],
+    attractiveness: {
+      score: 72,
+    },
+  };
+
   const methodology = 'This is a photographic aesthetic and image-consulting assessment, not a medical or dermatological evaluation of any condition. This particular reading was generated by the resilience engine from your calibration answers, so the scores are directional estimates — a clear, front-lit photograph sharpens every metric. Items marked as dermatologist-grade are listed only as directives to discuss with a licensed dermatologist, who sets the formulation, strength, and frequency for your skin; do not self-source. Patch-test new topicals, introduce one product at a time, and keep daily sun protection alongside any resurfacing step. Fixed osseous metrics (gonial angle, canthal tilt, chin projection, native hair density) are documented as strategic context only — they are excluded from the protocol and the projected ceiling, and no directive targets bone structure. All recommended habits are health-positive; discontinue anything that causes discomfort or irritation and consult a professional. ◆ MainCharacter';
 
   return {
@@ -996,6 +1059,7 @@ function buildFallbackReport(quizAnswers) {
     rank: _rankFromScore(auraScore),
     archetype,
     faceShape: 'oval',
+    faceMeasured,
     firstImpression,
     statusAlert,
     metricsScored: 24,

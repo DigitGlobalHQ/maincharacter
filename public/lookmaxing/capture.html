@@ -71,11 +71,12 @@
     .lm-camera-frame {
       position: relative;
       aspect-ratio: 3 / 4;
+      max-width: 360px;
+      margin: 0 auto var(--mc-sp-4);
       background: var(--mc-near-black);
       border: 1px solid var(--mc-line-strong);
       border-radius: var(--mc-r-3);
       overflow: hidden;
-      margin-bottom: var(--mc-sp-4);
     }
     .lm-camera-video {
       width: 100%;
@@ -379,7 +380,7 @@
     <img class="lm-camera-preview-img" id="preview-img" hidden alt="Captured photo preview" loading="lazy">
 
     <!-- Face guide SVG overlay (shown while camera is live) -->
-    <svg class="lm-face-guide" id="face-guide" viewBox="0 0 200 260" fill="none" aria-hidden="true" focusable="false">
+    <svg class="lm-face-guide" id="face-guide" viewBox="0 0 200 260" fill="none" aria-hidden="true" focusable="false" hidden>
       <ellipse cx="100" cy="130" rx="76" ry="110" stroke="#e8e8e8" stroke-width="1"/>
     </svg>
 

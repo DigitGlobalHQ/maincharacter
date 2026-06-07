@@ -21,9 +21,9 @@
 **Ranks** the user progresses through: Unawakened → Seeker → Ascendant → Luminary → Sovereign (Orator). Mirror Levels for Lookmaxxing: Raw → Polished → Magnetic → Radiant → Sovereign.
 
 **Pricing:**
-- Orator ₹799/mo (Seeker plan)
-- Lookmaxxing ₹1,499/mo
-- Aura++ bundle ₹1,999/mo (auto-applied when both selected)
+- Lookmaxxing **₹99/mo** — the ONLY Lookmaxxing price (founder, 2026-06-07; `lookmax99` plan). The legacy ₹1,499 `lookmaxxing` plan is retired (kept only for backward-compat + tests, offered nowhere).
+- Orator ₹799/mo (Seeker plan) — pillar is "coming soon".
+- Aura++ bundle ₹1,999/mo (auto-applied when both selected). NOTE: the "saves ₹299" math assumed Lookmaxxing ₹1,499 — revisit bundle pricing when Orator launches.
 - All Razorpay Subscriptions (recurring), NOT one-shot links.
 
 **Domain:** `https://maincharacter.digitglobalservices.com` (Render.com).

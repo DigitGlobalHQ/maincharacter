@@ -29,7 +29,7 @@ describe('public/paywall.html structure', () => {
     expect(html).toContain('The Orator');
     expect(html).toContain('₹799');
     expect(html).toContain('Lookmaxxing');
-    expect(html).toContain('₹1,499');
+    expect(html).toContain('₹99'); // Lookmaxxing is ₹99/mo — the only Lookmaxxing price
     expect(html).toContain('Aura++');
     expect(html).toContain('₹1,999');
     expect(html).toContain('Saves ₹299/mo');
@@ -79,12 +79,12 @@ describe('POST /api/payment/subscribe — pillar resolution', () => {
     expect(res.body.url).toBeTruthy();
   });
 
-  it('lookmaxxing pillar → lookmaxxing plan (₹1,499)', async () => {
+  it('lookmaxxing pillar → lookmax99 plan (₹99 — the only Lookmaxxing price)', async () => {
     const res = await request(app)
       .post('/api/payment/subscribe')
       .send({ pillars: ['lookmaxxing'], phone: '919000000011', name: 'Look' });
-    expect(res.body.planKey).toBe('lookmaxxing');
-    expect(res.body.amount).toBe(149900);
+    expect(res.body.planKey).toBe('lookmax99');
+    expect(res.body.amount).toBe(9900);
   });
 
   it('both pillars → Aura++ bundle (₹1,999)', async () => {

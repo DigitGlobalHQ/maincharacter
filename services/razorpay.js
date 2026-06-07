@@ -96,7 +96,10 @@ function pillarsForPlan(planKey) {
 function resolvePlanForPillars(pillars = []) {
   const set = new Set(pillars);
   if (set.has('orator') && set.has('lookmaxxing')) return 'auraplus';
-  if (set.has('lookmaxxing')) return 'lookmaxxing';
+  // Lookmaxxing alone is ₹99/mo — the only Lookmaxxing price (founder, 2026-06-07).
+  // Resolve to the lookmax99 plan; the legacy ₹1,499 `lookmaxxing` plan is retained
+  // only for backward-compat + tests and is no longer offered on any surface.
+  if (set.has('lookmaxxing')) return 'lookmax99';
   if (set.has('orator')) return 'seeker';
   return null;
 }

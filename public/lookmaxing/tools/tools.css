@@ -1,6 +1,6 @@
 /* Shared styles for the free facial-analysis tools (hub + flagship + per-tool). */
 :root{
-  --obsidian:#070708; --panel:#0f0f12; --panel2:#141418; --gold:#e8b84b;
+  --obsidian:#070708; --panel:#0f0f12; --panel2:#141418; --gold:#c0c0c0;
   --ink:#f4f1ea; --dim:#9b988f; --faint:#5c5a54; --line:rgba(255,255,255,0.10);
   --good:#7fae8e;
 }
@@ -17,11 +17,11 @@ h1{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500;font
 .sub{color:var(--dim);font-size:1.02rem;max-width:600px;margin:0 0 14px}
 .privacy{display:inline-flex;align-items:center;gap:8px;font-size:0.8rem;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:8px 16px;margin:8px 0 34px}
 .privacy b{color:var(--ink);font-weight:500}
-.drop{border:1px dashed rgba(232,184,75,0.35);border-radius:16px;background:var(--panel);padding:44px 24px;text-align:center}
+.drop{border:1px dashed rgba(255,255,255,0.35);border-radius:16px;background:var(--panel);padding:44px 24px;text-align:center}
 .drop p{color:var(--dim);margin:10px 0 0;font-size:0.9rem}
 input[type=file]{display:none}
 .btn{display:inline-block;cursor:pointer;border:none;font-family:inherit;font-weight:600;
-  background:linear-gradient(135deg,#f3d27a,#e8b84b);color:#070708;padding:15px 30px;border-radius:999px;font-size:1rem;text-decoration:none}
+  background:linear-gradient(135deg,#e8e8e8,#c0c0c0);color:#070708;padding:15px 30px;border-radius:999px;font-size:1rem;text-decoration:none}
 .btn--ghost{background:none;border:1px solid var(--line);color:var(--ink);font-weight:400}
 .stage{display:none;margin-top:28px}
 .stage.show{display:block}
@@ -40,11 +40,11 @@ canvas{display:block;width:100%;height:auto}
 .card__v{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.7rem;color:var(--ink);margin:0}
 .card__sub{color:var(--dim);font-size:0.86rem;margin:6px 0 0}
 .bar{height:6px;border-radius:3px;background:rgba(255,255,255,0.08);margin:10px 0 0;overflow:hidden}
-.bar > i{display:block;height:100%;background:linear-gradient(90deg,#f3d27a,#e8b84b)}
+.bar > i{display:block;height:100%;background:linear-gradient(90deg,#e8e8e8,#c0c0c0)}
 .rows{margin-top:6px}
 .rows > div{display:flex;justify-content:space-between;font-size:0.86rem;color:var(--dim);padding:3px 0}
 .rows b{color:var(--ink);font-weight:500}
-.cta{margin-top:40px;text-align:center;background:var(--panel2);border:1px solid rgba(232,184,75,0.25);border-radius:16px;padding:34px 24px}
+.cta{margin-top:40px;text-align:center;background:var(--panel2);border:1px solid rgba(255,255,255,0.25);border-radius:16px;padding:34px 24px}
 .cta h2{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500;font-size:1.9rem;margin:0 0 10px}
 .cta p{color:var(--dim);font-size:0.95rem;margin:0 0 22px;max-width:480px;margin-left:auto;margin-right:auto}
 .actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:22px}
@@ -56,7 +56,7 @@ canvas{display:block;width:100%;height:auto}
 .tool-grid{display:grid;grid-template-columns:1fr;gap:14px;margin-top:30px}
 @media(min-width:640px){.tool-grid{grid-template-columns:1fr 1fr}}
 .tool-link{display:block;text-decoration:none;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;transition:border-color .2s}
-.tool-link:hover{border-color:rgba(232,184,75,0.4)}
+.tool-link:hover{border-color:rgba(255,255,255,0.4)}
 .tool-link h3{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500;font-size:1.45rem;color:var(--ink);margin:0 0 6px}
 .tool-link p{color:var(--dim);font-size:0.88rem;margin:0}
 .tool-link .soon{color:var(--faint);font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase}

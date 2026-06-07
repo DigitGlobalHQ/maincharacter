@@ -10,14 +10,14 @@
   :root {
     --bg: #0E0E10;
     --bg-card: #16161A;
-    --gold: #C9A84C;
-    --gold-bright: #E0C068;
-    --gold-dim: rgba(201,168,76,0.15);
-    --gold-glow: rgba(201,168,76,0.08);
+    --gold: #c0c0c0;
+    --gold-bright: #e8e8e8;
+    --gold-dim: rgba(255,255,255,0.15);
+    --gold-glow: rgba(255,255,255,0.08);
     --text: #F5F0E8;
     --text-dim: #A09B8E;
     --text-faint: #6B665C;
-    --border: rgba(201,168,76,0.2);
+    --border: rgba(255,255,255,0.2);
     --radius: 8px;
     --ease: cubic-bezier(0.22, 1, 0.36, 1);
   }
@@ -41,7 +41,7 @@
     transform: translateX(-50%);
     width: 800px;
     height: 500px;
-    background: radial-gradient(ellipse, rgba(201,168,76,0.06), transparent 70%);
+    background: radial-gradient(ellipse, rgba(255,255,255,0.06), transparent 70%);
     pointer-events: none;
   }
 
@@ -118,7 +118,7 @@
 
   .plan-card.featured {
     border-color: var(--gold);
-    background: linear-gradient(180deg, rgba(201,168,76,0.06) 0%, var(--bg-card) 100%);
+    background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, var(--bg-card) 100%);
   }
 
   .plan-badge {
@@ -315,7 +315,7 @@ async function selectPlan(planKey) {
           window.location.href = '/welcome?status=subscribed';
         }
       },
-      theme: { color: '#C9A84C' },
+      theme: { color: '#c0c0c0' },
     };
 
     const rzp = new Razorpay(options);

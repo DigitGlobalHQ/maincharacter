@@ -46,10 +46,12 @@ Every line of copy that ships to a user — WhatsApp messages, pages, errors, em
 - Capitalised single words used as emphasis: `THE SEEKER`, `THE PAUSE`. Used sparingly.
 
 Visual brand:
-- Background `--obsidian #070708`, gold `--gold #e8b84b`, ink `#f4f1ea`.
+- **ONE theme, site-wide: Silver / Platinum on obsidian.** Background `--obsidian #070708`, accent silver `--silver-mid #c0c0c0` (exposed everywhere as `--gold`, kept for variable-name compatibility — the value is silver, NOT gold), ink `#f4f1ea`.
+- Silver scale: `--silver-bright #e8e8e8` · `--silver-mid #c0c0c0` · `--silver-dim #8a8a8a` · `--silver-faint #5a5a5a` · `--silver-ghost #2a2a2a`. Glows are white: `rgba(255,255,255,.18/.32/.55)`.
 - Fonts: **Cormorant Garamond** (serif italic for headlines), **Sora** (sans for body).
-- Pillar colours: orator `#f0a500`, aesthetic `#b06fd8`, sage `#3dbfa0`.
-- Subtle grain overlay, gold radial glows, generous negative space.
+- **No pillar accent colours.** Orator/aesthetic/sage all resolve to silver `#c0c0c0` — do NOT reintroduce gold `#e8b84b`, orange `#f0a500`, purple `#b06fd8`, or green `#3dbfa0`.
+- Functional status colours are the ONLY exception (keep them): error red (`#d9…`/`#ef4444`) and admin chart/status indicators are semantic, not theme.
+- Subtle grain overlay, white radial glows, generous negative space.
 
 **Untouchable assets** (do not restyle without explicit approval):
 - The 7-day content in `data/orator-content.js` — words, prompts, Consultant intros/outros are FINAL. You may refactor structure, never the copy.

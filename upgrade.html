@@ -20,13 +20,13 @@
     --ink: #f4f1ea;
     --ink-dim: #9b988f;
     --ink-faint: #5c5a54;
-    --gold: #e8b84b;
-    --gold-bright: #f5d07a;
-    --gold-glow: rgba(232,184,75,0.18);
-    --gold-deep: #8a6f31;
-    --orator: #f0a500;
-    --aesthetic: #b06fd8;
-    --sage: #3dbfa0;
+    --gold: #c0c0c0;
+    --gold-bright: #e8e8e8;
+    --gold-glow: rgba(255,255,255,0.18);
+    --gold-deep: #5a5a5a;
+    --orator: #c0c0c0;
+    --aesthetic: #c0c0c0;
+    --sage: #c0c0c0;
     --border: rgba(255,255,255,0.07);
     --serif: 'Cormorant Garamond', Georgia, serif;
     --sans: 'Sora', system-ui, sans-serif;
@@ -68,7 +68,7 @@
     transform: translateX(-50%);
     width: 800px;
     height: 500px;
-    background: radial-gradient(ellipse, rgba(232,184,75,0.08) 0%, transparent 70%);
+    background: radial-gradient(ellipse, rgba(255,255,255,0.08) 0%, transparent 70%);
     pointer-events: none;
     z-index: 0;
   }
@@ -160,13 +160,13 @@
     overflow: hidden;
   }
   .plan-card:hover {
-    border-color: rgba(232,184,75,0.25);
+    border-color: rgba(255,255,255,0.25);
     transform: translateY(-2px);
   }
   .plan-card.selected {
     border-color: var(--gold);
-    background: rgba(232,184,75,0.04);
-    box-shadow: 0 0 40px rgba(232,184,75,0.08);
+    background: rgba(255,255,255,0.04);
+    box-shadow: 0 0 40px rgba(255,255,255,0.08);
   }
   .plan-card.selected::before {
     content: '✓';
@@ -200,7 +200,7 @@
     color: var(--ink-dim);
   }
   .plan-badge.annual {
-    background: rgba(61,191,160,0.15);
+    background: rgba(255,255,255,0.15);
     color: var(--sage);
   }
 
@@ -222,8 +222,8 @@
     font-size: 11px;
     font-weight: 600;
     color: var(--sage);
-    background: rgba(61,191,160,0.12);
-    border: 1px solid rgba(61,191,160,0.25);
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
     padding: 3px 10px;
     border-radius: 20px;
   }
@@ -248,7 +248,7 @@
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: rgba(232,184,75,0.12);
+    background: rgba(255,255,255,0.12);
     color: var(--gold);
     display: flex;
     align-items: center;
@@ -277,7 +277,7 @@
   }
   .cta-button:hover {
     transform: translateY(-1px);
-    box-shadow: 0 8px 32px rgba(232,184,75,0.25);
+    box-shadow: 0 8px 32px rgba(255,255,255,0.25);
   }
   .cta-button:active { transform: scale(0.98); }
   .cta-button:disabled {
@@ -557,7 +557,7 @@ async function initiatePayment() {
         platform: 'maincharacter',
       },
       theme: {
-        color: '#e8b84b',
+        color: '#c0c0c0',
         backdrop_color: 'rgba(7,7,8,0.85)',
       },
       config: {

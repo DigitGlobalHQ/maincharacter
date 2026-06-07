@@ -11,13 +11,13 @@
     --bg: #0E0E10;
     --bg-card: #16161A;
     --bg-card2: #1C1C22;
-    --gold: #C9A84C;
-    --gold-bright: #E0C068;
-    --gold-dim: rgba(201,168,76,0.15);
+    --gold: #c0c0c0;
+    --gold-bright: #e8e8e8;
+    --gold-dim: rgba(255,255,255,0.15);
     --text: #F5F0E8;
     --text-dim: #A09B8E;
     --text-faint: #6B665C;
-    --border: rgba(201,168,76,0.12);
+    --border: rgba(255,255,255,0.12);
     --green: #4ADE80;
     --red: #EF4444;
     --blue: #60A5FA;
@@ -160,7 +160,7 @@
     border-bottom: 1px solid rgba(255,255,255,0.03);
     white-space: nowrap;
   }
-  tr:hover td { background: rgba(201,168,76,0.03); }
+  tr:hover td { background: rgba(255,255,255,0.03); }
   tr { cursor: pointer; }
 
   .status-badge {
@@ -791,7 +791,7 @@ function renderChart(scores) {
     data: {
       labels: scores.map(s => 'Day ' + s.day),
       datasets: [
-        { label: 'Fluency', data: scores.map(s => s.fluency), borderColor: '#C9A84C', tension: 0.3, pointRadius: 3 },
+        { label: 'Fluency', data: scores.map(s => s.fluency), borderColor: '#c0c0c0', tension: 0.3, pointRadius: 3 },
         { label: 'Confidence', data: scores.map(s => s.confidenceTone), borderColor: '#4ADE80', tension: 0.3, pointRadius: 3 },
         { label: 'Vocabulary', data: scores.map(s => s.vocabularyRange), borderColor: '#60A5FA', tension: 0.3, pointRadius: 3 },
         { label: 'Structure', data: scores.map(s => s.structure), borderColor: '#F472B6', tension: 0.3, pointRadius: 3 },

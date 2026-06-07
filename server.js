@@ -388,6 +388,8 @@ app.get('/health', async (req, res) => {
         // analyses vs the quiz-only fallback. If `fallback` climbs while `gemini`
         // stays 0, every reading is the near-constant fallback (same score for all).
         auraEngine: lookmaxingRoutes.getAnalyzeStats ? lookmaxingRoutes.getAnalyzeStats() : null,
+        // Daily Mirror + PWA aesthetic scorer: same gemini-vs-fallback reality check.
+        mirrorEngine: (() => { try { return require('./services/vision').getStats(); } catch { return null; } })(),
         razorpay: !!process.env.RAZORPAY_KEY_ID,
         adminPhone: adminLib.getAdminPhones().length > 0,
         adminCount: adminLib.getAdminPhones().length,

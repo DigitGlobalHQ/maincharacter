@@ -134,9 +134,11 @@ app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 const { analyticsHead } = require('./lib/analytics-head');
 const { themeHead } = require('./lib/theme-head');
 const { authWidgetHead } = require('./lib/auth-widget');
+const { faviconHead } = require('./lib/favicon-head');
 const _ANALYTICS_HEAD = analyticsHead();
 const _THEME_HEAD = themeHead();
 const _AUTH_HEAD = authWidgetHead();
+const _FAVICON_HEAD = faviconHead();
 const _pageCache = new Map();
 function servePage(res, absPath) {
   let html = _pageCache.get(absPath);
@@ -148,12 +150,16 @@ function servePage(res, absPath) {
       return;
     }
     if (html.includes('</head>')) {
-      html = html.replace('</head>', _ANALYTICS_HEAD + _THEME_HEAD + _AUTH_HEAD + '</head>');
+      html = html.replace('</head>', _FAVICON_HEAD + _ANALYTICS_HEAD + _THEME_HEAD + _AUTH_HEAD + '</head>');
     }
     _pageCache.set(absPath, html);
   }
   res.type('html').send(html);
 }
+
+// Default /favicon.ico request → the 32px PNG (explicit <link rel=icon> tags are
+// injected into every page; this covers browsers that still probe /favicon.ico).
+app.get('/favicon.ico', (req, res) => res.redirect(301, '/favicon-32.png'));
 
 // Homepage
 app.get('/', (req, res) => {
@@ -266,7 +272,7 @@ app.get('/lookmaxing/fork', (req, res) => {
     return servePage(res, path.join(__dirname, 'public', 'lookmaxing', 'index.html'));
   }
   const trialLive = process.env.LOOKMAX_TRIAL_LIVE !== 'false';
-  html = html.replace('</head>', `<script>window.LOOKMAX_TRIAL_LIVE=${trialLive};</script>` + _ANALYTICS_HEAD + _THEME_HEAD + _AUTH_HEAD + '</head>');
+  html = html.replace('</head>', `<script>window.LOOKMAX_TRIAL_LIVE=${trialLive};</script>` + _FAVICON_HEAD + _ANALYTICS_HEAD + _THEME_HEAD + _AUTH_HEAD + '</head>');
   res.type('html').send(html);
 });
 

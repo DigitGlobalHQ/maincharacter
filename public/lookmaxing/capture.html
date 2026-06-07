@@ -62,6 +62,11 @@
       margin: 0 0 var(--mc-sp-5);
     }
 
+    /* The hidden attribute must always win over component display rules
+       (e.g. .lm-camera-pending sets display:flex, which otherwise keeps the
+       "Awaiting camera" placeholder visible on top of the captured photo). */
+    [hidden] { display: none !important; }
+
     /* ── Camera frame ── */
     .lm-camera-frame {
       position: relative;
@@ -231,6 +236,8 @@
     .lm-consent__box:focus-visible { outline: 2px solid var(--mc-light-point); outline-offset: 2px; }
     .lm-consent__checkmark { display: none; }
     .lm-consent__box.is-checked .lm-consent__checkmark { display: block; }
+    /* tick must contrast the checked box (silver-bright), which flips per theme */
+    .lm-consent__checkmark path { stroke: var(--mc-black); }
     .lm-consent__label {
       font-size: var(--mc-fs-small);
       color: var(--mc-silver-mid);
@@ -487,12 +494,23 @@
     analyzeBtn.disabled = !(consentChecked && capturedBlob);
   }
 
-  consentBox.addEventListener('click', function () {
+  function toggleConsent() {
     consentChecked = !consentChecked;
     consentBox.setAttribute('aria-checked', consentChecked ? 'true' : 'false');
     consentBox.classList.toggle('is-checked', consentChecked);
     updateAnalyzeBtn();
-  });
+  }
+  consentBox.addEventListener('click', toggleConsent);
+  // The label's for= can't drive a <button>, so wire it manually — but let the
+  // privacy-policy link open normally instead of toggling.
+  var consentLabel = document.getElementById('consent-label');
+  if (consentLabel) {
+    consentLabel.addEventListener('click', function (e) {
+      if (e.target.closest('a')) return;
+      e.preventDefault();
+      toggleConsent();
+    });
+  }
 
   // ── Camera init ──
   function startCamera() {

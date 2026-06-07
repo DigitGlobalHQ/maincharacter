@@ -17,11 +17,10 @@ describe('authWidgetHead()', () => {
     expect(h).toContain('d.user.name'); // uses the name the /me endpoint returns
   });
 
-  it('signed-out shows Sign In + Sign Up pointing at the real routes', () => {
+  it('signed-out shows ONLY Sign In (no Sign Up) pointing at the real route', () => {
     expect(h).toContain('Sign In');
-    expect(h).toContain('Sign Up');
+    expect(h).not.toContain('Sign Up');
     expect(h).toContain("'/lookmaxing/start'"); // sign in
-    expect(h).toContain("'/lookmaxing'");       // sign up (the reading funnel)
   });
 
   it('signed-in exposes Sign Out which clears the token + hits logout', () => {

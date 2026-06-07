@@ -29,9 +29,9 @@
   <div class="wrap">
     <p class="eyebrow">The AI Studio</p>
     <h1>See the upgrade before you make it.</h1>
-    <p class="sub">Try hairstyles, a glow-up, a time machine, procedure previews and a fully custom look — generated on your own photo, your identity preserved.</p>
+    <p class="sub">Try hairstyles, a glow-up, a time machine, procedure previews and a fully custom look, generated on your own photo, your identity preserved.</p>
 
-    <div class="bal"><span>Your balance: <b id="bal">—</b> tokens</span><button class="btn" id="buyBtn">Buy tokens</button></div>
+    <div class="bal"><span>Your balance: <b id="bal">…</b> tokens</span><button class="btn" id="buyBtn">Buy tokens</button></div>
     <div id="packs" style="display:none;margin:-8px 0 18px"></div>
 
     <div class="drop" id="drop"><label class="btn" for="file">Upload your photo →</label><input type="file" id="file" accept="image/*"><p>Front-facing, clear light. Used only to generate your images.</p></div>
@@ -47,10 +47,10 @@
     <div id="procWrap" class="opts"><input id="o-procedure" placeholder="Procedure to preview (e.g. subtle jaw definition, brow lift)"></div>
 
     <button class="btn" id="goBtn" style="margin-top:8px;display:none">Generate →</button>
-    <div class="loading" id="loading" style="display:none">Generating — this can take a few seconds…</div>
+    <div class="loading" id="loading" style="display:none">Generating. This can take a few seconds…</div>
     <div class="err" id="err" style="display:none"></div>
     <div class="out" id="out"></div>
-    <p class="note" id="mockNote" style="display:none">Preview mode — connect the live image model to generate real transformations.</p>
+    <p class="note" id="mockNote" style="display:none">Preview mode. Connect the live image model to generate real transformations.</p>
 
     <div class="foot">◆ MAINCHARACTER</div>
   </div>
@@ -119,7 +119,7 @@
         .then(function(r){return r.json().then(function(j){return {s:r.status,j:j};});})
         .then(function(x){
           $('loading').style.display='none';
-          if(x.s===402){ $('err').textContent='Not enough tokens — you need '+x.j.need+'. Buy a pack above.'; $('err').style.display='block'; return; }
+          if(x.s===402){ $('err').textContent='Not enough tokens. You need '+x.j.need+'. Buy a pack above.'; $('err').style.display='block'; return; }
           if(x.s!==200){ $('err').textContent='Generation could not complete. Your tokens were not charged.'; $('err').style.display='block'; return; }
           $('bal').textContent = x.j.tokensLeft;
           $('out').innerHTML = (x.j.images||[]).map(function(b){return '<img src="data:image/png;base64,'+b+'" alt="result">';}).join('');

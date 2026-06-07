@@ -88,11 +88,11 @@
   <div class="page">
     <div class="topbar">
       <div class="who">◆ Today's Protocol</div>
-      <div class="badges"><span class="badge badge--streak" id="streakBadge">—</span></div>
+      <div class="badges"><span class="badge badge--streak" id="streakBadge">…</span></div>
     </div>
 
     <h1 style="margin-bottom:4px">The work for today.</h1>
-    <p class="muted" id="progressLine" aria-live="polite" style="margin-bottom:18px">—</p>
+    <p class="muted" id="progressLine" aria-live="polite" style="margin-bottom:18px">…</p>
 
     <!-- Active focus (Phase 3.3 trigger engine) — populated by JS when present -->
     <div id="focusCard" class="card card--gold" style="display:none;margin-bottom:18px">
@@ -231,7 +231,7 @@
         const remaining = state.totalCount - state.completedCount;
         if (remaining > 0 && !readyGlow) {
           // 0/N state: "Complete the day — N more to go"
-          btn.textContent = 'Complete the day — ' + remaining + ' more to go';
+          btn.textContent = 'Complete the day, ' + remaining + ' more to go';
         } else if (readyGlow) {
           // ≥80% state: "Complete the day ◆"
           btn.textContent = 'Complete the day ◆';
@@ -287,7 +287,7 @@
         state.isLocked = true; state.streak = r.streak;
         document.getElementById('msg').textContent = r.streakIncremented
           ? 'The day is closed. The streak holds. ◆'
-          : 'The day is closed. Eighty percent carries the streak — aim higher tomorrow. ◆';
+          : 'The day is closed. Eighty percent carries the streak. Aim higher tomorrow. ◆';
         if (window.mc) window.mc.track('protocol_day_closed', { streakIncremented: r.streakIncremented, completionPct: state.totalCount ? state.completedCount / state.totalCount : 0 });
         render();
       } catch {

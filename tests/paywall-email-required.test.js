@@ -24,7 +24,7 @@ describe('paywall.html — email-required modification (Login Gate)', () => {
 
   it('shows the approved error copy when email is blank and Lookmaxxing is selected', () => {
     // The approved copy from spec-login-gate-copy.md paywall.email.required
-    expect(html).toContain('Email is required for Lookmaxxing — you enter the work through it.');
+    expect(html).toContain('Email is required for Lookmaxxing. You enter the work through it.');
   });
 
   it('calls updateEmailRequirement(pillars) inside begin()', () => {

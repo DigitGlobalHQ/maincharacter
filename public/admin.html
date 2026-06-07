@@ -593,23 +593,23 @@
       </button>
 
       <button class="dogfood-btn" onclick="dogfoodAction('simulate-up')">
-        Simulate reveal — UP<br>
+        Simulate reveal: UP<br>
         <span style="font-size:0.68rem;color:var(--text-faint);">All axes +8 to +14 above baseline</span>
       </button>
 
       <button class="dogfood-btn" onclick="dogfoodAction('simulate-flat')">
-        Simulate reveal — FLAT<br>
+        Simulate reveal: FLAT<br>
         <span style="font-size:0.68rem;color:var(--text-faint);">All axes within ±2 of baseline</span>
       </button>
 
       <button class="dogfood-btn" onclick="dogfoodAction('simulate-down-held8')">
-        Simulate reveal — DOWN (held=8)<br>
+        Simulate reveal: DOWN (held=8)<br>
         <span style="font-size:0.68rem;color:var(--text-faint);">All axes fell; score below Day 1</span>
       </button>
 
       <button class="dogfood-btn" onclick="dogfoodAction('simulate-down-held0')">
-        Simulate reveal — DOWN (held=0)<br>
-        <span style="font-size:0.68rem;color:var(--text-faint);">No axes held — drops "held" sentence</span>
+        Simulate reveal: DOWN (held=0)<br>
+        <span style="font-size:0.68rem;color:var(--text-faint);">No axes held: drops "held" sentence</span>
       </button>
     </div>
   </div>
@@ -667,7 +667,7 @@ function loadLookmaxUsers() {
     .then(d => {
       const rows = d.users || [];
       document.getElementById('lmx-users-count').textContent =
-        `— ${d.count} total · ${d.signedInCount != null ? d.signedInCount + ' signed in · ' : ''}${d.paidCount} paid`;
+        `${d.count} total · ${d.signedInCount != null ? d.signedInCount + ' signed in · ' : ''}${d.paidCount} paid`;
       const tbody = document.getElementById('lmx-users-table');
       if (!rows.length) { tbody.innerHTML = '<tr><td colspan="9" style="color:var(--ink-dim)">No sign-ups yet.</td></tr>'; return; }
       tbody.innerHTML = rows.map(u => {
@@ -756,7 +756,7 @@ function openDetail(phone) {
   fetch('/api/admin/user/' + phone, { headers: authHeaders() })
     .then(r => r.json())
     .then(user => {
-      document.getElementById('detail-name').textContent = user.name + ' — ' + user.phone;
+      document.getElementById('detail-name').textContent = user.name + ' · ' + user.phone;
       
       let html = '';
       html += `<div class="detail-section"><div class="detail-label">Status</div><div class="detail-value">${user.status} · ${user.subscriptionStatus}</div></div>`;
@@ -939,7 +939,7 @@ let _dogfoodPending = null;
 
 const DOGFOOD_CONFIGS = {
   grant: {
-    label: 'Grant comp access (Orator + Lookmaxxing) — no Razorpay transaction.',
+    label: 'Grant comp access (Orator + Lookmaxxing), no Razorpay transaction.',
     action: async (email) => {
       const r = await fetch('/api/admin/grant', {
         method: 'POST',

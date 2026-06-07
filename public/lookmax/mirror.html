@@ -81,8 +81,8 @@
     <div class="topbar">
       <div class="who">◆ Daily Mirror</div>
       <div class="badges">
-        <span class="badge badge--streak" id="streakBadge">—</span>
-        <span class="badge badge--level" id="levelBadge">—</span>
+        <span class="badge badge--streak" id="streakBadge">…</span>
+        <span class="badge badge--level" id="levelBadge">…</span>
       </div>
     </div>
 
@@ -389,7 +389,7 @@
 
       // Beat 2: level line + consultant line (fade at t=2s; instant if reduced-motion)
       const beat2El = document.querySelector('.reveal-beat-2');
-      document.getElementById('levelLine').textContent = levelLabel(r.mirrorLevel) + ' — ' + r.score + '/100';
+      document.getElementById('levelLine').textContent = levelLabel(r.mirrorLevel) + ' · ' + r.score + '/100';
       // COPY APPROVED 2026-05-28 (#05): first-mirror baseline Consultant line — rendered when no prior trend data
       const consultantText = (r.isFirstMirror || (r.trend && r.trend.length <= 1 && !r.consultantLine))
         ? 'Today is the baseline. Hold it. Tomorrow has something to push against.'

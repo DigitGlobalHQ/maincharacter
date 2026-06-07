@@ -226,7 +226,7 @@
 
       <!-- Share controls -->
       <!-- COPY APPROVED 2026-05-28 (#18): see product/copy-pending-approval-2026-05-28.md -->
-      <p class="share-frame" aria-hidden="true">This is what shares — your week as a quiet line.</p>
+      <p class="share-frame" aria-hidden="true">This is what shares: your week as a quiet line.</p>
 
       <div class="share-primary">
         <button
@@ -262,7 +262,7 @@
       </div>
 
       <p class="footer-note" id="stubNote" style="margin-top:20px">
-        The reveal is a preview. The full video — stitched, scored, with the soundtrack — arrives once the infrastructure lands. Soon. ◆
+        The reveal is a preview. The full video (stitched, scored, with the soundtrack) arrives once the infrastructure lands. Soon. ◆
       </p>
     </div>
 
@@ -277,7 +277,7 @@
         <!-- Populated by showDay30() -->
       </div>
 
-      <div class="day30-score-line" id="day30ScoreLine" aria-live="polite">—</div>
+      <div class="day30-score-line" id="day30ScoreLine" aria-live="polite">…</div>
 
       <!-- Beat 2: axes + trajectory + consultant + close line -->
       <div class="day30-beat-2" id="day30Beat2">
@@ -414,7 +414,7 @@
 
       if (!d) {
         // Shell without data — show empty state
-        document.getElementById('day30ScoreLine').textContent = '—';
+        document.getElementById('day30ScoreLine').textContent = '…';
         if (window.mc) window.mc.track('reveal_day30_shown', { overallDelta: null, deltaSign: null });
         return;
       }
@@ -439,7 +439,7 @@
         // TODO copy: "Day 1 photo not held" — design-lookmax-reveal.md §4
         const miss = document.createElement('div');
         miss.className = 'photo-missing muted';
-        miss.textContent = '—';
+        miss.textContent = '…';
         day1Div.appendChild(miss);
       }
       const cap1 = document.createElement('div');
@@ -449,10 +449,10 @@
         try {
           const d1 = new Date(d.baselineDate);
           const ddMmm = d1.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
-          cap1.textContent = 'Day 1 — ' + ddMmm;
-        } catch (_) { cap1.textContent = 'Day 1 —'; }
+          cap1.textContent = 'Day 1 · ' + ddMmm;
+        } catch (_) { cap1.textContent = 'Day 1'; }
       } else {
-        cap1.textContent = 'Day 1 —';
+        cap1.textContent = 'Day 1';
       }
       day1Div.appendChild(cap1);
       photosEl.appendChild(day1Div);
@@ -467,13 +467,13 @@
       } else {
         const miss2 = document.createElement('div');
         miss2.className = 'photo-missing muted';
-        miss2.textContent = '—';
+        miss2.textContent = '…';
         day30Div.appendChild(miss2);
       }
       const cap2 = document.createElement('div');
       cap2.className = 'photo-caption';
       // COPY APPROVED 2026-05-28 (#24): "Day 30 — today" — see product/copy-pending-approval-2026-05-28.md
-      cap2.textContent = 'Day 30 — today';
+      cap2.textContent = 'Day 30 · today';
       day30Div.appendChild(cap2);
       photosEl.appendChild(day30Div);
 

@@ -204,8 +204,48 @@ async function sendMirrorPushNudges() {
 
 // ─── Health (observable on /health, so the per-minute tick can be verified on
 // live without Render log access — funnel-repair) ───
-const _health = { startedAt: null, lastTickAt: null, ticks: 0, lastError: null, lastErrorAt: null };
+const _health = {
+  startedAt: null, lastTickAt: null, ticks: 0, lastError: null, lastErrorAt: null,
+  lastTickSource: null, lastHttpTickAt: null,
+};
 function getHealth() { return { ..._health }; }
+
+/**
+ * One scheduler pass. The single source of truth for the per-minute work,
+ * driven by BOTH node-cron (when the process is alive) AND the external
+ * /api/cron/tick endpoint (the Path-A resilience layer: an external pinger
+ * keeps a free-tier host awake and drives this on hosts that scale-to-zero).
+ *
+ * Idempotent — sendMorningMessages/sendMirrorNudges/checkMissedMessages each
+ * guard on lastMorningSent/awaitingResponse/mirrorForToday, so calling tick()
+ * more often than once a minute (or twice in one minute) never double-sends.
+ *
+ * @param {{ source?: 'cron'|'http' }} opts
+ * @returns {Promise<{ ok: boolean, ticks?: number, source?: string, error?: string }>}
+ */
+async function tick({ source = 'cron' } = {}) {
+  try {
+    await sendMorningMessages();
+    await sendMirrorNudges();
+    await maybeRegenerateWeeklyProtocols();
+    if (source === 'http') {
+      // External-pinger path: the host may have slept through a user's
+      // preferredTime (free-tier scale-to-zero), so run windowed catch-up for
+      // any due-but-unsent morning message. No-op when node-cron kept up.
+      await checkMissedMessages();
+    }
+    _health.lastTickAt = new Date().toISOString();
+    _health.lastTickSource = source;
+    if (source === 'http') _health.lastHttpTickAt = _health.lastTickAt;
+    _health.ticks += 1;
+    return { ok: true, ticks: _health.ticks, source };
+  } catch (err) {
+    _health.lastError = err.message;
+    _health.lastErrorAt = new Date().toISOString();
+    log('ERROR', `Scheduler tick error: ${err.message}`);
+    return { ok: false, error: err.message };
+  }
+}
 
 /**
  * Start the scheduler.
@@ -214,20 +254,9 @@ function start() {
   log('INIT', 'Starting scheduler (every minute check)');
   _health.startedAt = new Date().toISOString();
 
-  // Check every minute
-  cron.schedule('* * * * *', async () => {
-    try {
-      await sendMorningMessages();
-      await sendMirrorNudges();
-      await maybeRegenerateWeeklyProtocols();
-      _health.lastTickAt = new Date().toISOString();
-      _health.ticks += 1;
-    } catch (err) {
-      _health.lastError = err.message;
-      _health.lastErrorAt = new Date().toISOString();
-      log('ERROR', `Scheduler error: ${err.message}`);
-    }
-  });
+  // Check every minute (in-process; survives only while the dyno is awake —
+  // /api/cron/tick is the cross-host fallback).
+  cron.schedule('* * * * *', () => tick({ source: 'cron' }));
 
   // Daily 7:30 IST web-push mirror nudge (B4 — MIRROR_PUSH_ENABLED flag).
   // Cron is UTC; 7:30 IST = 02:00 UTC.
@@ -252,4 +281,4 @@ function start() {
   log('INIT', 'Scheduler started');
 }
 
-module.exports = { start, sendMorningMessages, sendMirrorNudges, sendMirrorPushNudges, checkMissedMessages, getHealth };
+module.exports = { start, tick, sendMorningMessages, sendMirrorNudges, sendMirrorPushNudges, checkMissedMessages, getHealth };

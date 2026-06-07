@@ -468,6 +468,7 @@ app.listen(PORT, async () => {
   console.log('    POST /api/webhook/whatsapp — Incoming WhatsApp messages');
   console.log('    POST /api/waitlist        — Coming Soon waitlist');
   console.log('    GET  /api/user/:token     — User dashboard data');
+  console.log('    GET  /api/cron/tick       — External scheduler trigger (pinger)');
   console.log('    GET  /health              — Status check');
   console.log('═'.repeat(62));
   console.log('');

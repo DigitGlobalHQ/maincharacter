@@ -15,7 +15,7 @@
   <style>
     html, body { height: 100%; }
     body {
-      margin: 0; background: var(--mc-obsidian, #070708); color: var(--mc-ink, #f4f1ea);
+      margin: 0; background: var(--mc-obsidian, var(--mc-black,#070708)); color: var(--mc-ink, var(--mc-ink-white,#f4f1ea));
       font-family: 'Sora', system-ui, sans-serif;
       display: flex; align-items: center; justify-content: center; min-height: 100vh;
     }
@@ -24,7 +24,7 @@
     .lm-signing__msg { margin-top: 1rem; font-size: 0.95rem; color: var(--mc-silver-faint, #8a8a92); }
     .lm-dots span {
       display: inline-block; width: 5px; height: 5px; margin: 0 3px; border-radius: 50%;
-      background: var(--mc-ink, #f4f1ea); opacity: 0.4; animation: lm-pulse 1.2s infinite ease-in-out;
+      background: var(--mc-ink, var(--mc-ink-white,#f4f1ea)); opacity: 0.4; animation: lm-pulse 1.2s infinite ease-in-out;
     }
     .lm-dots span:nth-child(2) { animation-delay: 0.2s; }
     .lm-dots span:nth-child(3) { animation-delay: 0.4s; }

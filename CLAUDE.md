@@ -46,7 +46,8 @@ Every line of copy that ships to a user — WhatsApp messages, pages, errors, em
 - Capitalised single words used as emphasis: `THE SEEKER`, `THE PAUSE`. Used sparingly.
 
 Visual brand:
-- **ONE theme, site-wide: Silver / Platinum on obsidian.** Background `--obsidian #070708`, accent silver `--silver-mid #c0c0c0` (exposed everywhere as `--gold`, kept for variable-name compatibility — the value is silver, NOT gold), ink `#f4f1ea`.
+- **Canonical (default) theme: Silver / Platinum on obsidian.** Background `--obsidian #070708`, accent silver `--silver-mid #c0c0c0` (exposed everywhere as `--gold`, kept for variable-name compatibility — the value is silver, NOT gold), ink `#f4f1ea`. Dark is the default and the identity; design every new surface dark-first.
+- **Opt-in LIGHT mode** (`lib/theme-head.js`, injected into every page's `<head>` via `servePage`): a single `:root[data-theme="light"]` block re-points the colour tokens to graphite/ink on warm ivory (`--obsidian #f3f1ec`, `--ink #16161a`, silver accent → `#3a3a40`). No-flash boot from `localStorage('mc-theme')` or `prefers-color-scheme`; a fixed `.mc-theme-toggle` switches and persists. Build with **tokens** (`var(--token)`) so new surfaces flip automatically — never hardcode brand-literal colours in `<style>` (use the token; a literal won't switch).
 - Silver scale: `--silver-bright #e8e8e8` · `--silver-mid #c0c0c0` · `--silver-dim #8a8a8a` · `--silver-faint #5a5a5a` · `--silver-ghost #2a2a2a`. Glows are white: `rgba(255,255,255,.18/.32/.55)`.
 - Fonts: **Cormorant Garamond** (serif italic for headlines), **Sora** (sans for body).
 - **No pillar accent colours.** Orator/aesthetic/sage all resolve to silver `#c0c0c0` — do NOT reintroduce gold `#e8b84b`, orange `#f0a500`, purple `#b06fd8`, or green `#3dbfa0`.

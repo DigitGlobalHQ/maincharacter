@@ -21,7 +21,7 @@ h1{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500;font
 .drop p{color:var(--dim);margin:10px 0 0;font-size:0.9rem}
 input[type=file]{display:none}
 .btn{display:inline-block;cursor:pointer;border:none;font-family:inherit;font-weight:600;
-  background:linear-gradient(135deg,#e8e8e8,#c0c0c0);color:#070708;padding:15px 30px;border-radius:999px;font-size:1rem;text-decoration:none}
+  background:linear-gradient(135deg,var(--mc-silver-bright,#e8e8e8),var(--mc-silver-mid,#c0c0c0));color:var(--mc-black,#070708);padding:15px 30px;border-radius:999px;font-size:1rem;text-decoration:none}
 .btn--ghost{background:none;border:1px solid var(--line);color:var(--ink);font-weight:400}
 .stage{display:none;margin-top:28px}
 .stage.show{display:block}
@@ -40,7 +40,7 @@ canvas{display:block;width:100%;height:auto}
 .card__v{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.7rem;color:var(--ink);margin:0}
 .card__sub{color:var(--dim);font-size:0.86rem;margin:6px 0 0}
 .bar{height:6px;border-radius:3px;background:rgba(255,255,255,0.08);margin:10px 0 0;overflow:hidden}
-.bar > i{display:block;height:100%;background:linear-gradient(90deg,#e8e8e8,#c0c0c0)}
+.bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--mc-silver-bright,#e8e8e8),var(--mc-silver-mid,#c0c0c0))}
 .rows{margin-top:6px}
 .rows > div{display:flex;justify-content:space-between;font-size:0.86rem;color:var(--dim);padding:3px 0}
 .rows b{color:var(--ink);font-weight:500}

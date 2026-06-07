@@ -70,7 +70,7 @@
       font-weight: 400;
       line-height: 1;
       letter-spacing: -0.02em;
-      background: var(--silver-gradient, linear-gradient(180deg,#e8e8e8 0%,#c0c0c0 48%,#8a8a8a 100%));
+      background: var(--silver-gradient, linear-gradient(180deg,var(--mc-silver-bright,#e8e8e8) 0%,var(--mc-silver-mid,#c0c0c0) 48%,var(--mc-silver-dim,#8a8a8a) 100%));
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -84,7 +84,7 @@
       font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
       font-size: 11px;
       letter-spacing: 0.16em;
-      color: var(--silver-faint, #5a5a5a);
+      color: var(--mc-silver-faint, var(--mc-silver-faint,#5a5a5a));
     }
     /* Rank label — JetBrains Mono */
     .mc-aura-obj__rank {
@@ -92,7 +92,7 @@
       font-size: 11px;
       letter-spacing: 0.28em;
       text-transform: uppercase;
-      color: var(--silver-mid, #c0c0c0);
+      color: var(--mc-silver-mid, var(--mc-silver-mid,#c0c0c0));
       display: block;
     }
 
@@ -272,7 +272,7 @@
       font-weight: 400;
       font-size: 24px;
       line-height: 1;
-      color: var(--silver-bright, #e8e8e8);
+      color: var(--mc-silver-bright, var(--mc-silver-bright,#e8e8e8));
       letter-spacing: -0.02em;
     }
     .timeline-rank {
@@ -417,7 +417,7 @@
       font-weight: 400;
       font-size: 44px;
       line-height: 1;
-      color: var(--silver-bright, #e8e8e8);
+      color: var(--mc-silver-bright, var(--mc-silver-bright,#e8e8e8));
       display: block;
       letter-spacing: -0.02em;
     }
@@ -506,7 +506,7 @@
       font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
       font-weight: 400;
       font-size: 28px;
-      color: var(--silver-bright, #e8e8e8);
+      color: var(--mc-silver-bright, var(--mc-silver-bright,#e8e8e8));
       line-height: 1;
       letter-spacing: -0.02em;
     }
@@ -1220,7 +1220,7 @@
           // Score label above/beside latest dot
           const labelX = (parseFloat(cx) + 8).toFixed(1);
           const labelY = (parseFloat(cy) + 5).toFixed(1);
-          svgContent += `<text x="${labelX}" y="${labelY}" fill="var(--silver-bright,#e8e8e8)" font-family="JetBrains Mono,SF Mono,Menlo,monospace" font-size="12" aria-hidden="true">${r.auraScore}</text>`;
+          svgContent += `<text x="${labelX}" y="${labelY}" fill="var(--mc-silver-bright,#e8e8e8)" font-family="JetBrains Mono,SF Mono,Menlo,monospace" font-size="12" aria-hidden="true">${r.auraScore}</text>`;
         }
       });
 

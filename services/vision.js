@@ -50,6 +50,14 @@ function canCall() {
   return callLog.length < RPM_LIMIT;
 }
 
+// ── Engine observability ─────────────────────────────────────────────────────
+// Counts genuine Gemini Vision scores vs deterministic fallbacks across the Daily
+// Mirror and the PWA aesthetic/baseline scorer, surfaced on /health so the founder
+// can confirm these readings are real Gemini (not the no-key fallback).
+const _stats = { gemini: 0, fallback: 0 };
+function _bump(source) { if (source === 'gemini') _stats.gemini += 1; else _stats.fallback += 1; }
+function getStats() { return Object.assign({}, _stats); }
+
 function clamp(val, min, max) {
   return Math.max(min, Math.min(max, Math.round(Number(val) || min)));
 }
@@ -78,7 +86,7 @@ function weakestOf(scores) {
  * @param {{ photos?: Array, quizAnswers?: object, hairFocus?: boolean }} input
  * @returns {Promise<{scores:object, weakestAxis:string, diagnosis:string, hairReceding:object, source:'gemini'|'fallback'}>}
  */
-async function scoreAesthetic({ photos = [], quizAnswers = {}, hairFocus = false } = {}) {
+async function _scoreAestheticImpl({ photos = [], quizAnswers = {}, hairFocus = false } = {}) {
   if (!model || !canCall()) {
     log.warn('FALLBACK', 'aesthetic scoring (no API or rate limited)');
     return fallbackAesthetic(quizAnswers);
@@ -165,7 +173,7 @@ function fallbackDiagnosis(weakestAxis) {
  * @param {{ photo?: {data:string,mimeType:string}, baseline?: object }} input
  * @returns {Promise<{scores:object, source:'gemini'|'fallback'}>}
  */
-async function scoreMirror({ photo = null, baseline = null } = {}) {
+async function _scoreMirrorImpl({ photo = null, baseline = null } = {}) {
   if (!model || !canCall() || !photo) {
     return { scores: fallbackMirrorScores(baseline), source: 'fallback' };
   }
@@ -269,9 +277,14 @@ function fallbackHair() {
   return { norwood: 2, hairlineScore: 60, recessionMm: null, confidence: 'low' };
 }
 
+// Public wrappers that tally gemini-vs-fallback for /health visibility.
+async function scoreAesthetic(input) { const out = await _scoreAestheticImpl(input); _bump(out && out.source); return out; }
+async function scoreMirror(input) { const out = await _scoreMirrorImpl(input); _bump(out && out.source); return out; }
+
 module.exports = {
   scoreAesthetic,
   scoreMirror,
+  getStats,
   consultantLine,
   scoreHair,
   AESTHETIC_AXES,

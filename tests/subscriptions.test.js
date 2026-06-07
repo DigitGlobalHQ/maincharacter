@@ -37,7 +37,8 @@ describe('plan + bundle math (P4.2)', () => {
   });
 
   it('single pillar resolves to its own plan', () => {
-    expect(razorpay.resolvePlanForPillars(['lookmaxxing'])).toBe('lookmaxxing');
+    // Lookmaxxing alone is ₹99/mo — the only Lookmaxxing price (founder 2026-06-07).
+    expect(razorpay.resolvePlanForPillars(['lookmaxxing'])).toBe('lookmax99');
     expect(razorpay.resolvePlanForPillars(['orator'])).toBe('seeker');
     expect(razorpay.resolvePlanForPillars([])).toBeNull();
   });
@@ -55,8 +56,8 @@ describe('POST /api/payment/subscribe (P4.3)', () => {
       .post('/api/payment/subscribe')
       .send({ pillars: ['lookmaxxing'], phone: '918000000901', name: 'Nia', email: 'n@x.io' });
     expect(res.status).toBe(200);
-    expect(res.body.planKey).toBe('lookmaxxing');
-    expect(res.body.amount).toBe(149900);
+    expect(res.body.planKey).toBe('lookmax99');
+    expect(res.body.amount).toBe(9900);
     const u = User.getUserByPhone('918000000901');
     expect(u.pendingPillars).toEqual(['lookmaxxing']);
     expect(u.email).toBe('n@x.io');

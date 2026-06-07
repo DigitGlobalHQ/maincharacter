@@ -16,9 +16,9 @@
     '.mcfe__hero{text-align:center;margin-bottom:var(--mc-sp-4,18px)}',
     '.mcfe__num{font-family:var(--mc-font-serif,"Cormorant Garamond",serif);font-style:italic;font-size:clamp(56px,12vw,84px);line-height:1;color:var(--mc-silver-bright,#e8e8e8)}',
     '.mcfe__label{font-family:var(--mc-font-mono,"JetBrains Mono",monospace);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--mc-silver-faint,#5a5a5a);margin-top:8px}',
-    '.mcfe__sub{font-size:var(--mc-fs-small,13px);color:var(--mc-silver-mid,#c0c0c0);max-width:46ch;margin:10px auto 0;line-height:1.5}',
-    '.mcfe__canvas-wrap{display:flex;justify-content:center;margin:var(--mc-sp-5,24px) 0}',
-    '.mcfe__canvas{max-width:300px;width:100%;height:auto;border-radius:var(--mc-r-3,14px);border:1px solid var(--mc-line,rgba(255,255,255,.10))}',
+    '.mcfe__sub{font-size:var(--mc-fs-small,13px);color:var(--mc-silver-mid,#c0c0c0);max-width:46ch;margin:0 auto var(--mc-sp-5,24px);line-height:1.5;text-align:center}',
+    '.mcfe__canvas-wrap{display:flex;justify-content:center;margin:0 0 var(--mc-sp-3,12px)}',
+    '.mcfe__canvas{max-width:340px;width:100%;height:auto;border-radius:var(--mc-r-3,14px);border:1px solid var(--mc-line,rgba(255,255,255,.10))}',
     '.mcfe__grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--mc-sp-3,12px)}',
     '.mcfe__card{border:1px solid var(--mc-line,rgba(255,255,255,.10));border-radius:var(--mc-r-3,14px);background:var(--mc-near-black,#0c0c0e);padding:var(--mc-sp-4,18px)}',
     '.mcfe__k{font-family:var(--mc-font-mono,monospace);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--mc-silver-faint,#5a5a5a);margin:0 0 8px}',
@@ -85,15 +85,14 @@
     ].join('');
   }
 
+  // No competing hero number here — the Aura Score above is the single headline.
+  // Attractiveness lives as one of the cards. We show the mesh photo, a caption,
+  // then the geometric KPI grid.
   function buildSection(root, m, withCanvas) {
     root.classList.add('mcfe');
     root.innerHTML =
-      '<div class="mcfe__hero">' +
-        '<div class="mcfe__num">' + esc(m.attractiveness.score) + '</div>' +
-        '<div class="mcfe__label">Attractiveness Score · out of 100</div>' +
-        '<p class="mcfe__sub">A composite of symmetry, golden-ratio proportions, jawline and canthal tilt — read from your photograph across 478 facial landmarks.</p>' +
-      '</div>' +
       (withCanvas ? '<div class="mcfe__canvas-wrap"><canvas class="mcfe__canvas"></canvas></div>' : '') +
+      '<p class="mcfe__sub">Measured from your photograph across 478 facial landmarks.</p>' +
       '<div class="mcfe__grid">' + renderCards(m) + '</div>';
   }
 

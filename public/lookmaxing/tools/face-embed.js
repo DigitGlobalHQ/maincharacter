@@ -85,16 +85,72 @@
     ].join('');
   }
 
+  function buildSection(root, m, withCanvas) {
+    root.classList.add('mcfe');
+    root.innerHTML =
+      '<div class="mcfe__hero">' +
+        '<div class="mcfe__num">' + esc(m.attractiveness.score) + '</div>' +
+        '<div class="mcfe__label">Attractiveness Score · out of 100</div>' +
+        '<p class="mcfe__sub">A composite of symmetry, golden-ratio proportions, jawline and canthal tilt — read from your photograph across 478 facial landmarks.</p>' +
+      '</div>' +
+      (withCanvas ? '<div class="mcfe__canvas-wrap"><canvas class="mcfe__canvas"></canvas></div>' : '') +
+      '<div class="mcfe__grid">' + renderCards(m) + '</div>';
+  }
+
+  // Best-effort: draw the photo + 478-landmark mesh on the section's canvas. Never
+  // throws; hides the canvas if a face can't be detected. The KPI cards stand alone.
+  function drawMeshOnto(root, photo) {
+    var wrap = root.querySelector('.mcfe__canvas-wrap');
+    var canvas = root.querySelector('.mcfe__canvas');
+    if (!canvas) return;
+    var image = new Image();
+    image.onerror = function () { if (wrap) wrap.style.display = 'none'; };
+    image.onload = async function () {
+      try {
+        var maxW = 720, scale = Math.min(1, maxW / image.naturalWidth);
+        var W = Math.round(image.naturalWidth * scale), H = Math.round(image.naturalHeight * scale);
+        canvas.width = W; canvas.height = H;
+        var ctx = canvas.getContext('2d'); ctx.drawImage(image, 0, 0, W, H);
+        if (window.FaceMetrics) {
+          var lmk = await getLandmarker();
+          var res = lmk.detect(image);
+          if (res.faceLandmarks && res.faceLandmarks.length) {
+            var px = res.faceLandmarks[0].map(function (p) { return { x: p.x * W, y: p.y * H }; });
+            drawOverlay(ctx, px, W, H);
+          }
+        }
+      } catch (e) { if (wrap) wrap.style.display = 'none'; }
+    };
+    image.src = photo;
+  }
+
+  /**
+   * run({ root, metrics?, photo?, onDone? })
+   *  - metrics (Gemini faceMeasured, same shape as FaceMetrics.computeAllMetrics):
+   *    when present, the KPI cards + score come from Gemini; the mesh is best-effort.
+   *  - else: compute the metrics in-browser from the photo (the free-tool engine).
+   */
   async function run(opts) {
     opts = opts || {};
     var root = opts.root;
     function done(ok) { if (typeof opts.onDone === 'function') opts.onDone(!!ok); }
     function fail() { if (root) root.style.display = 'none'; done(false); }
-    if (!root || !opts.photo || !window.FaceMetrics) { fail(); return; }
+    if (!root) { done(false); return; }
     injectStyle();
+
+    // Preferred path: Gemini already produced the metrics.
+    if (opts.metrics && opts.metrics.attractiveness) {
+      buildSection(root, opts.metrics, !!opts.photo);
+      done(true);
+      if (opts.photo) drawMeshOnto(root, opts.photo);
+      if (window.mc) window.mc.track('report_face_shown', { source: 'gemini' });
+      return;
+    }
+
+    // Fallback path: compute in-browser from the photo.
+    if (!opts.photo || !window.FaceMetrics) { fail(); return; }
     root.classList.add('mcfe');
     root.innerHTML = '<div class="mcfe__loading">Mapping 478 facial landmarks…</div>';
-
     var image = new Image();
     image.onerror = function () { fail(); };
     image.onload = async function () {
@@ -107,23 +163,12 @@
         var px = res.faceLandmarks[0].map(function (p) { return { x: p.x * W, y: p.y * H }; });
         var m = window.FaceMetrics.computeAllMetrics(px);
         if (!m) { fail(); return; }
-
-        root.innerHTML =
-          '<div class="mcfe__hero">' +
-            '<div class="mcfe__num">' + esc(m.attractiveness.score) + '</div>' +
-            '<div class="mcfe__label">Attractiveness Score · out of 100</div>' +
-            '<p class="mcfe__sub">A composite of symmetry, golden-ratio proportions, jawline and canthal tilt — measured from 478 facial landmarks, in your browser.</p>' +
-          '</div>' +
-          '<div class="mcfe__canvas-wrap"><canvas class="mcfe__canvas"></canvas></div>' +
-          '<div class="mcfe__grid">' + renderCards(m) + '</div>';
-
+        buildSection(root, m, true);
         var canvas = root.querySelector('.mcfe__canvas');
         canvas.width = W; canvas.height = H;
-        var ctx = canvas.getContext('2d');
-        ctx.drawImage(image, 0, 0, W, H);
-        drawOverlay(ctx, px, W, H);
+        var ctx = canvas.getContext('2d'); ctx.drawImage(image, 0, 0, W, H); drawOverlay(ctx, px, W, H);
         done(true);
-        if (window.mc) window.mc.track('report_face_mesh_shown', {});
+        if (window.mc) window.mc.track('report_face_shown', { source: 'math' });
       } catch (e) { fail(); }
     };
     image.src = opts.photo;

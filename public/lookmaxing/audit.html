@@ -484,6 +484,16 @@
     </div>
   </div>
 
+  <!-- Free geometric reading: 478-landmark mesh + KPI cards, browser-side (like /face).
+       Shown only when the same-session photo is available; hides itself otherwise. -->
+  <section id="face-embed-section">
+    <div class="lm-section-label" aria-hidden="true">
+      <span class="lm-section-label__text">YOUR FACE, MEASURED</span>
+      <div class="lm-section-label__line"></div>
+    </div>
+    <div id="face-embed-root" style="margin:var(--mc-sp-4) 0 var(--mc-sp-6);"></div>
+  </section>
+
   <!-- Gate teaser -->
   <div class="lm-gate-teaser" id="gate-teaser">
     <p class="lm-gate-teaser__line">Your score is free. The reading that explains it: the full decomposition, your biggest lever, the quests, style &amp; colour, and a 7-day plan is one tap away.</p>
@@ -1190,6 +1200,27 @@
     document.getElementById('audit-error-msg').textContent = 'No reading found. Return to the start.';
   }
 }());
+</script>
+<!-- Free geometric facial analysis (478-landmark mesh + KPI cards), reusing the /face engine -->
+<script src="/lookmaxing/tools/face-metrics.js" defer></script>
+<script src="/lookmaxing/tools/face-embed.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var section = document.getElementById('face-embed-section');
+    var root = document.getElementById('face-embed-root');
+    if (!section || !root) return;
+    var photo = null;
+    try { photo = sessionStorage.getItem('mc.facePhoto'); } catch (e) { /* blocked */ }
+    if (!photo) { section.style.display = 'none'; return; }
+    (function go() {
+      if (!window.FaceEmbed) return setTimeout(go, 100);
+      window.FaceEmbed.run({
+        photo: photo,
+        root: root,
+        onDone: function (ok) { if (!ok) section.style.display = 'none'; },
+      });
+    }());
+  });
 </script>
 </body>
 </html>

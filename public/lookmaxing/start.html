@@ -219,7 +219,7 @@
     .lm-footer { padding: var(--mc-sp-3) var(--mc-sp-4); }
 
     /* ── Explicit consent checkboxes (compliance) ── */
-    .lm-consent2 { display: flex; flex-direction: column; gap: var(--mc-sp-3); margin: var(--mc-sp-5) 0 0; }
+    .lm-consent-top { margin: 0 0 var(--mc-sp-3); padding-bottom: var(--mc-sp-4); border-bottom: 1px solid var(--mc-line); }
     .lm-check { display: flex; align-items: flex-start; gap: var(--mc-sp-3); cursor: pointer; }
     .lm-check input { position: absolute; opacity: 0; width: 1px; height: 1px; }
     .lm-check__box {
@@ -258,6 +258,14 @@
     <!-- Sign in is the single path (guest flow removed — funnel-repair P1) -->
     <div class="mc-card lm-fork-card">
       <div class="lm-fork-card__actions" id="signin-actions">
+        <!-- Consent — ONE tick, above both options, so it applies to Google AND email
+             (no awkward reaching past the email form to consent for Google). -->
+        <label class="lm-check lm-consent-top">
+          <input type="checkbox" id="consent-all">
+          <span class="lm-check__box"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M2 6l3 3 5-5" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="lm-check__text">I am 18 or older and I agree to the <a href="/terms" target="_blank" rel="noopener">Terms of Use</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</span>
+        </label>
+
         <!-- Continue with Google — always shown; activates the moment the OAuth
              keys are set. When not yet configured, the click is intercepted with
              a clean note instead of a dead bounce. -->
@@ -290,20 +298,6 @@
         <label for="auth-password" class="mc-eyebrow" style="display:block;margin:var(--mc-sp-3) 0 var(--mc-sp-2);">Password</label>
         <input type="password" id="auth-password" class="lm-email-input" placeholder="At least 8 characters" autocomplete="current-password">
 
-        <!-- Explicit consent — both required before either sign-in path activates -->
-        <div class="lm-consent2">
-          <label class="lm-check">
-            <input type="checkbox" id="consent-age">
-            <span class="lm-check__box"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M2 6l3 3 5-5" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-            <span class="lm-check__text">I am 18 years of age or older.</span>
-          </label>
-          <label class="lm-check">
-            <input type="checkbox" id="consent-terms">
-            <span class="lm-check__box"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M2 6l3 3 5-5" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-            <span class="lm-check__text">I agree to the <a href="/terms" target="_blank" rel="noopener">Terms of Use</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</span>
-          </label>
-        </div>
-
         <button class="mc-btn-primary lm-fork-card__btn" id="auth-submit-btn" style="margin-top:var(--mc-sp-4);" disabled aria-disabled="true">
           Continue →
         </button>
@@ -332,8 +326,7 @@
   var passEl = document.getElementById('auth-password');
   var submitBtn = document.getElementById('auth-submit-btn');
   var errEl = document.getElementById('auth-error');
-  var ageEl = document.getElementById('consent-age');
-  var termsEl = document.getElementById('consent-terms');
+  var consentEl = document.getElementById('consent-all');
   var NEXT = '/lookmaxing/quiz';
   var CONSENT_MSG = 'Please confirm your age and accept the Terms and Privacy Policy to continue.';
 
@@ -347,13 +340,12 @@
   function clearError() { errEl.hidden = true; errEl.textContent = ''; }
 
   // ── Consent gate: both boxes required before any sign-in path activates ──
-  function consented() { return !!(ageEl && ageEl.checked && termsEl && termsEl.checked); }
+  function consented() { return !!(consentEl && consentEl.checked); }
   function updateGate() {
     submitBtn.disabled = !consented();
     submitBtn.setAttribute('aria-disabled', consented() ? 'false' : 'true');
   }
-  if (ageEl) ageEl.addEventListener('change', function () { updateGate(); clearError(); });
-  if (termsEl) termsEl.addEventListener('change', function () { updateGate(); clearError(); });
+  if (consentEl) consentEl.addEventListener('change', function () { updateGate(); clearError(); });
   updateGate();
 
   // Surface a bounced Google attempt cleanly (no dead-ends).

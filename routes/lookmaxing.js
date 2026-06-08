@@ -84,6 +84,51 @@ function _sanitizeReport(report, auditId = '') {
   return report;
 }
 
+// ─── De-AI punctuation ────────────────────────────────────────────────────────
+// The founder's rule: NO em dashes / "--" anywhere in user-facing prose — it reads
+// as AI-generated. Gemini leans on the em dash heavily, so we strip it at the
+// render boundary (covers both the reading page and the PDF, for cached + new
+// reports). Em/en dashes used as clause separators become a comma; ranges and
+// hyphenated words (single hyphen) are untouched.
+function _deAiText(s) {
+  if (typeof s !== 'string' || !s) return s;
+  return s
+    .replace(/\s*[—―]\s*/g, ', ')        // em dash / horizontal bar → comma
+    .replace(/\s+–\s+/g, ', ')            // spaced en dash → comma
+    .replace(/\s+--+\s+/g, ', ')          // spaced double(+) hyphen → comma
+    .replace(/\s*,\s*,\s*/g, ', ')        // collapse double commas
+    .replace(/,(\s*[.;:!?])/g, '$1')      // drop a comma left dangling before other punctuation
+    .replace(/\s+([,.;:!?])/g, '$1')      // no space before punctuation
+    .replace(/([,;])(?=[A-Za-z])/g, '$1 ') // ensure a single space after , and ;
+    .replace(/[ \t]{2,}/g, ' ')           // collapse runs of spaces
+    .trim();
+}
+
+/**
+ * Deep-clone a report and de-AI every string field. Applied at every render
+ * boundary (resolution gate + PDF) so no em dash ever reaches a user.
+ */
+function _deAiProse(report) {
+  if (!report || typeof report !== 'object') return report;
+  let clone;
+  try { clone = JSON.parse(JSON.stringify(report)); } catch { return report; }
+  const walk = (node) => {
+    if (Array.isArray(node)) {
+      for (let i = 0; i < node.length; i += 1) {
+        if (typeof node[i] === 'string') node[i] = _deAiText(node[i]); else walk(node[i]);
+      }
+      return;
+    }
+    if (node && typeof node === 'object') {
+      for (const k of Object.keys(node)) {
+        if (typeof node[k] === 'string') node[k] = _deAiText(node[k]); else walk(node[k]);
+      }
+    }
+  };
+  try { walk(clone); } catch { return report; }
+  return clone;
+}
+
 const router = express.Router();
 
 // ─── Multer — memory storage; storage.putPhoto handles the disk/R2 layer ────
@@ -198,8 +243,9 @@ function _buildCompatScores(report) {
 
 function applyResolutionGate(report, paid) {
   if (!report) return null;
-  if (paid) return report;
-  const stripped = { ...report };
+  const clean = _deAiProse(report); // strip em dashes / AI-tell punctuation on every read
+  if (paid) return clean;
+  const stripped = { ...clean };
   for (const f of PREMIUM_FIELDS) delete stripped[f];
   return stripped;
 }
@@ -473,6 +519,7 @@ async function _callGemini(quizAnswers, photoBuffer) {
  */
 async function _generatePdf(auditId, report, photoBuffer = null) {
   const PDFDocument = require('pdfkit'); // eslint-disable-line global-require
+  report = _deAiProse(report); // no em dashes / AI-tell punctuation in the dossier
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ size: 'A4', margin: 60, bufferPages: true });
@@ -552,7 +599,7 @@ async function _generatePdf(auditId, report, photoBuffer = null) {
         : (report.auraScore ? +(report.auraScore / 10).toFixed(1) : null);
       doc.font('Helvetica-Bold').fontSize(8).fillColor(GOLD).text('GLOBAL AURA SCORE', M, doc.y, { characterSpacing: 2 });
       const scoreY = doc.y + 4;
-      doc.font('Times-Bold').fontSize(54).fillColor(INK).text(g10 != null ? g10.toFixed(1) : String(report.auraScore || '—'), M, scoreY, { continued: true })
+      doc.font('Times-Bold').fontSize(54).fillColor(INK).text(g10 != null ? g10.toFixed(1) : String(report.auraScore || '-'), M, scoreY, { continued: true })
          .font('Helvetica').fontSize(15).fillColor(MUTED).text(g10 != null ? '  / 10' : '  / 100');
       doc.font('Helvetica').fontSize(9.5).fillColor(MUTED)
          .text(`${report.percentile ? report.percentile + 'th percentile' : ''}${report.faceShape ? '        ' + cap(report.faceShape) : ''}`, M, scoreY + 58, { characterSpacing: 1 });
@@ -586,7 +633,7 @@ async function _generatePdf(auditId, report, photoBuffer = null) {
                .text(fmtName(item.metric), M, doc.y, { continued: true })
                .font('Courier').fontSize(9).fillColor(GOLD).text(`    ${item.score}/100`);
             if (item.cause) doc.font('Helvetica').fontSize(8.5).fillColor(MUTED).text(item.cause, M + 12, doc.y, { width: W - 12, lineGap: 1 });
-            if (item.fix) doc.font('Helvetica-Oblique').fontSize(8.5).fillColor('#3a3a3a').text('Fix — ' + item.fix, M + 12, doc.y, { width: W - 12, lineGap: 1 });
+            if (item.fix) doc.font('Helvetica-Oblique').fontSize(8.5).fillColor('#3a3a3a').text('Fix. ' + item.fix, M + 12, doc.y, { width: W - 12, lineGap: 1 });
             doc.moveDown(0.4);
           }
         }
@@ -629,9 +676,9 @@ async function _generatePdf(auditId, report, photoBuffer = null) {
           }
           doc.y = sy + sw + 6; doc.x = M;
           doc.font('Helvetica').fontSize(8).fillColor(MUTED)
-             .text('Palette — ' + sc.palette.map((c) => (typeof c === 'string' ? c : (c.name || c.hex || ''))).join('  ·  '), M, doc.y, { width: W });
+             .text('Palette. ' + sc.palette.map((c) => (typeof c === 'string' ? c : (c.name || c.hex || ''))).join('  ·  '), M, doc.y, { width: W });
         }
-        if (sc.avoid && sc.avoid.length) doc.font('Helvetica-Oblique').fontSize(8).fillColor(FAINT).text('Avoid — ' + sc.avoid.join(', '), M, doc.y, { width: W });
+        if (sc.avoid && sc.avoid.length) doc.font('Helvetica-Oblique').fontSize(8).fillColor(FAINT).text('Avoid. ' + sc.avoid.join(', '), M, doc.y, { width: W });
       }
 
       // ── The 7-Day Starter Plan ───────────────────────────────────
@@ -874,14 +921,19 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
   });
   y += 50;
 
-  // score card
-  const cardH = 132, cardY = y;
+  // score card — height grows to fit the narrative so long status text can never overflow
+  const pad = 24;
+  const g10 = num1(typeof report.globalScore10 === 'number' ? report.globalScore10 : (report.auraScore != null ? report.auraScore / 10 : null));
+  const nx = M + W * 0.5, nw = W * 0.5 - pad;       // narrative column (right half)
+  const coverNarr = report.statusAlert || report.firstImpression || '';
+  doc.font(SANS).fontSize(9);
+  const narrH = coverNarr ? doc.heightOfString(coverNarr, { width: nw, lineGap: 2.5 }) : 0;
+  const cardH = Math.max(132, narrH + pad * 2);     // left column (score + pill) ≈ 116
+  const cardY = y;
   doc.roundedRect(M, cardY, W, cardH, 12).fill(CARD);
   doc.roundedRect(M, cardY, W, cardH, 12).lineWidth(1).strokeColor(HAIR).stroke();
-  const g10 = num1(typeof report.globalScore10 === 'number' ? report.globalScore10 : (report.auraScore != null ? report.auraScore / 10 : null));
-  const pad = 24;
   eyebrow('OVERALL PRESENCE READ', M + pad, cardY + pad, FAINT, 7.5);
-  doc.font(SERIF).fontSize(52).fillColor(CREAM).text(g10 != null ? g10 : '—', M + pad, cardY + pad + 12, { continued: true, lineBreak: false })
+  doc.font(SERIF).fontSize(52).fillColor(CREAM).text(g10 != null ? g10 : '-', M + pad, cardY + pad + 12, { continued: true, lineBreak: false })
      .font(SANS).fontSize(13).fillColor(DIM).text(g10 != null ? '  /10' : '', { lineBreak: false });
   const projHi = num1(report.projection && report.projection.globalDay90);
   if (projHi) {
@@ -889,8 +941,6 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
     pillLeft('Projected ' + projHi + ' with full adherence', M + pad, py, false);
   }
   // narrative on the right half of the card (kept clear of the pill column)
-  const nx = M + W * 0.5, nw = W * 0.5 - pad;
-  const coverNarr = report.statusAlert || report.firstImpression || '';
   if (coverNarr) doc.font(SANS).fontSize(9).fillColor(SILVER).text(coverNarr, nx, cardY + pad, { width: nw, lineGap: 2.5 });
   y = cardY + cardH + 22;
 
@@ -904,7 +954,7 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
   legend.forEach((lg) => {
     diamond(lx + 3, y + 6, 6, SILVER);
     doc.font(SANS_B).fontSize(8).fillColor(SILVER).text(lg[0], lx + 12, y, { lineBreak: false });
-    doc.font(SANS).fontSize(8).fillColor(FAINT).text('— ' + lg[1], lx + 12 + doc.widthOfString(lg[0]) + 6, y, { lineBreak: false });
+    doc.font(SANS).fontSize(8).fillColor(FAINT).text(lg[1], lx + 12 + doc.widthOfString(lg[0]) + 10, y, { lineBreak: false });
     lx += W / 3;
   });
 
@@ -933,7 +983,7 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
   if (fixed.length) {
     page('Your Fixed Architecture');
     sectionHead('02', 'READ AS CONTEXT, NOT GRADED', 'Your Fixed Architecture',
-      'Bone structure does not change without surgery, so it is not graded. Read this as context, then build on it — most of it is already working for you.');
+      'Bone structure does not change without surgery, so it is not graded. Read this as context, then build on it. Most of it is already working for you.');
     doc.y += 6;
     doc.moveTo(M, doc.y).lineTo(M + W, doc.y).lineWidth(0.5).strokeColor(HAIR).stroke();
     doc.y += 2;
@@ -952,9 +1002,9 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
     doc.y += 6;
     // three trait cards
     const triple = [
-      ['UNDERTONE', c.undertone || '—', c.undertoneNote || ''],
-      ['CONTRAST', c.contrast || '—', c.contrastNote || ''],
-      ['FAMILY', c.profile || '—', c.profileNote || ''],
+      ['UNDERTONE', c.undertone || '-', c.undertoneNote || ''],
+      ['CONTRAST', c.contrast || '-', c.contrastNote || ''],
+      ['FAMILY', c.profile || '-', c.profileNote || ''],
     ];
     const gap = 12, tcW = (W - gap * 2) / 3, tcH = 74, tcY = doc.y;
     triple.forEach((t, i) => {
@@ -987,7 +1037,7 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
       });
       doc.y = rowTop + pcH + 16;
     }
-    if (c.supportingNeutrals) { doc.font(SANS_I).fontSize(8).fillColor(FAINT).text('Supporting neutrals — ' + c.supportingNeutrals, M, doc.y, { width: W }); doc.y += 6; }
+    if (c.supportingNeutrals) { doc.font(SANS_I).fontSize(8).fillColor(FAINT).text('Supporting neutrals. ' + c.supportingNeutrals, M, doc.y, { width: W }); doc.y += 6; }
 
     // avoid + metals panels
     need(120); doc.y += 8;
@@ -1057,7 +1107,7 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
   if (proj) {
     page('What Ninety Days Produces');
     sectionHead('05', 'THE HORIZON', 'What Ninety Days Produces',
-      'Kept consistently, here is an honest picture of what ninety days changes. No percentiles — just the qualities that shift when these habits compound.');
+      'Kept consistently, here is an honest picture of what ninety days changes. No percentiles. Just the qualities that shift when these habits compound.');
     doc.y += 8;
     eyebrow('PROJECTED EVOLUTION  ·  MODELLED NINETY-DAY OUTCOME, STRICT ADHERENCE', M, doc.y, FAINT, 7.5);
     doc.y += 18;
@@ -1087,10 +1137,10 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
     doc.roundedRect(M, gY, W, gH, 12).lineWidth(1).strokeColor(HAIR).stroke();
     eyebrow('OVERALL PRESENCE READ', M + 24, gY + 18, FAINT, 7.5);
     const gd0 = num1(proj.globalDay0), gd90 = num1(proj.globalDay90);
-    doc.font(SERIF).fontSize(34).fillColor(CREAM).text(gd0 || '—', M + 24, gY + 30, { lineBreak: false });
-    const gw0 = doc.widthOfString(gd0 || '—');
+    doc.font(SERIF).fontSize(34).fillColor(CREAM).text(gd0 || '-', M + 24, gY + 30, { lineBreak: false });
+    const gw0 = doc.widthOfString(gd0 || '-');
     arrow(M + 24 + gw0 + 16, gY + 48, 22, FAINT);
-    doc.font(SERIF).fontSize(34).fillColor(CREAM).text(gd90 || '—', M + 24 + gw0 + 50, gY + 30, { lineBreak: false });
+    doc.font(SERIF).fontSize(34).fillColor(CREAM).text(gd90 || '-', M + 24 + gw0 + 50, gY + 30, { lineBreak: false });
     if (gd0 && gd90) {
       pillLeft('+' + (Number(proj.globalDay90) - Number(proj.globalDay0)).toFixed(1) + ' in 90 days', M + W * 0.46, gY + 24, false);
       doc.font(SANS).fontSize(8.5).fillColor(DIM).text('Fixed structural features are held constant, so the ceiling is realistic, not inflated.', M + W * 0.46, gY + 46, { width: W * 0.54 - 24, lineGap: 1.5 });
@@ -1102,7 +1152,7 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
   // ════════════════════ THE PROGRAMME ════════════════════
   page('How This Continues');
   sectionHead('06', 'THE PROGRAMME', 'How This Continues',
-    'This blueprint is your baseline — a single photograph in time. The programme keeps reading you, day by day, so the work shows up in numbers you can watch.');
+    'This blueprint is your baseline, a single photograph in time. The programme keeps reading you, day by day, so the work shows up in numbers you can watch.');
   doc.y += 8;
   // four feature cards (real product features — short factual labels)
   const feats = [
@@ -1776,8 +1826,12 @@ router.get('/audit/:id/pdf', async (req, res) => {
   // persists — read it back from storage when available. Degrades gracefully:
   // the dossier renders without the photo if it can't be recovered (e.g. R2 off).
   let coverPhoto = null;
-  if (session.photoKey && !session.photoKey.startsWith('local:')) {
-    try { coverPhoto = await storage.readImage(session.photoKey); } catch { coverPhoto = null; }
+  if (session.photoKey) {
+    // storage.put returns a RAW R2 key (no scheme); readImage wants r2:/local:.
+    let key = session.photoKey;
+    if (!key.startsWith('local:') && !key.startsWith('r2:')) key = 'r2:' + key;
+    try { coverPhoto = await storage.readImage(key); }
+    catch (e) { log.warn('PDF', `cover photo recover failed for ${id}: ${e.message}`); coverPhoto = null; }
   }
 
   // Generate PDF.

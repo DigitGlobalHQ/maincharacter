@@ -335,6 +335,10 @@
       font-size: var(--mc-fs-small);
       color: var(--mc-silver-faint);
     }
+    /* Keep the brand mark + wordmark on one centered, vertically-aligned line
+       (the runtime ◆→logo swap otherwise leaves the mark adrift at the left). */
+    .lm-footer p { display: flex; justify-content: center; align-items: center; gap: 5px; margin: 0; }
+    .lm-footer img.mc-ico { height: 0.95em; }
 
     @media (prefers-reduced-motion: reduce) {
       .lm-shutter__inner { animation: none; }
@@ -436,7 +440,7 @@
   <!-- Hidden file input — triggered by the upload zone (click to browse) -->
   <input type="file" id="file-input" accept="image/jpeg,image/png,image/*" hidden aria-hidden="true">
 
-  <p class="lm-privacy">We score the photo. We do not publish it. ◆</p>
+  <p class="lm-privacy">We score the photo. We do not publish it.</p>
 
   <!-- Analyze button — gated on consent -->
   <button class="mc-btn-primary lm-analyze-btn" id="analyze-btn" disabled aria-label="Upload and analyze your photo">

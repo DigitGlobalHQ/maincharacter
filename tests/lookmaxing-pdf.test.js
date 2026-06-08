@@ -220,7 +220,8 @@ describe('PDF generation — dark Blueprint dossier (_generatePdf)', () => {
     // page-tree /Count is written uncompressed — the dossier is an 8-section doc.
     const count = buf.toString('latin1').match(/\/Count (\d+)/);
     expect(count).toBeTruthy();
-    expect(Number(count[1])).toBeGreaterThanOrEqual(7);
+    // Sections flow together to avoid dead space, so the dossier is a few dense pages.
+    expect(Number(count[1])).toBeGreaterThanOrEqual(3);
   });
 
   it('embeds a cover photo without error when one is provided', async () => {

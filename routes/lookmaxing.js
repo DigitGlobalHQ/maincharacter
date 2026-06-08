@@ -815,54 +815,69 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
     if (intro) { doc.font(SANS).fontSize(9.5).fillColor(DIM).text(intro, M, doc.y, { width: W * 0.92, lineGap: 3 }); doc.y += 8; }
   }
 
-  // Graded metric → focus pill verdict.
-  function gradedPill(m) {
-    const s = typeof m.score10 === 'number' ? m.score10 : 5;
-    if (s >= 7) return { text: 'Natural Asset', filled: false };
-    if (m.class === 'leverage' || s < 5) return { text: 'High Focus', filled: true };
-    return { text: 'Refine', filled: false };
-  }
+  // Verdict colours (match the web reading page): actionable green, leverage blue,
+  // fixed grey. Each verdict is a coloured pill with a small shape marker.
+  const V_GREEN = '#6fae8e', V_BLUE = '#7da0c4', V_GREY = '#8a8a93';
   function fixedTag(m) {
     const s = typeof m.score10 === 'number' ? m.score10 : 6;
     if (s >= 7.5) return 'Strong'; if (s >= 6.5) return 'Asset';
     if (s >= 5.5) return 'Balanced'; if (s >= 4.5) return 'Even'; return 'Neutral';
   }
+  function verdict(m, graded) {
+    if (graded && m.class === 'leverage') return { label: 'Leverage via state', color: V_BLUE, shape: 'dia' };
+    if (graded && m.class !== 'fixed') return { label: 'Actionable', color: V_GREEN, shape: 'dot' };
+    return { label: graded ? 'Fixed · context' : fixedTag(m), color: V_GREY, shape: 'ring' };
+  }
+  function vMarker(shape, cx, cy, color) {
+    if (shape === 'dia') diamond(cx, cy, 5, color);
+    else if (shape === 'ring') { doc.circle(cx, cy, 2.6).lineWidth(1.1).strokeColor(color).stroke(); }
+    else doc.circle(cx, cy, 2.8).fill(color);
+  }
+  // Outlined pill, coloured by verdict, with its marker on the left.
+  function verdictPill(v, x, y) {
+    const t = String(v.label).toUpperCase();
+    doc.font(SANS_B).fontSize(6.8);
+    const tw = doc.widthOfString(t, { characterSpacing: 0.8 });
+    const h = 15, w = 20 + tw + 9;
+    doc.roundedRect(x, y, w, h, 7.5).lineWidth(0.9).strokeColor(v.color).stroke();
+    vMarker(v.shape, x + 11, y + h / 2, v.color);
+    doc.fillColor(v.color).font(SANS_B).fontSize(6.8).text(t, x + 20, y + 4.4, { characterSpacing: 0.8, lineBreak: false });
+  }
 
-  // One analysis row: name + italic descriptor (left), root-cause (mid), score
-  // + verdict pill (right). `graded` shows the /10; fixed rows omit it.
+  // One analysis row, stacked for visual rhythm (like the web reading page):
+  // name + score on top, a score bar, the root cause, then a coloured verdict pill.
   function metricRow(m, graded) {
-    const nameW = 124;
-    const pillRightX = M + W;
-    const scoreRightX = pillRightX - 92;          // score sits left of the pill column
-    const descX = M + 142;
-    const descW = (graded ? scoreRightX - 56 : pillRightX - 96) - descX;
-    const desc = m.rootCause || m.subtitle || '';
+    const hasScore = typeof m.score10 === 'number';
+    const desc = m.rootCause || '';
+    const nameW = W - 64;            // leave room for the score on the right
+    // measure for the page-break check
+    doc.font(SERIF).fontSize(12); let h = 8 + doc.heightOfString(fmt(m.metric), { width: nameW });
+    if (m.subtitle) { doc.font(SERIF_I).fontSize(8.5); h += doc.heightOfString(m.subtitle, { width: nameW }) + 1; }
+    if (hasScore) h += 13;          // score bar
+    if (desc) { doc.font(SANS).fontSize(8.5); h += doc.heightOfString(desc, { width: W, lineGap: 1.6 }) + 8; }
+    h += 28;                         // pill + paddings
+    need(h);
 
-    doc.font(SANS).fontSize(8.5);
-    const descH = doc.heightOfString(desc, { width: Math.max(60, descW), lineGap: 1.6 });
-    doc.font(SERIF).fontSize(11.5);
-    let nameH = doc.heightOfString(fmt(m.metric), { width: nameW });
-    if (m.subtitle) { doc.font(SERIF_I).fontSize(8.5); nameH += doc.heightOfString(m.subtitle, { width: nameW }) + 2; }
-    const rowH = Math.max(descH, nameH, 26);
-    need(rowH + 16);
-
-    const y0 = doc.y + 7;
-    doc.font(SERIF).fontSize(11.5).fillColor(CREAM).text(fmt(m.metric), M, y0, { width: nameW });
-    if (m.subtitle) doc.font(SERIF_I).fontSize(8.5).fillColor(DIM).text(m.subtitle, M, doc.y + 1, { width: nameW });
-    doc.font(SANS).fontSize(8.5).fillColor(DIM).text(desc, descX, y0, { width: Math.max(60, descW), lineGap: 1.6 });
-
-    const midY = y0 + rowH / 2 - 9;
-    if (graded && typeof m.score10 === 'number') {
-      doc.font(SERIF).fontSize(15).fillColor(CREAM)
-         .text(m.score10.toFixed(1), scoreRightX - 50, midY, { width: 38, align: 'right', lineBreak: false });
-      doc.font(SANS).fontSize(7).fillColor(FAINT).text('/10', scoreRightX - 11, midY + 5, { lineBreak: false });
+    doc.y += 8;
+    const top = doc.y;
+    doc.font(SERIF).fontSize(12).fillColor(CREAM).text(fmt(m.metric), M, top, { width: nameW });
+    const nameBottom = doc.y;
+    if (hasScore) {
+      doc.font(SERIF).fontSize(16).fillColor(CREAM).text(m.score10.toFixed(1), M + W - 56, top - 2, { width: 44, align: 'right', lineBreak: false });
+      doc.font(SANS).fontSize(7).fillColor(FAINT).text('/10', M + W - 11, top + 5, { lineBreak: false });
     }
-    const p = graded ? gradedPill(m) : { text: fixedTag(m), filled: false };
-    pillRight(p.text, pillRightX, midY, p.filled);
-
-    doc.y = y0 + rowH + 9;
-    doc.moveTo(M, doc.y).lineTo(M + W, doc.y).lineWidth(0.5).strokeColor(FAINTLINE).stroke();
-    doc.y += 2;
+    doc.y = nameBottom;
+    if (m.subtitle) doc.font(SERIF_I).fontSize(8.5).fillColor(DIM).text(m.subtitle, M, doc.y + 1, { width: nameW });
+    if (hasScore) {
+      const by = doc.y + 7, pct = Math.max(0.04, Math.min(1, m.score10 / 10));
+      doc.roundedRect(M, by, W, 3, 1.5).fill('#262629');
+      doc.roundedRect(M, by, W * pct, 3, 1.5).fill(SILVER);
+      doc.y = by + 3;
+    }
+    if (desc) doc.font(SANS).fontSize(8.5).fillColor(DIM).text(desc, M, doc.y + 8, { width: W, lineGap: 1.6 });
+    verdictPill(verdict(m, graded), M, doc.y + 9);
+    doc.y = doc.y + 9 + 15 + 11;
+    doc.moveTo(M, doc.y - 5).lineTo(M + W, doc.y - 5).lineWidth(0.5).strokeColor(FAINTLINE).stroke();
   }
 
   // ════════════════════ PAGE 1 · COVER ════════════════════

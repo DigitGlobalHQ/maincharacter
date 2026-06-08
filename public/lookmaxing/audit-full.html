@@ -270,6 +270,57 @@
   </style>
 <style>.lm-nav__brand{display:inline-flex;align-items:center;gap:8px;}.lm-nav__logo{width:24px;height:24px;object-fit:contain;}</style>
   <style id="mc-footer-fix">.lm-footer p{display:flex;justify-content:center;align-items:center;gap:5px;margin:0;}.lm-footer img.mc-ico{height:.95em;}</style>
+  <style id="lm-full-redesign">
+    /* Reading-page redesign — dossier card system (matches the PDF). */
+    .lm-card{background:var(--mc-near-black,#0c0c0e);border:1px solid var(--mc-line);border-radius:var(--mc-r-3,14px);padding:var(--mc-sp-5,24px);margin:0 0 var(--mc-sp-4,18px);}
+    .lm-vhead{display:flex;align-items:baseline;gap:var(--mc-sp-3,12px);margin:0 0 var(--mc-sp-2,8px);padding-bottom:var(--mc-sp-3,12px);border-bottom:1px solid var(--mc-line);}
+    .lm-vhead__num{font-family:var(--mc-font-mono,monospace);font-size:10px;letter-spacing:.16em;color:var(--mc-silver-faint,#5a5a5a);text-transform:uppercase;}
+    .lm-vhead__name{font-family:var(--mc-font-mono,monospace);font-size:12px;letter-spacing:.14em;color:var(--mc-silver-mid,#c0c0c0);text-transform:uppercase;}
+    /* marker shapes (no ◆ glyph — that gets swapped to the logo) */
+    .lm-mk{display:inline-block;width:7px;height:7px;vertical-align:middle;margin-right:5px;}
+    .lm-mk--dot{border-radius:50%;}
+    .lm-mk--ring{border-radius:50%;background:transparent!important;border:1.5px solid;}
+    .lm-mk--dia{border-radius:1px;}
+    .lm-legend{display:flex;flex-wrap:wrap;gap:18px;margin:0 0 var(--mc-sp-5,24px);font-size:12px;color:var(--mc-silver-mid,#c0c0c0);}
+    .lm-metric{padding:var(--mc-sp-4,18px) 0;border-top:1px solid var(--mc-line);}
+    .lm-metric:first-of-type{border-top:none;padding-top:var(--mc-sp-3,12px);}
+    .lm-metric__top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;}
+    .lm-metric__name{color:var(--mc-silver-bright,#e8e8e8);font-weight:600;font-size:15px;}
+    .lm-metric__sub{color:var(--mc-silver-faint,#5a5a5a);font-size:12px;font-style:italic;margin-top:1px;}
+    .lm-metric__score{font-family:var(--mc-font-serif,serif);font-size:22px;line-height:1;color:var(--mc-silver-bright,#e8e8e8);white-space:nowrap;}
+    .lm-metric__score small{font-family:var(--mc-font-mono,monospace);font-size:10px;color:var(--mc-silver-faint,#5a5a5a);}
+    .lm-bar{height:3px;border-radius:3px;background:var(--mc-silver-ghost,#2a2a2a);margin:10px 0;overflow:hidden;}
+    .lm-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--mc-silver-dim,#8a8a8a),var(--mc-silver-bright,#e8e8e8));}
+    .lm-metric__cause{color:var(--mc-silver-mid,#c0c0c0);font-size:13px;line-height:1.6;}
+    .lm-pill{display:inline-flex;align-items:center;font-family:var(--mc-font-mono,monospace);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:3px 10px;border-radius:20px;border:1px solid;margin-top:10px;}
+    .lm-trait-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 0 var(--mc-sp-5,24px);}
+    .lm-trait{background:var(--mc-near-black,#0c0c0e);border:1px solid var(--mc-line);border-radius:12px;padding:var(--mc-sp-4,18px);}
+    .lm-trait__k{font-family:var(--mc-font-mono,monospace);font-size:10px;letter-spacing:.16em;color:var(--mc-silver-faint,#5a5a5a);text-transform:uppercase;}
+    .lm-trait__v{font-family:var(--mc-font-serif,serif);font-size:20px;color:var(--mc-silver-bright,#e8e8e8);margin:8px 0 6px;}
+    .lm-trait__note{font-size:10.5px;color:var(--mc-silver-dim,#8a8a8a);text-transform:uppercase;letter-spacing:.04em;line-height:1.4;}
+    .lm-pal-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:0 0 var(--mc-sp-4,18px);}
+    .lm-pal{border:1px solid var(--mc-line);border-radius:10px;overflow:hidden;background:var(--mc-near-black,#0c0c0e);}
+    .lm-pal__sw{height:52px;}
+    .lm-pal__body{padding:12px 14px;}
+    .lm-pal__name{color:var(--mc-silver-bright,#e8e8e8);font-weight:600;font-size:14px;}
+    .lm-pal__hex{font-family:var(--mc-font-mono,monospace);font-size:11px;color:var(--mc-silver-faint,#5a5a5a);}
+    .lm-pal__note{color:var(--mc-silver-mid,#c0c0c0);font-size:12.5px;line-height:1.5;margin-top:4px;}
+    .lm-step{display:grid;grid-template-columns:auto 1fr;gap:var(--mc-sp-3,12px);padding:var(--mc-sp-3,12px) 0;border-top:1px solid var(--mc-line);}
+    .lm-step:first-of-type{border-top:none;}
+    .lm-step__n{font-family:var(--mc-font-mono,monospace);font-size:12px;color:var(--mc-silver-faint,#5a5a5a);padding-top:2px;}
+    .lm-step__agent{color:var(--mc-silver-bright,#e8e8e8);font-weight:600;font-size:14px;}
+    .lm-step__why{color:var(--mc-silver-mid,#c0c0c0);font-size:13px;line-height:1.55;margin-top:3px;}
+    .lm-rx{font-family:var(--mc-font-mono,monospace);font-size:10px;color:var(--mc-silver-faint,#5a5a5a);border:1px solid var(--mc-line);padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:1px;}
+    .lm-proj-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:11px 0;border-top:1px solid var(--mc-line);}
+    .lm-proj-row:first-of-type{border-top:none;}
+    .lm-proj__name{color:var(--mc-silver-bright,#e8e8e8);font-size:14px;}
+    .lm-proj__track{flex:1;max-width:220px;height:4px;border-radius:4px;background:var(--mc-silver-ghost,#2a2a2a);overflow:hidden;}
+    .lm-proj__track i{display:block;height:100%;background:linear-gradient(90deg,var(--mc-silver-dim,#8a8a8a),var(--mc-silver-bright,#e8e8e8));}
+    .lm-proj__nums{font-family:var(--mc-font-mono,monospace);font-size:13px;color:var(--mc-silver-bright,#e8e8e8);white-space:nowrap;}
+    .lm-proj__total{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0 2px;margin-top:6px;border-top:1px solid var(--mc-silver-faint,#5a5a5a);color:var(--mc-silver-bright,#e8e8e8);font-weight:600;font-family:var(--mc-font-mono,monospace);font-size:14px;}
+    .lm-gain{color:#6fae8e;}
+    @media (max-width:560px){.lm-trait-grid,.lm-pal-grid{grid-template-columns:1fr;}.lm-proj__track{max-width:120px;}}
+  </style>
 </head>
 <body class="lookmaxing">
 
@@ -397,21 +448,31 @@
   }
 
   function clsMeta(c) {
-    if (c === 'leverage') return { g: '◆', col: '#7da0c4', t: 'Leverage via state' };
-    if (c === 'fixed')    return { g: '○', col: '#8a8a93', t: 'Fixed · context' };
-    return { g: '●', col: '#6fae8e', t: 'Actionable' };
+    if (c === 'leverage') return { shape: 'dia', col: '#7da0c4', t: 'Leverage via state' };
+    if (c === 'fixed')    return { shape: 'ring', col: '#8a8a93', t: 'Fixed · context' };
+    return { shape: 'dot', col: '#6fae8e', t: 'Actionable' };
+  }
+  // CSS-shape marker (dot / diamond / ring) — never the ◆ glyph, which the global
+  // brand-mark swap would replace with the logo image.
+  function clsMarker(mm) {
+    if (mm.shape === 'ring') return '<span class="lm-mk lm-mk--ring" style="border-color:' + mm.col + '"></span>';
+    if (mm.shape === 'dia')  return '<span class="lm-mk lm-mk--dia" style="background:' + mm.col + ';transform:rotate(45deg);"></span>';
+    return '<span class="lm-mk lm-mk--dot" style="background:' + mm.col + '"></span>';
   }
   function sectionLabel(text) {
     return '<div class="lm-section-label" aria-hidden="true"><span class="lm-section-label__text">' + esc(text) + '</span><div class="lm-section-label__line"></div></div>';
   }
-  function swatch(hex, name, note) {
+  function safeHex(hex) {
     var raw = String(hex || '').trim();
-    var safe = /^#?[0-9a-fA-F]{3,8}$/.test(raw) ? (raw[0] === '#' ? raw : '#' + raw) : '#888888';
-    return '<div style="display:flex;gap:12px;align-items:flex-start;margin:0 0 12px;">'
-      + '<span style="flex:0 0 auto;width:34px;height:34px;border-radius:6px;border:1px solid var(--mc-line);background:' + safe + '"></span>'
-      + '<div style="flex:1;"><div style="color:var(--mc-silver-bright);font-weight:600;font-size:14px;">' + esc(name || '')
-      + ' <span style="color:var(--mc-silver-faint);font-family:var(--mc-font-mono);font-size:11px;">' + safe.toUpperCase() + '</span></div>'
-      + (note ? '<div style="color:var(--mc-silver-mid);font-size:13px;line-height:1.55;margin-top:2px;">' + esc(note) + '</div>' : '')
+    return /^#?[0-9a-fA-F]{3,8}$/.test(raw) ? (raw[0] === '#' ? raw : '#' + raw) : '#888888';
+  }
+  // Swatch card — colour block on top, name + hex + note beneath. Used in grids.
+  function paletteCard(hex, name, note) {
+    var safe = safeHex(hex);
+    return '<div class="lm-pal"><div class="lm-pal__sw" style="background:' + safe + '"></div>'
+      + '<div class="lm-pal__body"><div class="lm-pal__name">' + esc(name || '')
+      + ' <span class="lm-pal__hex">' + safe.toUpperCase() + '</span></div>'
+      + (note ? '<div class="lm-pal__note">' + esc(note) + '</div>' : '')
       + '</div></div>';
   }
 
@@ -461,24 +522,23 @@
     if (Array.isArray(report.vectors) && report.vectors.length) {
       html += sectionLabel('02 · BIOMETRIC GAP ANALYSIS');
       html += '<p class="lm-block-intro">Twenty-four metrics across five regions. Each finding pairs the clinical root cause with a score and a verdict.</p>';
-      html += '<div style="display:flex;flex-wrap:wrap;gap:18px;margin:0 0 var(--mc-sp-5);font-size:12px;color:var(--mc-silver-mid);">';
-      ['actionable', 'leverage', 'fixed'].forEach(function (c) { var mm = clsMeta(c); html += '<span><span style="color:' + mm.col + '">' + mm.g + '</span> ' + mm.t + '</span>'; });
+      html += '<div class="lm-legend">';
+      ['actionable', 'leverage', 'fixed'].forEach(function (c) { var mm = clsMeta(c); html += '<span>' + clsMarker(mm) + esc(mm.t) + '</span>'; });
       html += '</div>';
       report.vectors.forEach(function (v) {
-        html += '<div class="lm-decomp-group" style="margin-bottom:var(--mc-sp-5);">';
-        html += '<p class="lm-decomp-group__header">VECTOR ' + esc(v.numeral || '') + ' · ' + esc((v.name || '').toUpperCase()) + '</p>';
-        html += '<hr class="mc-hairline mc-hairline--bright" style="margin:0 0 var(--mc-sp-3);">';
+        html += '<div class="lm-card">';
+        html += '<div class="lm-vhead"><span class="lm-vhead__num">VECTOR ' + esc(v.numeral || '') + '</span><span class="lm-vhead__name">' + esc((v.name || '').toUpperCase()) + '</span></div>';
         (v.metrics || []).forEach(function (m) {
           var mm = clsMeta(m.class);
           var sc = (typeof m.score10 === 'number' ? m.score10.toFixed(1) : esc(String(m.score10 || '')));
-          html += '<div style="margin:0 0 var(--mc-sp-4);">';
-          html += '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">';
-          html += '<span style="color:var(--mc-silver-bright);font-weight:600;font-size:15px;">' + esc(formatMetricName(m.metric || '')) + (m.visualIndicator ? ' <span style="color:var(--mc-silver-faint)">*</span>' : '') + '</span>';
-          html += '<span style="font-family:var(--mc-font-mono);color:var(--mc-silver-bright);font-size:14px;white-space:nowrap;">' + sc + ' <span style="color:var(--mc-silver-faint)">/10</span></span>';
-          html += '</div>';
-          if (m.subtitle) html += '<div style="color:var(--mc-silver-faint);font-size:12px;font-style:italic;margin-top:1px;">' + esc(m.subtitle) + '</div>';
-          if (m.rootCause) html += '<div style="color:var(--mc-silver-mid);font-size:13px;line-height:1.55;margin-top:4px;">' + esc(m.rootCause) + '</div>';
-          html += '<div style="font-size:11px;letter-spacing:0.04em;margin-top:4px;color:' + mm.col + '">' + mm.g + ' ' + mm.t.toUpperCase() + '</div>';
+          var pct = (typeof m.score10 === 'number') ? Math.max(4, Math.min(100, m.score10 * 10)) : 0;
+          html += '<div class="lm-metric">';
+          html += '<div class="lm-metric__top"><div><div class="lm-metric__name">' + esc(formatMetricName(m.metric || '')) + '</div>'
+            + (m.subtitle ? '<div class="lm-metric__sub">' + esc(m.subtitle) + '</div>' : '') + '</div>';
+          html += '<div class="lm-metric__score">' + sc + '<small> /10</small></div></div>';
+          html += '<div class="lm-bar"><i style="width:' + pct + '%"></i></div>';
+          if (m.rootCause) html += '<div class="lm-metric__cause">' + esc(m.rootCause) + '</div>';
+          html += '<span class="lm-pill" style="border-color:' + mm.col + '55;color:' + mm.col + '">' + clsMarker(mm) + esc(mm.t) + '</span>';
           html += '</div>';
         });
         html += '</div>';
@@ -489,15 +549,23 @@
     if (c) {
       html += sectionLabel('03 · THE CHROMATIC & GROOMING ARSENAL');
       html += '<p class="lm-block-intro">Colour is the highest-ROI lever. It re-engineers how the skin reads with no physical intervention.</p>';
-      html += '<p style="color:var(--mc-silver-bright);font-weight:600;margin:0 0 4px;">' + esc(c.profile || '') + '</p>';
-      html += '<p style="color:var(--mc-silver-mid);font-size:13px;margin:0 0 var(--mc-sp-5);">Undertone: ' + esc((c.undertone || '') + ' (' + (c.undertoneNote || '') + ')') + ' · Contrast: ' + esc((c.contrast || '') + ' (' + (c.contrastNote || '') + ')') + '</p>';
-      if (c.powerPalette && c.powerPalette.length) { html += '<p class="mc-eyebrow" style="margin-bottom:var(--mc-sp-3)">THE POWER PALETTE</p>'; c.powerPalette.forEach(function (s) { html += swatch(s.hex, s.name, s.note); }); }
+      html += '<div class="lm-trait-grid">';
+      [['UNDERTONE', c.undertone, c.undertoneNote], ['CONTRAST', c.contrast, c.contrastNote], ['FAMILY', c.profile, c.profileNote]].forEach(function (t) {
+        html += '<div class="lm-trait"><div class="lm-trait__k">' + esc(t[0]) + '</div><div class="lm-trait__v">' + esc(t[1] || '—') + '</div>'
+          + (t[2] ? '<div class="lm-trait__note">' + esc(String(t[2]).toUpperCase()) + '</div>' : '') + '</div>';
+      });
+      html += '</div>';
+      if (c.powerPalette && c.powerPalette.length) { html += '<p class="mc-eyebrow" style="margin-bottom:var(--mc-sp-3)">THE POWER PALETTE</p><div class="lm-pal-grid">'; c.powerPalette.forEach(function (s) { html += paletteCard(s.hex, s.name, s.note); }); html += '</div>'; }
       if (c.supportingNeutrals) html += '<p style="color:var(--mc-silver-faint);font-size:12px;font-style:italic;margin:0 0 var(--mc-sp-4)">Supporting neutrals: ' + esc(c.supportingNeutrals) + '</p>';
-      if (c.antiPalette && c.antiPalette.length) { html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 var(--mc-sp-3)">THE ANTI-PALETTE · NEVER AT THE FACE</p>'; c.antiPalette.forEach(function (s) { html += swatch(s.hex, 'Avoid: ' + (s.name || ''), s.impact); }); }
-      if (c.metals) html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 6px">HARDWARE & METALS</p><p style="color:var(--mc-silver-bright);font-weight:600;margin:0 0 2px">' + esc(c.metals.locked || '') + '</p><p style="color:var(--mc-silver-mid);font-size:13px;margin:0 0 var(--mc-sp-4)">' + esc(c.metals.note || '') + '</p>';
-      if (c.stylingCorrections) html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 6px">STYLING CORRECTIONS</p><p style="color:var(--mc-silver-mid);font-size:13px;line-height:1.6;margin:0 0 var(--mc-sp-4)">' + esc(c.stylingCorrections) + '</p>';
+      if (c.antiPalette && c.antiPalette.length) { html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-5) 0 var(--mc-sp-3)">THE ANTI-PALETTE · NEVER AT THE FACE</p><div class="lm-pal-grid">'; c.antiPalette.forEach(function (s) { html += paletteCard(s.hex, 'Avoid: ' + (s.name || ''), s.impact); }); html += '</div>'; }
+      if (c.metals || c.stylingCorrections) {
+        html += '<div class="lm-card" style="margin-top:var(--mc-sp-4);">';
+        if (c.metals) html += '<p class="mc-eyebrow" style="margin:0 0 6px">HARDWARE & METALS</p><p style="color:var(--mc-silver-bright);font-weight:600;margin:0 0 2px">' + esc(c.metals.locked || '') + '</p><p style="color:var(--mc-silver-mid);font-size:13px;margin:0;">' + esc(c.metals.note || '') + '</p>';
+        if (c.stylingCorrections) html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 6px">STYLING CORRECTIONS</p><p style="color:var(--mc-silver-mid);font-size:13px;line-height:1.6;margin:0;">' + esc(c.stylingCorrections) + '</p>';
+        html += '</div>';
+      }
       if (c.cosmetic) {
-        if (c.cosmetic.lipWardrobe && c.cosmetic.lipWardrobe.length) { html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 var(--mc-sp-3)">THE LIP WARDROBE</p>'; c.cosmetic.lipWardrobe.forEach(function (s) { html += swatch(s.hex, s.name, s.note); }); }
+        if (c.cosmetic.lipWardrobe && c.cosmetic.lipWardrobe.length) { html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-5) 0 var(--mc-sp-3)">THE LIP WARDROBE</p><div class="lm-pal-grid">'; c.cosmetic.lipWardrobe.forEach(function (s) { html += paletteCard(s.hex, s.name, s.note); }); html += '</div>'; }
         if (c.cosmetic.complexion && c.cosmetic.complexion.length) { html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 var(--mc-sp-3)">COMPLEXION · CHEEK · EYE</p>'; c.cosmetic.complexion.forEach(function (it) { html += '<p style="margin:0 0 8px"><span style="color:var(--mc-silver-bright);font-weight:600">' + esc(it.area || '') + '</span> · <span style="color:var(--mc-silver-mid);font-size:13px">' + esc(it.directive || '') + '</span></p>'; }); }
         html += '<p style="color:var(--mc-silver-faint);font-size:11px;font-style:italic;margin-top:8px">Cosmetic guidance is calibrated to colour biology only and is independent of gender expression.</p>';
       }
@@ -510,13 +578,15 @@
       [['Morning Protocol', iv.morning], ['Night Protocol', iv.night], ['Mechanical Arsenal', iv.mechanical]].forEach(function (b) {
         var steps = b[1]; if (!steps || !steps.length) return;
         html += '<p class="mc-eyebrow" style="margin:var(--mc-sp-4) 0 var(--mc-sp-3)">' + esc(b[0].toUpperCase()) + '</p>';
-        steps.forEach(function (s) {
-          html += '<div style="margin:0 0 var(--mc-sp-3);">';
-          html += '<div style="color:var(--mc-silver-bright);font-weight:600;font-size:14px;">' + esc(s.step || '') + ' · ' + esc(s.agent || '') + (s.rx ? ' <span style="color:var(--mc-silver-faint);font-family:var(--mc-font-mono);font-size:11px;border:1px solid var(--mc-line);padding:1px 5px;border-radius:4px;">Rx</span>' : '') + '</div>';
-          if (s.spec) html += '<div style="color:var(--mc-silver-faint);font-size:12px;font-style:italic;">' + esc(s.spec) + '</div>';
-          if (s.rationale) html += '<div style="color:var(--mc-silver-mid);font-size:13px;line-height:1.55;margin-top:2px;">' + esc(s.rationale) + '</div>';
-          html += '</div>';
+        html += '<div class="lm-card">';
+        steps.forEach(function (s, i) {
+          html += '<div class="lm-step"><span class="lm-step__n">' + String(i + 1).padStart(2, '0') + '</span><div>';
+          html += '<div class="lm-step__agent">' + esc(s.agent || s.step || '') + (s.rx ? '<span class="lm-rx">Rx</span>' : '') + '</div>';
+          if (s.spec) html += '<div class="lm-metric__sub">' + esc(s.spec) + '</div>';
+          if (s.rationale) html += '<div class="lm-step__why">' + esc(s.rationale) + '</div>';
+          html += '</div></div>';
         });
+        html += '</div>';
       });
     }
 
@@ -524,13 +594,14 @@
     if (p && p.rows) {
       html += sectionLabel('05 · PROJECTED EVOLUTION');
       html += '<p class="lm-block-intro">Modelled 90-day outcome under strict adherence. Only actionable vectors move; fixed osseous geometry is held constant.</p>';
-      html += '<div style="font-family:var(--mc-font-mono);font-size:13px;">';
-      html += '<div style="display:flex;justify-content:space-between;color:var(--mc-silver-faint);font-size:10px;letter-spacing:0.08em;border-bottom:1px solid var(--mc-line);padding-bottom:6px;margin-bottom:8px;"><span>VECTOR</span><span>DAY 0 → 90 · GAIN</span></div>';
+      html += '<div class="lm-card">';
       p.rows.forEach(function (r) {
-        html += '<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--mc-silver-mid);"><span style="color:var(--mc-silver-bright);">' + esc(formatMetricName(r.vector)) + '</span><span>' + Number(r.day0).toFixed(1) + ' → <span style="color:var(--mc-silver-bright)">' + Number(r.day90).toFixed(1) + '</span> · <span style="color:#6fae8e">+' + Number(r.delta).toFixed(1) + '</span></span></div>';
+        var pct = Math.max(4, Math.min(100, Number(r.day90) * 10));
+        html += '<div class="lm-proj-row"><div style="flex:1;min-width:0;"><div class="lm-proj__name">' + esc(formatMetricName(r.vector)) + '</div><div class="lm-proj__track" style="margin-top:6px;"><i style="width:' + pct + '%"></i></div></div>'
+          + '<span class="lm-proj__nums">' + Number(r.day0).toFixed(1) + ' → ' + Number(r.day90).toFixed(1) + ' <span class="lm-gain">+' + Number(r.delta).toFixed(1) + '</span></span></div>';
       });
       if (p.globalDay0 != null && p.globalDay90 != null) {
-        html += '<div style="display:flex;justify-content:space-between;padding:10px 0 4px;border-top:1px solid var(--mc-silver-faint);margin-top:6px;color:var(--mc-silver-bright);font-weight:600;"><span>GLOBAL AURA SCORE</span><span>' + Number(p.globalDay0).toFixed(1) + ' → ' + Number(p.globalDay90).toFixed(1) + ' · <span style="color:#6fae8e">+' + (Number(p.globalDay90) - Number(p.globalDay0)).toFixed(1) + '</span></span></div>';
+        html += '<div class="lm-proj__total"><span>GLOBAL AURA SCORE</span><span>' + Number(p.globalDay0).toFixed(1) + ' → ' + Number(p.globalDay90).toFixed(1) + ' <span class="lm-gain">+' + (Number(p.globalDay90) - Number(p.globalDay0)).toFixed(1) + '</span></span></div>';
       }
       html += '</div>';
       if (p.narrative) html += '<p class="mc-serif mc-serif--italic" style="font-size:var(--mc-fs-h3);margin:var(--mc-sp-5) 0 0;line-height:1.5;">' + esc(p.narrative) + '</p>';

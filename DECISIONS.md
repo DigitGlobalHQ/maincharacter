@@ -1278,3 +1278,35 @@ opt-in (toggle + follows device on first visit, persisted).
   Full suite 1521 pass; smoke 44/44.
 - OPEN: visual QA is the founder's — the palette is correct by construction but a few
   literal-heavy or inline-style spots may need touch-ups once seen on real pages.
+
+## 2026-06-08 — ₹99 full-report PDF redesigned as the dark "Bespoke Aesthetic Blueprint" dossier
+
+- **What:** Rewrote the blueprint branch of `_generatePdf` (routes/lookmaxing.js) into a new
+  `_renderDossier()` that reproduces the founder's reference design (final99.pdf): a dark
+  obsidian, 8-section A4 dossier — Cover · 01 The Reading (graded vectors) · 02 Fixed
+  Architecture · 03 The Chromatic Arsenal · 04 The 90-Day Protocol · 05 The Horizon ·
+  06 The Programme. Every figure is driven from the existing Gemini blueprint report
+  (report.vectors / chromatic / intervention / projection / methodology) — no schema change.
+- **Photo:** the subject's own capture is embedded (rounded) on the cover. Bytes are recovered
+  in the /pdf route via `storage.readImage(session.photoKey)` and passed into `_generatePdf`.
+  The raw photoB64 is dropped after /analyze, but the durable photoKey persists, so this works
+  in production (R2 configured) and degrades gracefully (cover renders without the photo) when
+  it can't be recovered (e.g. R2 off / local dev).
+- **Logo:** embeds `public/maincharacter-mark-3d.png` (silver 3D M, reads on dark) instead of
+  the old drawn gold diamond. The ◆ accent glyphs are drawn as vectors (the built-in fonts
+  can't encode ◆/→/✕).
+- **Personalisation:** cover metadata — Client A-XXXX (from auditId, privacy-preserving),
+  archetype as "styling direction", date of issue, "The Consultant".
+- **Fonts:** pdfkit built-ins (Times≈Cormorant, Helvetica≈Sora, Courier≈mono) — chosen over
+  embedding real OFL TTFs to avoid adding a font binary / build dependency and to keep the
+  render network-free on Render. Upgrade path: drop static Cormorant/Sora TTFs into
+  assets/fonts/ and `doc.registerFont(...)` in `_renderDossier`.
+- **Legacy:** pre-Blueprint cached reports (and the legacy test fixture) still render the
+  original white-paper layout — `_generatePdf` early-returns to `_renderDossier` only when
+  `report.vectors` is present. Removed the superseded blueprint-only pdfkit helpers.
+- **Pricing copy NOT shipped:** the reference PDF's "Daily Monitoring from ₹599/month" pricing
+  contradicts the canonical ₹99/mo Lookmaxxing price (CLAUDE.md §1), so the Programme page
+  intentionally omits the pricing cards rather than ship a wrong/un-approved number. Founder to
+  decide the continuation-pricing copy before it's added (orchestrator checkpoint #7).
+- **Tests:** tests/lookmaxing-pdf.test.js +3 (blueprint multi-page render asserting %PDF +
+  page-tree /Count ≥ 7; cover-photo embed; legacy path still renders). Suite 1543 pass; smoke 44/44.

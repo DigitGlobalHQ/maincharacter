@@ -86,6 +86,65 @@ describe('grounding discipline (specificity engine)', () => {
     const lower = AUDIT_SYSTEM_PROMPT.toLowerCase();
     expect(lower).toMatch(/do not (?:guess|invent|fabricate)|never (?:guess|invent|fabricate)/);
   });
+
+  it('carries an explicit MANDATORY GROUNDING CONTRACT enforcing all three inputs', () => {
+    expect(AUDIT_SYSTEM_PROMPT.toUpperCase()).toContain('MANDATORY GROUNDING CONTRACT');
+  });
+
+  it('requires the firstImpression to cite a measured geometric figure', () => {
+    const lower = AUDIT_SYSTEM_PROMPT.toLowerCase();
+    // firstImpression must anchor to BOTH a photo observation AND a measured figure
+    expect(lower).toMatch(/firstimpression.{0,200}(canthal tilt|jaw score|symmetry|golden-ratio|geometric figure)/s);
+  });
+
+  it('requires the statusAlert to combine the percentile, a measured figure, and a reported answer', () => {
+    const lower = AUDIT_SYSTEM_PROMPT.toLowerCase();
+    expect(lower).toMatch(/statusalert.{0,300}percentile/s);
+    expect(lower).toMatch(/statusalert.{0,300}(figure|number)/s);
+    // explicitly demands reference to something the subject reported
+    expect(lower).toMatch(/(reported|told|they (?:said|reported)|their (?:goal|answers))/);
+  });
+
+  it('demands the answers feed the skin, hair, AND posture vectors', () => {
+    const lower = AUDIT_SYSTEM_PROMPT.toLowerCase();
+    expect(lower).toMatch(/each of the skin, hair,? and posture/);
+  });
+
+  it('requires geometric figures be cited by value in osseous/periorbital rootCauses and match faceMeasured', () => {
+    const lower = AUDIT_SYSTEM_PROMPT.toLowerCase();
+    expect(lower).toMatch(/cite (?:that|the|these) figure(?:s)? by value/);
+    expect(lower).toMatch(/match (?:the )?facemeasured|matching facemeasured/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// LIVE-INJECTION TAIL — the last text the model reads must restate the contract
+// ---------------------------------------------------------------------------
+describe('buildAuditPrompt grounding tail', () => {
+  it('lays out the compute-figures-first, then-score, then-weave-answers order', () => {
+    const prompt = buildAuditPrompt(ANSWERS, true).toLowerCase();
+    expect(prompt).toMatch(/compute the facemeasured geometric figures.{0,120}first/s);
+    expect(prompt).toMatch(/score all 24 metrics/);
+    // answers must be cross-read into the skin/hair/posture vectors
+    expect(prompt).toMatch(/calibration answers.{0,200}(skin, hair,? and posture|reference what the subject reported)/s);
+  });
+
+  it('restates the firstImpression + statusAlert grounding requirements in the tail', () => {
+    const prompt = buildAuditPrompt(ANSWERS, true).toLowerCase();
+    expect(prompt).toMatch(/firstimpression.{0,120}(photo observation|cited figure|figure)/s);
+    expect(prompt).toMatch(/statusalert.{0,160}percentile/s);
+  });
+
+  it('reinforces the JSON-only / no-markdown output guard in the tail', () => {
+    const prompt = buildAuditPrompt(ANSWERS, true);
+    expect(prompt).toContain('JSON only.');
+    expect(prompt.toLowerCase()).toContain('no markdown');
+  });
+
+  it('still references the MANDATORY GROUNDING CONTRACT from the live tail', () => {
+    const prompt = buildAuditPrompt(ANSWERS, true);
+    expect(prompt.toUpperCase()).toContain('MANDATORY GROUNDING CONTRACT');
+  });
 });
 
 // ---------------------------------------------------------------------------

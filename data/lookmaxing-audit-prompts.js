@@ -533,17 +533,36 @@ This is a photographic image-consulting assessment, NOT a medical or dermatologi
 [GROUNDING DISCIPLINE — OBSERVE BEFORE YOU SCORE]
 This is what separates a credible dossier from a horoscope. Follow it for every natural-language field (firstImpression, statusAlert, every rootCause, the chromatic notes, every intervention rationale, the projection narrative).
 
+You have been handed THREE evidence sources for this one subject. Use ALL THREE, and make your use of them VISIBLE in the prose:
+  (A) THE PHOTOGRAPH — what the camera actually shows: lighting, grooming, surface, structure, carriage, presence.
+  (B) THE FIVE CALIBRATION ANSWERS — this person's own words about their goal, skin, hair, sleep, and routine.
+  (C) THE GEOMETRIC FACE METRICS (faceMeasured) you compute below — the numbers: canthal tilt in degrees, the symmetry reads (overall / eyes / nose / mouth / jaw out of 100), the gonial angle in degrees, the jaw taper and jaw score, the golden-ratio proximity, the four facial ratios (FWHR, midface, lower-to-upper thirds), and the attractiveness composite.
+A reading that names the photo but never the numbers, or names the numbers but never the answers, has failed the founder's standard. The numbers are the EVIDENTIARY SPINE — they are what makes this read clinical rather than decorative.
+
 1. OBSERVE FIRST. Before any score, study the photograph and note the concrete, visible particulars: where light falls, the state of the under-eye, the set of the shoulders, the line of the beard or hairline, the texture across forehead and cheeks, the carriage of the head, the openness of the eyes, the evenness of the skin in this lighting. Every score must trace to something you can point to in THIS image.
 
 2. ROOT CAUSE IS THE MECHANISM, NOT THE SYMPTOM. The rootCause field names the underlying clinical mechanism that produced what you see — never a restatement of the metric name. Example: do not write "the jaw looks soft"; write "an undertrained masseter plus infrequent hard-chewing load leaves the gonial angle reading soft rather than defined." State the mechanism, then connect it to the visible result.
 
-3. CONNECT THE ANSWERS THEY REPORTED. The five calibration answers are this person's own words. Reference what they told you — by content, not by quoting raw text — wherever it sharpens the read. If they reported short sleep, the periorbital rootCause should reflect whether the photo and that answer agree or, honestly, disagree. At minimum the firstImpression and statusAlert must visibly reflect the photo AND at least one specific thing they reported.
+3. CITE THE NUMBER. Wherever a metric has a geometric figure behind it, the rootCause must reference that figure by value so the reader sees the measurement, not an adjective. Examples of the standard: "at a measured canthal tilt of +4.2°, the eye axis is already an asset — what flattens the read is an untended brow line above it, not the eye itself"; "an overall symmetry of 88/100 with the jaw axis pulling to 81 places the only meaningful asymmetry in the lower third"; "a gonial angle near 122° is firmly in the strong range — documented as the canvas the masseter work builds onto, never a deficiency." Every osseous and periorbital rootCause SHOULD carry its geometric figure. The figures you cite must match the values you return in faceMeasured exactly — never invent a number you did not compute.
 
-4. NO FABRICATED CONFIDENCE. Do not guess, do not invent, do not fabricate detail the photograph does not support. If lighting is flat, the angle steep, or the frame partial, say so in that metric's rootCause and reflect it in the methodology. An honest gap reads as more credible than a confident wrong call.
+4. CONNECT THE ANSWERS THEY REPORTED. The five calibration answers are this person's own words. Reference what they told you — by content, not by quoting raw text — wherever it sharpens the read. If they reported short sleep, the periorbital rootCause should reflect whether the photo and that answer agree or, honestly, disagree. At minimum the firstImpression and statusAlert must visibly reflect the photo AND at least one specific thing they reported.
 
-5. THE ANTI-GENERIC TEST. Before writing any line ask: could this exact sentence appear unchanged on a stranger's report? If yes, rewrite it with a particular you actually observed.
+5. TRIANGULATE — THE THREE SOURCES MUST AGREE. The photo, the answers, and the numbers describe the same person; your reading must reconcile them, not contradict them. Where they agree, say so and let it raise your confidence (e.g. the reported short sleep, the visible under-eye, and a low periorbital score all point the same way). Where they disagree, name the tension honestly rather than papering over it (e.g. they report oily skin but the photo in this light reads balanced — so the work is maintenance, not correction). The firstImpression, every rootCause, the decomposition causes and fixes, the biggest lever, and the projection narrative must all be mutually consistent and consistent with the auraScore — a strong global score cannot sit beside prose that reads as bleak, and a low score cannot sit beside prose that reads as effusive.
+
+6. NO FABRICATED CONFIDENCE. Do not guess, do not invent, do not fabricate detail the photograph does not support, and do not state a geometric figure you did not actually read from the image. If lighting is flat, the angle steep, or the frame partial, say so in that metric's rootCause, keep the geometric values mid-range, and reflect it in the methodology. An honest gap reads as more credible than a confident wrong call.
+
+7. THE ANTI-GENERIC TEST. Before writing any line ask: could this exact sentence appear unchanged on a stranger's report? If yes, rewrite it with a particular you actually observed or a number you actually measured.
    Weak (generic): "Your skin could be improved with a consistent routine."
-   Strong (observed): "Light congestion collects at the nose by midday — the cheeks themselves read clear and even, so the work is barrier balance, not a full reset."
+   Strong (observed + cited): "Light congestion collects at the nose by midday — the cheeks themselves read clear and even, so the work is barrier balance, not a full reset; tonal evenness sits at 6.4/10, well ahead of the surface texture that is dragging the vector."
+
+8. MANDATORY GROUNDING CONTRACT — this is a hard checklist, not a suggestion. The reading FAILS if any line below is not met.
+   - firstImpression: MUST name one concrete thing seen in the photo AND cite one geometric figure by value (e.g. a symmetry read, the canthal tilt in degrees, the jaw score, the golden-ratio proximity). One sentence.
+   - statusAlert: MUST contain (i) the percentile, (ii) at least one geometric figure cited by value, (iii) an explicit reference to at least one thing the subject reported in their answers (their goal, skin, hair, sleep, or routine — by content, e.g. "the short sleep you reported", "the protocol you said you wanted").
+   - Every rootCause for a metric that has a geometric figure behind it (the Lower Face & Jaw and Periorbital & Eyes metrics especially: gonial angle, jaw score, canthal tilt, symmetry) MUST cite that figure by value, and the figure MUST match faceMeasured exactly.
+   - At least one rootCause in EACH of the skin, hair, and posture vectors MUST reference what the subject reported where the answers speak to it (oily/dry skin, thinning, short sleep, desk posture, current routine). If an answer speaks to a vector, ignoring it is a failure.
+   - At least one intervention rationale MUST name the specific answer or finding it corrects.
+   - The projection narrative MUST name the two or three findings doing the most work, by name.
+   Treat this contract as the acceptance test the founder will run on your output. A reading that scores well but cites no numbers, or names the numbers but never the subject's own words, is rejected.
 
 [CONTEXT-VS-QUEST RULE]
 The most important safety rule in this prompt. Every metric is one of two kinds:
@@ -616,11 +635,14 @@ Every free-text field must obey these without exception:
 If the image is too dark, blurry, off-angle, or partially occluded to read a metric reliably — do NOT guess. State the limit in that metric's rootCause, score conservatively toward the middle, and note the limitation in the methodology. Do not fabricate confidence.
 
 [FIRST IMPRESSION + STATUS ALERT — THE LINES THAT SELL THE READING]
-- firstImpression: one sentence that names something genuinely particular to THIS face in THIS photo and lands with quiet authority. Not a compliment, not a verdict on worth. It may nod to what they reported. No exclamation, no emoji.
-- statusAlert: 2-3 sentences — how they rank (percentile), the few modifiable imbalances bleeding perceived status, and the honest 90-day upside if executed. Chosen for them, tied to the photo and at least one answer.
+These two lines are where the founder judges whether the reading studied THIS subject. They must each draw on more than one of the three evidence sources.
+- firstImpression: one sentence that names something genuinely particular to THIS face in THIS photo and lands with quiet authority. Anchor it to a specific observed feature AND a geometric figure you measured (a symmetry read, the canthal tilt, the jaw score, the golden-ratio proximity) — never a vague adjective alone. It may nod to what they reported. Not a compliment, not a verdict on worth. No exclamation, no emoji.
+- statusAlert: 2-3 sentences that visibly triangulate all three sources — how they rank (state the percentile), the few modifiable imbalances bleeding perceived status (each tied to a finding and, where one exists, its number), and the honest 90-day upside if executed. It must reference the photo, at least one specific calibration answer, and at least one geometric figure. Chosen for them, never transferable to a stranger.
 
 [GEOMETRIC FACE ESTIMATES — faceMeasured]
 Also estimate the geometric face metrics directly from the photograph and return them in faceMeasured: the face shape, the jawline (gonial angle in degrees, taper, symmetry, a 0-100 jaw score), an overall and per-feature symmetry read (eyes, nose, mouth, jaw), the canthal tilt in degrees with its label, the eye shape, a golden-ratio proximity score, the four facial ratios (FWHR, midface, lower-to-upper thirds, canthal tilt °), and an attractiveness composite (1-99). These are VISUAL ESTIMATES read from the image, not landmark-precise measurements — read them honestly and conservatively, and if the angle or lighting prevents a confident read, keep the values mid-range. If no photograph is provided, base these on the calibration answers and keep face-shape confidence lower. The two recommendation lines (faceShape, eyeShape) are grooming and styling directives ONLY — no medical, surgical, procedural, or dose language. The geometric numbers are presented as observed context; they never shame an unchangeable trait.
+
+These numbers are not a separate widget — they are the EVIDENTIARY SPINE of the whole reading. Compute faceMeasured FIRST, then write the narrative against it: the related vector rootCauses, the firstImpression, the statusAlert, the chromatic contrast read, and the projection narrative must cite these figures by value and must AGREE with them (a jaw score of 82 cannot sit beside prose calling the jaw weak; a canthal tilt labelled Positive cannot sit beside prose calling the eyes downturned). The geometric figure for a metric and that metric's score10 must point in the same direction. The faceMeasured.faceShape.shape and the top-level faceShape field must be the same shape.
 
 [OUTPUT SCHEMA]
 Return ONLY valid JSON matching this exact shape. No prose before or after. No markdown. No code fences.
@@ -726,8 +748,8 @@ function buildAuditPrompt(quizAnswers, photoBytesAvailable) {
     : _safeField(quizAnswers, 1000);
 
   const photoLine = photoBytesAvailable
-    ? 'A photograph of this subject has been provided. Study it first, then score every one of the 24 metrics from it, grounding each rootCause in a specific observation. For any metric the image quality prevents you reading, follow the photo-quality fallback rule above.'
-    : 'No photograph has been provided for this audit. Score conservatively from the calibration answers, mark fixed metrics as context, and note in the methodology that a clear, front-lit photograph would sharpen every score.';
+    ? 'A photograph of this subject has been provided. Study it first, then compute the faceMeasured geometric figures from it, then score every one of the 24 metrics — grounding each rootCause in a specific observation AND, where one exists, the geometric figure behind it. Make the firstImpression and statusAlert visibly draw on the photo, at least one calibration answer, and at least one measured figure. For any metric the image quality prevents you reading, follow the photo-quality fallback rule above and keep the figure mid-range.'
+    : 'No photograph has been provided for this audit. Score conservatively from the calibration answers, keep the faceMeasured figures mid-range with lower face-shape confidence, mark fixed metrics as context, and note in the methodology that a clear, front-lit photograph would sharpen every score and every geometric figure.';
 
   return `${AUDIT_SYSTEM_PROMPT}
 
@@ -739,7 +761,13 @@ These are the five calibration answers this subject gave about themselves. Treat
 ${answerLines}
 <<<USER_INPUT_END>>>
 
-Based on the photograph (if provided) and the calibration answers above, produce the full Bespoke Aesthetic Blueprint as a single JSON object matching the schema above. Score all 24 metrics across the 5 vectors. Make every natural-language field specific to THIS face and THESE answers. No prose. No markdown. JSON only.`;
+Produce the full Bespoke Aesthetic Blueprint as a single JSON object matching the schema above. Work in this order, and let each step feed the next:
+  STEP 1 — Read the photograph (if provided) and compute the faceMeasured geometric figures from it FIRST: face shape, symmetry reads, canthal tilt in degrees, gonial angle and jaw score, golden-ratio proximity, the four facial ratios.
+  STEP 2 — Score all 24 metrics across the 5 vectors against those figures and what you see. Every osseous and periorbital rootCause cites its figure by value (matching faceMeasured exactly); a metric's figure and its score10 must point the same way.
+  STEP 3 — Cross-read the five calibration answers above and weave them in: each of the skin, hair, and posture vectors must reference what the subject reported where the answers speak to it, and where photo and answer agree or disagree, say which.
+  STEP 4 — Write firstImpression (one concrete photo observation + one cited figure) and statusAlert (the percentile + a cited figure + an explicit reference to something they reported).
+  STEP 5 — Triangulate: the firstImpression, every rootCause, the chromatic notes, the intervention rationales, the projection narrative and the auraScore must all agree with each other and with the figures.
+Make every natural-language field specific to THIS face, THESE answers, and THESE numbers — never a line that could be pasted onto a stranger's report. Honour the MANDATORY GROUNDING CONTRACT above. No prose. No markdown. JSON only.`;
 }
 
 // ---------------------------------------------------------------------------

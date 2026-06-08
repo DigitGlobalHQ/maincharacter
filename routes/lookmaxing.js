@@ -1064,7 +1064,7 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
     });
     let metalsH = 34;
     if (c.metals && c.metals.note) { doc.font(SANS).fontSize(8); metalsH += doc.heightOfString(c.metals.note, { width: tw, lineGap: 1.5 }) + 6; }
-    if (c.stylingCorrections) { doc.font(SANS).fontSize(8); metalsH += doc.heightOfString('Styling. ' + c.stylingCorrections, { width: tw, lineGap: 1.5 }); }
+    if (c.stylingCorrections) { metalsH += 13; doc.font(SANS).fontSize(8); metalsH += doc.heightOfString(c.stylingCorrections, { width: tw, lineGap: 1.5 }); }
     const panH = Math.max(avoidH, metalsH, 64) + 16;
     need(panH + 12);
     const panY = doc.y, mX = M + panW + 16;
@@ -1085,7 +1085,10 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
     if (c.metals && c.metals.locked) pillLeft(c.metals.locked, mX + 16 + 52, panY + 13, false);
     let my = panY + 34;
     if (c.metals && c.metals.note) { doc.font(SANS).fontSize(8).fillColor(DIM).text(c.metals.note, mX + 16, my, { width: tw, lineGap: 1.5 }); my = doc.y + 6; }
-    if (c.stylingCorrections) { doc.font(SANS_B).fontSize(8).fillColor(SILVER).text('Styling. ', mX + 16, my, { continued: true, lineBreak: false }).font(SANS).fillColor(DIM).text(c.stylingCorrections, { width: tw, lineGap: 1.5 }); }
+    if (c.stylingCorrections) {
+      doc.font(SANS_B).fontSize(8).fillColor(SILVER).text('Styling', mX + 16, my, { width: tw });
+      doc.font(SANS).fontSize(8).fillColor(DIM).text(c.stylingCorrections, mX + 16, doc.y + 2, { width: tw, lineGap: 1.5 });
+    }
     doc.y = panY + panH + 8;
   }
 

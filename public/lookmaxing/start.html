@@ -219,7 +219,7 @@
     .lm-footer { padding: var(--mc-sp-3) var(--mc-sp-4); }
 
     /* ── Explicit consent checkboxes (compliance) ── */
-    .lm-consent-top { margin: 0 0 var(--mc-sp-3); padding-bottom: var(--mc-sp-4); border-bottom: 1px solid var(--mc-line); }
+    .lm-consent-below { margin: var(--mc-sp-4) 0 0; padding-top: var(--mc-sp-4); border-top: 1px solid var(--mc-line); }
     .lm-check { display: flex; align-items: flex-start; gap: var(--mc-sp-3); cursor: pointer; }
     .lm-check input { position: absolute; opacity: 0; width: 1px; height: 1px; }
     .lm-check__box {
@@ -258,14 +258,6 @@
     <!-- Sign in is the single path (guest flow removed — funnel-repair P1) -->
     <div class="mc-card lm-fork-card">
       <div class="lm-fork-card__actions" id="signin-actions">
-        <!-- Consent — ONE tick, above both options, so it applies to Google AND email
-             (no awkward reaching past the email form to consent for Google). -->
-        <label class="lm-check lm-consent-top">
-          <input type="checkbox" id="consent-all">
-          <span class="lm-check__box"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M2 6l3 3 5-5" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-          <span class="lm-check__text">I am 18 or older and I agree to the <a href="/terms" target="_blank" rel="noopener">Terms of Use</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</span>
-        </label>
-
         <!-- Continue with Google — always shown; activates the moment the OAuth
              keys are set. When not yet configured, the click is intercepted with
              a clean note instead of a dead bounce. -->
@@ -285,6 +277,14 @@
           </svg>
           Continue with Google
         </a>
+
+        <!-- Consent — below the sign-in button, the conventional placement.
+             Still gates Google: clicking it before ticking shows the consent note. -->
+        <label class="lm-check lm-consent-below">
+          <input type="checkbox" id="consent-all">
+          <span class="lm-check__box"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M2 6l3 3 5-5" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="lm-check__text">I am 18 or older and I agree to the <a href="/terms" target="_blank" rel="noopener">Terms of Use</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</span>
+        </label>
 
         <div id="auth-error" role="alert" aria-live="polite" hidden style="text-align:center;margin-top:var(--mc-sp-3);font-size:13px;color:var(--mc-silver-bright);"></div>
       </div>

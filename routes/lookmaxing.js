@@ -1006,36 +1006,48 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
       ['CONTRAST', c.contrast || '-', c.contrastNote || ''],
       ['FAMILY', c.profile || '-', c.profileNote || ''],
     ];
-    const gap = 12, tcW = (W - gap * 2) / 3, tcH = 74, tcY = doc.y;
+    const gap = 12, tcW = (W - gap * 2) / 3, tcY = doc.y;
+    // height = tallest of the three (title can wrap, note sits under it)
+    let tcH = 74;
+    triple.forEach((t) => {
+      doc.font(SERIF).fontSize(15); let h = 26 + doc.heightOfString(t[1], { width: tcW - 28 });
+      if (t[2]) { doc.font(SANS).fontSize(7); h += 6 + doc.heightOfString(String(t[2]).toUpperCase(), { width: tcW - 28, characterSpacing: 0.5 }); }
+      tcH = Math.max(tcH, h + 16);
+    });
     triple.forEach((t, i) => {
       const tx = M + (tcW + gap) * i;
       doc.roundedRect(tx, tcY, tcW, tcH, 10).fill(CARD);
       doc.roundedRect(tx, tcY, tcW, tcH, 10).lineWidth(1).strokeColor(HAIR).stroke();
       eyebrow(t[0], tx + 14, tcY + 14, FAINT, 6.5);
-      doc.font(SERIF).fontSize(16).fillColor(CREAM).text(t[1], tx + 14, tcY + 26, { width: tcW - 28 });
-      if (t[2]) doc.font(SANS).fontSize(7).fillColor(DIM).text(String(t[2]).toUpperCase(), tx + 14, tcY + 50, { width: tcW - 28, characterSpacing: 0.5, lineBreak: false });
+      doc.font(SERIF).fontSize(15).fillColor(CREAM).text(t[1], tx + 14, tcY + 26, { width: tcW - 28 });
+      if (t[2]) doc.font(SANS).fontSize(7).fillColor(DIM).text(String(t[2]).toUpperCase(), tx + 14, doc.y + 6, { width: tcW - 28, characterSpacing: 0.5 });
     });
     doc.y = tcY + tcH + 16;
 
-    // power palette — swatch cards (3 per row)
+    // power palette — swatch cards (3 per row), each row sized to its tallest note
     if (Array.isArray(c.powerPalette) && c.powerPalette.length) {
       eyebrow('POWER PALETTE  ·  WEAR AT THE COLLAR', M, doc.y, FAINT, 7.5); doc.y += 16;
-      const per = 3, pgap = 12, pcW = (W - pgap * (per - 1)) / per, pcH = 98;
+      const per = 3, pgap = 12, pcW = (W - pgap * (per - 1)) / per;
+      const items = c.powerPalette.slice(0, 6);
       let rowTop = doc.y;
-      c.powerPalette.slice(0, 6).forEach((s, i) => {
-        const col = i % per;
-        if (col === 0 && i > 0) rowTop += pcH + pgap;
-        if (col === 0 && rowTop + pcH > BOTTOM) { doc.addPage(); doc.x = M; doc.y = M + 6; rowTop = doc.y; }
-        const sx = M + (pcW + pgap) * col, sy = rowTop;
-        doc.roundedRect(sx, sy, pcW, pcH, 9).fill(CARD);
-        doc.roundedRect(sx, sy, pcW, pcH, 9).lineWidth(1).strokeColor(HAIR).stroke();
-        // swatch fills the top of the card
-        doc.save(); doc.roundedRect(sx, sy, pcW, 40, 9).clip(); doc.rect(sx, sy, pcW, 40).fill(safeHex(s.hex)); doc.restore();
-        doc.font(SERIF).fontSize(11).fillColor(CREAM).text(s.name || '', sx + 12, sy + 50, { continued: true, lineBreak: false })
-           .font(MONO).fontSize(7).fillColor(FAINT).text('   ' + safeHex(s.hex).toUpperCase(), { lineBreak: false });
-        if (s.note) doc.font(SANS).fontSize(7.5).fillColor(DIM).text(s.note, sx + 12, sy + 66, { width: pcW - 24, lineGap: 1.4 });
-      });
-      doc.y = rowTop + pcH + 16;
+      for (let r = 0; r < items.length; r += per) {
+        const row = items.slice(r, r + per);
+        let noteH = 0;
+        row.forEach((s) => { if (s.note) { doc.font(SANS).fontSize(7.5); noteH = Math.max(noteH, doc.heightOfString(s.note, { width: pcW - 24, lineGap: 1.4 })); } });
+        const pcH = 78 + noteH;                 // swatch(40) + name line + note + pad
+        if (rowTop + pcH > BOTTOM) { doc.addPage(); doc.x = M; doc.y = M + 6; rowTop = doc.y; }
+        row.forEach((s, ci) => {
+          const sx = M + (pcW + pgap) * ci, sy = rowTop;
+          doc.roundedRect(sx, sy, pcW, pcH, 9).fill(CARD);
+          doc.roundedRect(sx, sy, pcW, pcH, 9).lineWidth(1).strokeColor(HAIR).stroke();
+          doc.save(); doc.roundedRect(sx, sy, pcW, 40, 9).clip(); doc.rect(sx, sy, pcW, 40).fill(safeHex(s.hex)); doc.restore();
+          doc.font(SERIF).fontSize(11).fillColor(CREAM).text(s.name || '', sx + 12, sy + 50, { continued: true, lineBreak: false })
+             .font(MONO).fontSize(7).fillColor(FAINT).text('   ' + safeHex(s.hex).toUpperCase(), { lineBreak: false });
+          if (s.note) doc.font(SANS).fontSize(7.5).fillColor(DIM).text(s.note, sx + 12, sy + 66, { width: pcW - 24, lineGap: 1.4 });
+        });
+        rowTop += pcH + pgap;
+      }
+      doc.y = rowTop - pgap + 16;
     }
     if (c.supportingNeutrals) { doc.font(SANS_I).fontSize(8).fillColor(FAINT).text('Supporting neutrals. ' + c.supportingNeutrals, M, doc.y, { width: W }); doc.y += 6; }
 
@@ -1089,27 +1101,33 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
       ['Night · Repair & Resurface', 'CLEAR THE DAY, THEN LET THE SKIN RECOVER', iv.night],
       ['Carriage · Structure & Posture', 'SCATTER THE DRILLS ACROSS THE DAY', iv.mechanical],
     ];
+    const AGENT_W = 138, DESC_X = 196, DESC_W = W - DESC_X - 22;
+    // per-step height = the taller of the step-name column and the rationale column,
+    // measured at the EXACT widths used to draw — so nothing can spill the box.
+    const stepH = (s) => {
+      doc.font(SERIF).fontSize(10.5);
+      const aH = doc.heightOfString((s.agent || s.step || '') + (s.rx ? '  [Rx]' : ''), { width: AGENT_W });
+      doc.font(SANS).fontSize(8.5);
+      const dH = doc.heightOfString(s.rationale || s.spec || '', { width: DESC_W, lineGap: 1.5 });
+      return Math.max(aH, dH, 16) + 13;
+    };
     blocks.forEach(([title, sub, steps]) => {
       if (!Array.isArray(steps) || !steps.length) return;
-      // measure block height
-      let h = 52;
-      steps.forEach((s) => {
-        doc.font(SANS).fontSize(8.5);
-        h += Math.max(20, doc.heightOfString(s.rationale || s.spec || '', { width: W - 200, lineGap: 1.5 })) + 8;
-      });
-      need(h + 12);
+      let body = 0; steps.forEach((s) => { body += stepH(s); });
+      const h = 58 + body + 8;
+      need(h + 14);
       const by = doc.y, bx = M;
       doc.roundedRect(bx, by, W, h, 12).fill(CARD);
       doc.roundedRect(bx, by, W, h, 12).lineWidth(1).strokeColor(HAIR).stroke();
       doc.font(SERIF).fontSize(14).fillColor(CREAM).text(title, bx + 22, by + 18, { lineBreak: false });
       eyebrow(sub, bx + 22, by + 38, FAINT, 6.5);
-      let sy = by + 56;
+      let sy = by + 58;
       steps.forEach((s, i) => {
-        doc.font(MONO).fontSize(9).fillColor(GHOST).text(String(i + 1).padStart(2, '0'), bx + 22, sy, { lineBreak: false });
-        doc.font(SERIF).fontSize(10.5).fillColor(CREAM).text((s.agent || s.step || '') + (s.rx ? '  [Rx]' : ''), bx + 52, sy - 1, { width: 130 });
-        const desc = s.rationale || s.spec || '';
-        doc.font(SANS).fontSize(8.5).fillColor(DIM).text(desc, bx + 196, sy, { width: W - 196 - 22, lineGap: 1.5 });
-        sy = Math.max(doc.y, sy + 18) + 8;
+        const sh = stepH(s);
+        doc.font(MONO).fontSize(9).fillColor(GHOST).text(String(i + 1).padStart(2, '0'), bx + 22, sy + 1, { lineBreak: false });
+        doc.font(SERIF).fontSize(10.5).fillColor(CREAM).text((s.agent || s.step || '') + (s.rx ? '  [Rx]' : ''), bx + 52, sy, { width: AGENT_W });
+        doc.font(SANS).fontSize(8.5).fillColor(DIM).text(s.rationale || s.spec || '', bx + DESC_X, sy, { width: DESC_W, lineGap: 1.5 });
+        sy += sh;
       });
       doc.y = by + h + 14;
     });

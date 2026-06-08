@@ -290,12 +290,17 @@
       animation: lm-analyzing-fade var(--mc-dur-base) var(--mc-ease);
     }
     .lm-analyzing[hidden] { display: none; }
-    .lm-analyzing__inner { max-width: 32ch; }
+    .lm-analyzing__inner {
+      max-width: 32ch;
+      display: flex; flex-direction: column; align-items: center;
+    }
     .lm-analyzing__diamond {
-      font-size: 40px; line-height: 1; color: var(--mc-silver-bright);
+      font-size: 44px; line-height: 1; color: var(--mc-silver-bright);
       text-shadow: 0 0 18px var(--mc-light-point-glow-mid);
       animation: lm-analyzing-pulse 1.8s var(--mc-ease) infinite;
+      display: flex; align-items: center; justify-content: center;
     }
+    .lm-analyzing__diamond img.mc-ico { height: 44px; width: auto; margin: 0; }
     .lm-analyzing__line {
       font-family: var(--mc-font-serif); font-style: italic;
       font-size: 22px; color: var(--mc-silver-bright);

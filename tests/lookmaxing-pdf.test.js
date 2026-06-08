@@ -159,3 +159,82 @@ describe('PDF generation — GET /api/lookmaxing/audit/:id/pdf', () => {
     expect(res.status).toBe(404);
   });
 });
+
+// ─── Dark "Bespoke Aesthetic Blueprint" dossier (_generatePdf) ─────────────────
+// A blueprint report (report.vectors present — every live Gemini report) renders
+// the dark 8-section dossier. Legacy reports keep the white-paper layout (above).
+const BLUEPRINT = {
+  auraScore: 62, globalScore10: 6.2, percentile: 58, rank: 'ascendant', archetype: 'The Sovereign', faceShape: 'oval',
+  firstImpression: 'Composed and deliberate — the room reads you as someone who waits to be understood.',
+  statusAlert: 'Your features are not the constraint. How they are presented is the opportunity. Three areas of work change how you read over ninety days.',
+  metricsScored: 24,
+  vectors: [
+    { id: 'skin', numeral: 'the daily canvas', name: 'Skin & Dermal', metrics: [
+      { metric: 'radianceHydration', subtitle: 'light return', rootCause: 'The complexion reads a little flat. Steady hydration helps the surface return light.', score10: 5.4, class: 'leverage' },
+      { metric: 'toneEvenness', subtitle: 'consistency of colour', rootCause: 'Some localised redness around the nose, otherwise an even field.', score10: 6.4, class: 'actionable' },
+    ] },
+    { id: 'carriage', numeral: 'how you hold yourself', name: 'Carriage & Presence', metrics: [
+      { metric: 'forwardHeadPosture', subtitle: 'head carriage', rootCause: 'The head sits forward of the shoulders in profile. The highest-leverage single habit here.', score10: 4.5, class: 'leverage' },
+    ] },
+    { id: 'fixed', numeral: 'bone structure', name: 'Fixed Architecture', metrics: [
+      { metric: 'facialSymmetry', subtitle: '', rootCause: 'Closely matched left and right. The slight nasal lean is visually negligible.', score10: 7.8, class: 'fixed' },
+      { metric: 'cheekboneStructure', subtitle: '', rootCause: 'Well positioned underlying bone. Definition is a matter of condition, not structure.', score10: 6.6, class: 'fixed' },
+    ] },
+  ],
+  chromatic: {
+    undertone: 'Cool', undertoneNote: 'blue, rose base', contrast: 'High', contrastNote: 'skin, hair, eyes',
+    profile: 'Deep Winter', profileNote: 'high contrast cool',
+    powerPalette: [
+      { name: 'Optic White', hex: '#F4F5F7', note: 'A crisp blue white, never cream.' },
+      { name: 'Imperial Navy', hex: '#1C2433', note: 'Your workhorse neutral.' },
+      { name: 'Royal Sapphire', hex: '#1F3A5F', note: 'Your event accent.' },
+    ],
+    supportingNeutrals: 'Pure black, stone grey, icy blue.',
+    antiPalette: [{ name: 'Mustard Ochre', hex: '#C9A227', impact: 'Opposes your undertone and casts a sallow shadow.' }],
+    metals: { locked: 'Recommended', note: 'Silver, platinum, white gold — cool toned metals only.' },
+    stylingCorrections: 'A cut with structured width at the sides.',
+  },
+  intervention: {
+    morning: [{ step: 1, agent: 'Gentle cleanse', rationale: 'A non-stripping cleanse that clears overnight build up.' }, { step: 2, agent: 'Broad spectrum sunscreen', rationale: 'Every morning, indoors included.' }],
+    night: [{ step: 1, agent: 'Cleanse fully', rationale: 'Remove sunscreen and the day.' }, { step: 2, agent: 'A texture step', rationale: 'One for a dermatologist.', rx: true }],
+    mechanical: [{ step: 1, agent: 'Chin tucks', rationale: 'Three sets of ten, cued through the day.' }],
+  },
+  projection: {
+    rows: [
+      { vector: 'forwardHeadPosture', day0: 4.5, day90: 7.5, delta: 3.0 },
+      { vector: 'radianceHydration', day0: 5.4, day90: 7.6, delta: 2.2 },
+    ],
+    globalDay0: 6.2, globalDay90: 8.5,
+    narrative: 'Your structure was never the constraint. The surface, the carriage, and the colour were the levers.',
+  },
+  methodology: 'This is a photographic image and styling assessment, not a medical diagnosis. We grade only what a photograph can responsibly support.',
+};
+
+describe('PDF generation — dark Blueprint dossier (_generatePdf)', () => {
+  it('renders a multi-page PDF from a blueprint report', async () => {
+    const { _generatePdf } = await import('../routes/lookmaxing.js');
+    const buf = await _generatePdf('7829abcd-1111-2222', BLUEPRINT, null);
+    expect(Buffer.isBuffer(buf)).toBe(true);
+    expect(buf.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+    expect(buf.length).toBeGreaterThan(8000);
+    // page-tree /Count is written uncompressed — the dossier is an 8-section doc.
+    const count = buf.toString('latin1').match(/\/Count (\d+)/);
+    expect(count).toBeTruthy();
+    expect(Number(count[1])).toBeGreaterThanOrEqual(7);
+  });
+
+  it('embeds a cover photo without error when one is provided', async () => {
+    const { _generatePdf } = await import('../routes/lookmaxing.js');
+    const photo = fs.readFileSync(new URL('../public/favicon-512.png', import.meta.url));
+    const buf = await _generatePdf('7829abcd-3333-4444', BLUEPRINT, photo);
+    expect(buf.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+    expect(buf.length).toBeGreaterThan(8000);
+  });
+
+  it('still renders the legacy white-paper layout for pre-Blueprint reports', async () => {
+    const { _generatePdf } = await import('../routes/lookmaxing.js');
+    const legacy = { auraScore: 70, rank: 'luminary', firstImpression: 'Deliberate.', decomposition: { skin: [{ metric: 'skinClarity', score: 70, cause: 'Even.', fix: 'SPF.' }] } };
+    const buf = await _generatePdf('legacy-1', legacy, null);
+    expect(buf.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+  });
+});

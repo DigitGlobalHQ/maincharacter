@@ -737,12 +737,25 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
   const GHOST = '#4c4c54';
   const INKON = '#141310';  // text on a filled-cream pill
 
-  // Fonts: pdfkit built-ins approximate the brand faces (Cormorant→Times serif,
-  // Sora→Helvetica sans, JetBrains Mono→Courier). See DECISIONS.md for the
-  // embed-real-TTF upgrade path.
-  const SERIF = 'Times-Roman', SERIF_I = 'Times-Italic', SERIF_B = 'Times-Bold';
-  const SANS  = 'Helvetica',   SANS_B  = 'Helvetica-Bold', SANS_I = 'Helvetica-Oblique';
-  const MONO  = 'Courier';
+  // Real brand fonts embedded from assets/fonts (Playfair Display display-serif,
+  // Sora sans, JetBrains Mono). Falls back to built-ins if the files are missing.
+  let SERIF = 'Times-Roman', SERIF_I = 'Times-Italic', SERIF_B = 'Times-Bold', SERIF_BK = 'Times-Bold';
+  let SANS  = 'Helvetica',   SANS_B  = 'Helvetica-Bold', SANS_I = 'Helvetica-Oblique';
+  let MONO  = 'Courier',      MONO_M  = 'Courier';
+  try {
+    const FD = path.join(__dirname, '..', 'assets', 'fonts');
+    doc.registerFont('PF',    path.join(FD, 'PlayfairDisplay-Regular.ttf'));
+    doc.registerFont('PF-B',  path.join(FD, 'PlayfairDisplay-Bold.ttf'));
+    doc.registerFont('PF-BK', path.join(FD, 'PlayfairDisplay-Black.ttf'));
+    doc.registerFont('PF-I',  path.join(FD, 'PlayfairDisplay-Italic.ttf'));
+    doc.registerFont('SR',    path.join(FD, 'Sora-Regular.ttf'));
+    doc.registerFont('SR-SB', path.join(FD, 'Sora-SemiBold.ttf'));
+    doc.registerFont('JM',    path.join(FD, 'JetBrainsMono-Regular.ttf'));
+    doc.registerFont('JM-M',  path.join(FD, 'JetBrainsMono-Medium.ttf'));
+    SERIF = 'PF'; SERIF_B = 'PF-B'; SERIF_BK = 'PF-BK'; SERIF_I = 'PF-I';
+    SANS = 'SR'; SANS_B = 'SR-SB'; SANS_I = 'SR';
+    MONO = 'JM'; MONO_M = 'JM-M';
+  } catch (e) { /* keep built-in fallbacks */ }
 
   const PW = doc.page.width, PH = doc.page.height;
   const M = 54, W = PW - M * 2;
@@ -810,7 +823,7 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
   function sectionHead(index, eyebrowText, title, intro) {
     eyebrow(`${index}  ·  ${eyebrowText}`, M, doc.y, FAINT, 8);
     doc.y += 16;
-    doc.font(SERIF).fontSize(27).fillColor(CREAM).text(title, M, doc.y, { width: W });
+    doc.font(SERIF_B).fontSize(27).fillColor(CREAM).text(title, M, doc.y, { width: W });
     doc.y += 6;
     if (intro) { doc.font(SANS).fontSize(9.5).fillColor(DIM).text(intro, M, doc.y, { width: W * 0.92, lineGap: 3 }); doc.y += 8; }
   }
@@ -863,7 +876,7 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
     doc.font(SERIF).fontSize(12).fillColor(CREAM).text(fmt(m.metric), M, top, { width: nameW });
     const nameBottom = doc.y;
     if (hasScore) {
-      doc.font(SERIF).fontSize(16).fillColor(CREAM).text(m.score10.toFixed(1), M + W - 56, top - 2, { width: 44, align: 'right', lineBreak: false });
+      doc.font(SERIF_B).fontSize(16).fillColor(CREAM).text(m.score10.toFixed(1), M + W - 56, top - 2, { width: 44, align: 'right', lineBreak: false });
       doc.font(SANS).fontSize(7).fillColor(FAINT).text('/10', M + W - 11, top + 5, { lineBreak: false });
     }
     doc.y = nameBottom;
@@ -912,8 +925,8 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
   diamond(M + pwii + 16, y + 4, 5, SILVER);
   eyebrow('LOOKMAXXING', M + pwii + 28, y, FAINT, 8);
   y += 20;
-  doc.font(SERIF).fontSize(38).fillColor(CREAM).text('The Presence', M, y, { width: titleW });
-  doc.font(SERIF).fontSize(38).fillColor(CREAM).text('Dossier', M, doc.y - 2, { width: titleW });
+  doc.font(SERIF_BK).fontSize(38).fillColor(CREAM).text('The Presence', M, y, { width: titleW });
+  doc.font(SERIF_BK).fontSize(38).fillColor(CREAM).text('Dossier', M, doc.y - 2, { width: titleW });
   y = doc.y + 8;
   doc.font(SERIF_I).fontSize(12).fillColor(DIM).text('A ninety-day reading, prepared from your own capture.', M, y, { width: titleW });
 
@@ -924,7 +937,7 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
   const meta = [
     ['PREPARED FOR', 'Client ' + ('A-' + String(auditId).slice(0, 4)).toUpperCase()],
     ['STYLING DIRECTION', archetype],
-    ['ASSESSMENT BASIS', photoBuffer ? 'One frontal capture + analysis' : 'Calibration answers'],
+    ['ASSESSMENT BASIS', photoBuffer ? 'Frontal capture' : 'Quiz answers'],
     ['DATE OF ISSUE', new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })],
     ['PREPARED BY', 'The Consultant'],
   ];
@@ -932,9 +945,9 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
   meta.forEach((mrow, i) => {
     const cx = M + colW * i;
     doc.font(SANS_B).fontSize(6).fillColor(FAINT).text(mrow[0], cx, y, { characterSpacing: 1, width: colW - 8, lineBreak: false });
-    doc.font(SERIF).fontSize(11).fillColor(CREAM).text(mrow[1], cx, y + 12, { width: colW - 10 });
+    doc.font(SERIF).fontSize(10.5).fillColor(CREAM).text(mrow[1], cx, y + 12, { width: colW - 10 });
   });
-  y += 50;
+  y += 54;
 
   // score card — height grows to fit the narrative so long status text can never overflow
   const pad = 24;
@@ -948,8 +961,11 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
   doc.roundedRect(M, cardY, W, cardH, 12).fill(CARD);
   doc.roundedRect(M, cardY, W, cardH, 12).lineWidth(1).strokeColor(HAIR).stroke();
   eyebrow('OVERALL PRESENCE READ', M + pad, cardY + pad, FAINT, 7.5);
-  doc.font(SERIF).fontSize(52).fillColor(CREAM).text(g10 != null ? g10 : '-', M + pad, cardY + pad + 12, { continued: true, lineBreak: false })
-     .font(SANS).fontSize(13).fillColor(DIM).text(g10 != null ? '  /10' : '', { lineBreak: false });
+  {
+    const sx = M + pad, sy = cardY + pad + 14;
+    doc.font(SERIF_BK).fontSize(52).fillColor(CREAM).text(g10 != null ? g10 : '-', sx, sy, { lineBreak: false });
+    if (g10 != null) { const sw = doc.widthOfString(String(g10)); doc.font(SANS).fontSize(13).fillColor(DIM).text('/10', sx + sw + 8, sy + 30, { lineBreak: false }); }
+  }
   const projHi = num1(report.projection && report.projection.globalDay90);
   if (projHi) {
     const py = cardY + cardH - pad - 4;
@@ -1186,10 +1202,10 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
     doc.roundedRect(M, gY, W, gH, 12).lineWidth(1).strokeColor(HAIR).stroke();
     eyebrow('OVERALL PRESENCE READ', M + 24, gY + 18, FAINT, 7.5);
     const gd0 = num1(proj.globalDay0), gd90 = num1(proj.globalDay90);
-    doc.font(SERIF).fontSize(34).fillColor(CREAM).text(gd0 || '-', M + 24, gY + 30, { lineBreak: false });
+    doc.font(SERIF_BK).fontSize(34).fillColor(CREAM).text(gd0 || '-', M + 24, gY + 30, { lineBreak: false });
     const gw0 = doc.widthOfString(gd0 || '-');
     arrow(M + 24 + gw0 + 16, gY + 48, 22, FAINT);
-    doc.font(SERIF).fontSize(34).fillColor(CREAM).text(gd90 || '-', M + 24 + gw0 + 50, gY + 30, { lineBreak: false });
+    doc.font(SERIF_BK).fontSize(34).fillColor(CREAM).text(gd90 || '-', M + 24 + gw0 + 50, gY + 30, { lineBreak: false });
     if (gd0 && gd90) {
       pillLeft('+' + (Number(proj.globalDay90) - Number(proj.globalDay0)).toFixed(1) + ' in 90 days', M + W * 0.46, gY + 24, false);
       doc.font(SANS).fontSize(8.5).fillColor(DIM).text('Fixed structural features are held constant, so the ceiling is realistic, not inflated.', M + W * 0.46, gY + 46, { width: W * 0.54 - 24, lineGap: 1.5 });

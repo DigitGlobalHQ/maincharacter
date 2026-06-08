@@ -584,7 +584,7 @@ async function _generatePdf(auditId, report, photoBuffer = null) {
       diamond(M + 4, 40, 9, GOLD);
       doc.font('Helvetica-Bold').fontSize(10).fillColor('#e8d9b0').text('MAINCHARACTER', M + 18, 35, { characterSpacing: 3 });
       doc.font('Helvetica').fontSize(7.5).fillColor('#8a8576').text('PILLAR II  ·  ELITE DIAGNOSTIC DIVISION', M, 60, { characterSpacing: 2 });
-      doc.font('Times-Italic').fontSize(25).fillColor(CREAM).text('The Bespoke Aesthetic Blueprint', M, 76);
+      doc.font('Times-Italic').fontSize(25).fillColor(CREAM).text('The Presence Dossier', M, 76);
       const archetype = report.archetype || cap(report.rank || '');
       doc.font('Helvetica').fontSize(7.5).fillColor('#9a9486')
          .text(`SUBJECT ${('A-' + auditId.slice(0, 4)).toUpperCase()}        ARCHETYPE ${archetype.toUpperCase()}        ${report.metricsScored || 24} METRICS        ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit' })}`,
@@ -755,15 +755,17 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
   const safeHex = (h) => { const r = String(h || '').trim(); return /^#?[0-9a-fA-F]{3,8}$/.test(r) ? (r[0] === '#' ? r : '#' + r) : '#888888'; };
   const num1 = (n) => (typeof n === 'number' && isFinite(n)) ? n.toFixed(1) : null;
 
-  // Footer label per page (filled as pages are created).
-  const footers = [];
-  let footerLabel = '';
   function paintBg() { doc.save(); doc.rect(0, 0, PW, PH).fill(BG); doc.restore(); }
   // First page exists already (constructor) — paint it; later pages via listener.
-  paintBg(); footers.push('');
-  doc.on('pageAdded', () => { paintBg(); footers.push(footerLabel); });
-  function page(label) { if (label != null) footerLabel = label; doc.addPage(); doc.x = M; doc.y = M + 6; }
-  function need(h) { if (doc.y + h > BOTTOM) { doc.addPage(); doc.x = M; doc.y = M + 6; } }
+  paintBg();
+  doc.on('pageAdded', () => { paintBg(); });
+  function need(h) { if (doc.y + h > BOTTOM) { doc.addPage(); doc.x = M; doc.y = M + 6; return true; } return false; }
+  // Start a section: break to a fresh page only when it won't fit; otherwise flow
+  // on with a measured gap + hairline, so short sections don't leave dead space.
+  function startSection(min) {
+    if (doc.y + (min || 180) > BOTTOM) { doc.addPage(); doc.x = M; doc.y = M + 6; }
+    else { doc.y += 30; doc.moveTo(M, doc.y - 15).lineTo(M + W, doc.y - 15).lineWidth(0.5).strokeColor(FAINTLINE).stroke(); }
+  }
 
   // ── Brand mark (silver 3D M, transparent — reads on dark) ──
   let mark = null;
@@ -864,8 +866,6 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
   }
 
   // ════════════════════ PAGE 1 · COVER ════════════════════
-  footerLabel = 'The Bespoke Aesthetic Blueprint';
-  footers[0] = footerLabel;
   let y = M + 4;
   // top brand row
   if (mark) { try { doc.image(mark, M, y - 2, { width: 17 }); } catch { /* ignore */ } }
@@ -897,10 +897,10 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
   diamond(M + pwii + 16, y + 4, 5, SILVER);
   eyebrow('LOOKMAXXING', M + pwii + 28, y, FAINT, 8);
   y += 20;
-  doc.font(SERIF).fontSize(34).fillColor(CREAM).text('The Bespoke', M, y, { width: titleW });
-  doc.font(SERIF).fontSize(34).fillColor(CREAM).text('Aesthetic Blueprint', M, doc.y - 2, { width: titleW });
-  y = doc.y + 6;
-  doc.font(SERIF_I).fontSize(12).fillColor(DIM).text('A ninety-day presence dossier, prepared from your own capture.', M, y, { width: titleW });
+  doc.font(SERIF).fontSize(38).fillColor(CREAM).text('The Presence', M, y, { width: titleW });
+  doc.font(SERIF).fontSize(38).fillColor(CREAM).text('Dossier', M, doc.y - 2, { width: titleW });
+  y = doc.y + 8;
+  doc.font(SERIF_I).fontSize(12).fillColor(DIM).text('A ninety-day reading, prepared from your own capture.', M, y, { width: titleW });
 
   // metadata strip
   y = Math.max(doc.y, photoY + photoH) + 26;
@@ -949,13 +949,13 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
     'A note on method. This is an image and styling read built from your photograph. A photograph shows how a feature appears, not the biology beneath it, so each score is a considered stylist read for setting priorities, not a clinical measurement.',
     M, y, { width: W, lineGap: 2.5 });
   y = doc.y + 14;
-  const legend = [['High Focus', 'where attention pays off most'], ['Refine', 'small habits, compounding'], ['Natural Asset', 'an existing strength']];
-  let lx = M;
+  // Legend, stacked one per line so the descriptions never collide.
+  const legend = [['High Focus', 'where attention pays off most'], ['Refine', 'small habits that compound'], ['Natural Asset', 'an existing strength']];
   legend.forEach((lg) => {
-    diamond(lx + 3, y + 6, 6, SILVER);
-    doc.font(SANS_B).fontSize(8).fillColor(SILVER).text(lg[0], lx + 12, y, { lineBreak: false });
-    doc.font(SANS).fontSize(8).fillColor(FAINT).text(lg[1], lx + 12 + doc.widthOfString(lg[0]) + 10, y, { lineBreak: false });
-    lx += W / 3;
+    diamond(M + 3, y + 5.5, 6, SILVER);
+    doc.font(SANS_B).fontSize(8.5).fillColor(SILVER).text(lg[0], M + 14, y, { continued: true, lineBreak: false })
+       .font(SANS).fontSize(8.5).fillColor(FAINT).text('     ' + lg[1], { lineBreak: false });
+    y += 16;
   });
 
   // ════════════════════ PAGES 2–4 · THE ANALYSIS (graded vectors) ════════════════════
@@ -965,7 +965,7 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
     .filter((v) => v.metrics.length);
   const fixed = allMetrics.filter((m) => m.class === 'fixed');
 
-  page('Where Presence Is Leaking');
+  startSection(420);
   sectionHead('01', 'THE READING', 'Where Presence Is Leaking',
     'A vector-by-vector read of where perceived status is leaking, and where it is already working for you. Each line pairs the cause with a score and a verdict.');
   doc.y += 4;
@@ -981,7 +981,7 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
 
   // ════════════════════ FIXED ARCHITECTURE ════════════════════
   if (fixed.length) {
-    page('Your Fixed Architecture');
+    startSection(220);
     sectionHead('02', 'READ AS CONTEXT, NOT GRADED', 'Your Fixed Architecture',
       'Bone structure does not change without surgery, so it is not graded. Read this as context, then build on it. Most of it is already working for you.');
     doc.y += 6;
@@ -996,7 +996,7 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
   // ════════════════════ THE CHROMATIC ARSENAL ════════════════════
   const c = report.chromatic;
   if (c) {
-    page('The Chromatic Arsenal');
+    startSection(300);
     sectionHead('03', 'THE LEVER WITH NO EFFORT', 'The Chromatic Arsenal',
       'Colour is the highest-return, lowest-effort lever in the dossier. It changes how your skin reads with no physical intervention. The codes below are calibrated to your colouring.');
     doc.y += 6;
@@ -1040,34 +1040,47 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
     if (c.supportingNeutrals) { doc.font(SANS_I).fontSize(8).fillColor(FAINT).text('Supporting neutrals. ' + c.supportingNeutrals, M, doc.y, { width: W }); doc.y += 6; }
 
     // avoid + metals panels
-    need(120); doc.y += 8;
-    const panW = (W - 16) / 2, panY = doc.y, panH = 132;
+    doc.y += 8;
+    const panW = (W - 16) / 2, tw = panW - 32;
+    const anti = (Array.isArray(c.antiPalette) ? c.antiPalette : []).slice(0, 3);
+    // measure both columns so the panels are exactly as tall as their content
+    let avoidH = 34;
+    anti.forEach((a) => {
+      doc.font(SANS_B).fontSize(8.5); avoidH += doc.heightOfString((a.name || '') + (a.hex ? '  ' + safeHex(a.hex).toUpperCase() : ''), { width: tw });
+      if (a.impact) { doc.font(SANS).fontSize(8); avoidH += doc.heightOfString(a.impact, { width: tw, lineGap: 1.4 }) + 2; }
+      avoidH += 8;
+    });
+    let metalsH = 34;
+    if (c.metals && c.metals.note) { doc.font(SANS).fontSize(8); metalsH += doc.heightOfString(c.metals.note, { width: tw, lineGap: 1.5 }) + 6; }
+    if (c.stylingCorrections) { doc.font(SANS).fontSize(8); metalsH += doc.heightOfString('Styling. ' + c.stylingCorrections, { width: tw, lineGap: 1.5 }); }
+    const panH = Math.max(avoidH, metalsH, 64) + 16;
+    need(panH + 12);
+    const panY = doc.y, mX = M + panW + 16;
     // avoid
     doc.roundedRect(M, panY, panW, panH, 10).fill(CARD);
     doc.roundedRect(M, panY, panW, panH, 10).lineWidth(1).strokeColor(HAIR).stroke();
     doc.font(SANS_B).fontSize(9).fillColor('#d98a8a').text('Avoid at the Face', M + 16, panY + 16, { lineBreak: false });
-    let ay = panY + 36;
-    (Array.isArray(c.antiPalette) ? c.antiPalette : []).slice(0, 3).forEach((a) => {
-      doc.font(SANS_B).fontSize(8.5).fillColor(SILVER).text((a.name || '') + (a.hex ? '  ' + safeHex(a.hex).toUpperCase() : ''), M + 16, ay, { width: panW - 32 });
-      if (a.impact) doc.font(SANS).fontSize(8).fillColor(DIM).text(a.impact, M + 16, doc.y + 1, { width: panW - 32, lineGap: 1.4 });
+    let ay = panY + 34;
+    anti.forEach((a) => {
+      doc.font(SANS_B).fontSize(8.5).fillColor(SILVER).text((a.name || '') + (a.hex ? '  ' + safeHex(a.hex).toUpperCase() : ''), M + 16, ay, { width: tw });
+      if (a.impact) doc.font(SANS).fontSize(8).fillColor(DIM).text(a.impact, M + 16, doc.y + 2, { width: tw, lineGap: 1.4 });
       ay = doc.y + 8;
     });
     // metals
-    const mX = M + panW + 16;
     doc.roundedRect(mX, panY, panW, panH, 10).fill(CARD);
     doc.roundedRect(mX, panY, panW, panH, 10).lineWidth(1).strokeColor(HAIR).stroke();
-    doc.font(SANS_B).fontSize(9).fillColor(SILVER).text('Metals', mX + 16, panY + 16, { continued: false, lineBreak: false });
+    doc.font(SANS_B).fontSize(9).fillColor(SILVER).text('Metals', mX + 16, panY + 16, { lineBreak: false });
     if (c.metals && c.metals.locked) pillLeft(c.metals.locked, mX + 16 + 52, panY + 13, false);
-    let my = panY + 38;
-    if (c.metals && c.metals.note) { doc.font(SANS).fontSize(8).fillColor(DIM).text(c.metals.note, mX + 16, my, { width: panW - 32, lineGap: 1.5 }); my = doc.y + 6; }
-    if (c.stylingCorrections) { doc.font(SANS_B).fontSize(8).fillColor(SILVER).text('Styling. ', mX + 16, my, { continued: true, lineBreak: false }).font(SANS).fillColor(DIM).text(c.stylingCorrections, { width: panW - 32, lineGap: 1.5 }); }
+    let my = panY + 34;
+    if (c.metals && c.metals.note) { doc.font(SANS).fontSize(8).fillColor(DIM).text(c.metals.note, mX + 16, my, { width: tw, lineGap: 1.5 }); my = doc.y + 6; }
+    if (c.stylingCorrections) { doc.font(SANS_B).fontSize(8).fillColor(SILVER).text('Styling. ', mX + 16, my, { continued: true, lineBreak: false }).font(SANS).fillColor(DIM).text(c.stylingCorrections, { width: tw, lineGap: 1.5 }); }
     doc.y = panY + panH + 8;
   }
 
   // ════════════════════ THE 90-DAY PROTOCOL ════════════════════
   const iv = report.intervention;
   if (iv) {
-    page('The 90-Day Protocol');
+    startSection(220);
     sectionHead('04', 'THE WORK', 'The 90-Day Protocol',
       'Your quick reference. Two daily routines and a short set of drills, each step chosen to support a focus area above. Every step here is a health-positive habit.');
     doc.y += 6;
@@ -1105,7 +1118,7 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
   // ════════════════════ THE HORIZON ════════════════════
   const proj = report.projection;
   if (proj) {
-    page('What Ninety Days Produces');
+    startSection(260);
     sectionHead('05', 'THE HORIZON', 'What Ninety Days Produces',
       'Kept consistently, here is an honest picture of what ninety days changes. No percentiles. Just the qualities that shift when these habits compound.');
     doc.y += 8;
@@ -1150,7 +1163,7 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
   }
 
   // ════════════════════ THE PROGRAMME ════════════════════
-  page('How This Continues');
+  startSection(260);
   sectionHead('06', 'THE PROGRAMME', 'How This Continues',
     'This blueprint is your baseline, a single photograph in time. The programme keeps reading you, day by day, so the work shows up in numbers you can watch.');
   doc.y += 8;
@@ -1192,11 +1205,8 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
     const bm = doc.page.margins.bottom; doc.page.margins.bottom = 0;
     const fy = PH - 32;
     doc.moveTo(M, fy - 8).lineTo(M + W, fy - 8).lineWidth(0.5).strokeColor(FAINTLINE).stroke();
-    const left = (i === 0)
-      ? footers[i]
-      : `${String(i).padStart(2, '0')}  ·  ${footers[i] || ''}`;
     doc.font(SANS).fontSize(7).fillColor(FAINT)
-       .text(left.toUpperCase(), M, fy, { width: W * 0.7, characterSpacing: 1.2, lineBreak: false });
+       .text('THE PRESENCE DOSSIER', M, fy, { width: W * 0.7, characterSpacing: 1.2, lineBreak: false });
     doc.font(SANS).fontSize(7).fillColor(FAINT)
        .text(`MAINCHARACTER  ·  ${String(i + 1).padStart(2, '0')}`, M, fy, { width: W, align: 'right', characterSpacing: 1.2, lineBreak: false });
     doc.page.margins.bottom = bm;

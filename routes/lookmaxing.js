@@ -725,542 +725,366 @@ async function _generatePdf(auditId, report, photoBuffer = null) {
  * @param {Buffer|null} photoBuffer  the subject's normalised capture, if recoverable
  */
 function _renderDossier(doc, auditId, report, photoBuffer) {
-  // ── Palette (dark, print-tuned) ──
-  const BG    = '#08080a';  // obsidian page
-  const CARD  = '#101013';  // lifted panel
-  const HAIR  = '#2a2a31';  // hairline / border
-  const FAINTLINE = '#1b1b20';
-  const CREAM = '#f4f1ea';  // headline ink
-  const SILVER= '#c9c9cf';  // body
-  const DIM   = '#9a9aa2';  // descriptions
-  const FAINT = '#6f6f78';  // eyebrows / labels
-  const GHOST = '#4c4c54';
-  const INKON = '#141310';  // text on a filled-cream pill
+  // ─── Professional documentation palette (light, matches the reference doc) ───
+  const PAGE = '#FFFFFF', IVORY = '#F6F2EA', IVORY2 = '#EAE4D8', INK = '#1F1E1C', INK2 = '#2E2C27',
+        MUTE = '#6E6962', LINE = '#D9D2C6', GOLD = '#C49A4A', TAN = '#6E5B3E',
+        GREEN = '#3F6B4E', RED = '#9A2D2D';
 
-  // Real brand fonts embedded from assets/fonts (Playfair Display display-serif,
-  // Sora sans, JetBrains Mono). Falls back to built-ins if the files are missing.
-  let SERIF = 'Times-Roman', SERIF_I = 'Times-Italic', SERIF_B = 'Times-Bold', SERIF_BK = 'Times-Bold';
-  let SANS  = 'Helvetica',   SANS_B  = 'Helvetica-Bold', SANS_I = 'Helvetica-Oblique';
-  let MONO  = 'Courier',      MONO_M  = 'Courier';
+  // ─── Fonts: Gelasio (Georgia-compatible) serif + JetBrains Mono labels ───
+  let SERIF = 'Times-Roman', SERIF_B = 'Times-Bold', SERIF_I = 'Times-Italic', SERIF_BI = 'Times-BoldItalic';
+  let MONO = 'Courier', MONO_M = 'Courier';
   try {
     const FD = path.join(__dirname, '..', 'assets', 'fonts');
-    doc.registerFont('PF',    path.join(FD, 'PlayfairDisplay-Regular.ttf'));
-    doc.registerFont('PF-B',  path.join(FD, 'PlayfairDisplay-Bold.ttf'));
-    doc.registerFont('PF-BK', path.join(FD, 'PlayfairDisplay-Black.ttf'));
-    doc.registerFont('PF-I',  path.join(FD, 'PlayfairDisplay-Italic.ttf'));
-    doc.registerFont('SR',    path.join(FD, 'Sora-Regular.ttf'));
-    doc.registerFont('SR-SB', path.join(FD, 'Sora-SemiBold.ttf'));
-    doc.registerFont('JM',    path.join(FD, 'JetBrainsMono-Regular.ttf'));
-    doc.registerFont('JM-M',  path.join(FD, 'JetBrainsMono-Medium.ttf'));
-    SERIF = 'PF'; SERIF_B = 'PF-B'; SERIF_BK = 'PF-BK'; SERIF_I = 'PF-I';
-    SANS = 'SR'; SANS_B = 'SR-SB'; SANS_I = 'SR';
-    MONO = 'JM'; MONO_M = 'JM-M';
+    doc.registerFont('GE', path.join(FD, 'Gelasio-Regular.ttf'));
+    doc.registerFont('GE-B', path.join(FD, 'Gelasio-Bold.ttf'));
+    doc.registerFont('GE-I', path.join(FD, 'Gelasio-Italic.ttf'));
+    doc.registerFont('GE-BI', path.join(FD, 'Gelasio-BoldItalic.ttf'));
+    doc.registerFont('JM', path.join(FD, 'JetBrainsMono-Regular.ttf'));
+    doc.registerFont('JM-M', path.join(FD, 'JetBrainsMono-Medium.ttf'));
+    SERIF = 'GE'; SERIF_B = 'GE-B'; SERIF_I = 'GE-I'; SERIF_BI = 'GE-BI'; MONO = 'JM'; MONO_M = 'JM-M';
   } catch (e) { /* keep built-in fallbacks */ }
 
-  const PW = doc.page.width, PH = doc.page.height;
-  const M = 54, W = PW - M * 2;
-  const FOOT = 52;                 // reserved footer band height
-  const BOTTOM = PH - FOOT;        // content must not cross this
+  const PW = doc.page.width, PH = doc.page.height, M = 54, W = PW - M * 2, FOOT = 44, BOTTOM = PH - FOOT;
 
   const cap = (s) => (s ? String(s).charAt(0).toUpperCase() + String(s).slice(1) : '');
-  const fmt = (s) => String(s || '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ').trim().replace(/^./, (c) => c.toUpperCase());
-  const safeHex = (h) => { const r = String(h || '').trim(); return /^#?[0-9a-fA-F]{3,8}$/.test(r) ? (r[0] === '#' ? r : '#' + r) : '#888888'; };
+  const fmt = (s) => String(s || '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/^./, (c) => c.toUpperCase());
+  const safeHex = (h) => { const r = String(h || '').trim(); return /^#?[0-9a-fA-F]{3,8}$/.test(r) ? (r[0] === '#' ? r : '#' + r) : '#999999'; };
   const num1 = (n) => (typeof n === 'number' && isFinite(n)) ? n.toFixed(1) : null;
 
-  function paintBg() { doc.save(); doc.rect(0, 0, PW, PH).fill(BG); doc.restore(); }
-  // First page exists already (constructor) — paint it; later pages via listener.
-  paintBg();
-  doc.on('pageAdded', () => { paintBg(); });
-  function need(h) { if (doc.y + h > BOTTOM) { doc.addPage(); doc.x = M; doc.y = M + 6; return true; } return false; }
-  // Start a section: break to a fresh page only when it won't fit; otherwise flow
-  // on with a measured gap + hairline, so short sections don't leave dead space.
-  function startSection(min) {
-    if (doc.y + (min || 180) > BOTTOM) { doc.addPage(); doc.x = M; doc.y = M + 6; }
-    else { doc.y += 30; doc.moveTo(M, doc.y - 15).lineTo(M + W, doc.y - 15).lineWidth(0.5).strokeColor(FAINTLINE).stroke(); }
-  }
+  function paintBg() { doc.save(); doc.rect(0, 0, PW, PH).fill(PAGE); doc.restore(); }
+  // Disable pdfkit's own text auto-pagination — need() is the sole page-break
+  // authority, so a long table cell can never auto-flow and orphan across pages.
+  paintBg(); doc.page.margins.bottom = 0;
+  doc.on('pageAdded', () => { paintBg(); doc.page.margins.bottom = 0; });
+  function need(h) { if (doc.y + h > BOTTOM) { doc.addPage(); doc.x = M; doc.y = M + 8; return true; } return false; }
+  function newPage() { doc.addPage(); doc.x = M; doc.y = M + 8; }
 
-  // ── Brand mark (silver 3D M, transparent — reads on dark) ──
-  let mark = null;
-  try { mark = fs.readFileSync(path.join(__dirname, '..', 'public', 'maincharacter-mark-3d.png')); } catch { mark = null; }
-
-  // ── small components ───────────────────────────────────────────────────────
   function eyebrow(text, x, y, color, size) {
-    doc.font(SANS_B).fontSize(size || 8).fillColor(color || FAINT)
-       .text(String(text).toUpperCase(), x, y, { characterSpacing: 2.2, lineBreak: false });
+    doc.font(MONO).fontSize(size || 7.5).fillColor(color || MUTE).text(String(text).toUpperCase(), x, y, { characterSpacing: 1.6, lineBreak: false });
   }
-  // Right-anchored pill; returns its left x.
-  function pillRight(text, xRight, y, filled) {
-    const t = String(text).toUpperCase();
-    doc.font(SANS_B).fontSize(7);
-    const tw = doc.widthOfString(t, { characterSpacing: 1 });
-    const padX = 9, h = 16, w = tw + padX * 2, x = xRight - w;
-    if (filled) { doc.roundedRect(x, y, w, h, 8).fill(CREAM); doc.fillColor(INKON); }
-    else { doc.roundedRect(x, y, w, h, 8).lineWidth(0.8).strokeColor(HAIR).stroke(); doc.fillColor(SILVER); }
-    doc.font(SANS_B).fontSize(7).text(t, x + padX, y + 4.5, { characterSpacing: 1, lineBreak: false });
-    return x;
-  }
-  function pillLeft(text, x, y, filled) {
-    const t = String(text).toUpperCase();
-    doc.font(SANS_B).fontSize(7);
-    const tw = doc.widthOfString(t, { characterSpacing: 1 });
-    const padX = 9, h = 16, w = tw + padX * 2;
-    if (filled) { doc.roundedRect(x, y, w, h, 8).fill(CREAM); doc.fillColor(INKON); }
-    else { doc.roundedRect(x, y, w, h, 8).lineWidth(0.8).strokeColor(HAIR).stroke(); doc.fillColor(SILVER); }
-    doc.font(SANS_B).fontSize(7).text(t, x + padX, y + 4.5, { characterSpacing: 1, lineBreak: false });
-    return x + w;
-  }
-  function diamond(cx, cy, s, color) { doc.save().translate(cx, cy).rotate(45).rect(-s / 2, -s / 2, s, s).fill(color).restore(); }
-  // Vector rightward arrow (the built-in fonts can't encode →).
-  function arrow(x, y, len, color) {
-    doc.save().lineWidth(1).strokeColor(color);
-    doc.moveTo(x, y).lineTo(x + len, y).stroke();
-    doc.moveTo(x + len - 3.5, y - 2.6).lineTo(x + len, y).lineTo(x + len - 3.5, y + 2.6).stroke();
-    doc.restore();
+  function priority(m) {
+    const s = typeof m.score10 === 'number' ? m.score10 : 5.5;
+    if (s >= 7) return { label: 'Natural Asset', color: GREEN };
+    if (m.class === 'leverage' || s < 5.5) return { label: 'High', color: GOLD };
+    return { label: 'Medium', color: MUTE };
   }
 
-  // Section header: faint "0N · EYEBROW" index line, big serif title, intro paragraph.
-  function sectionHead(index, eyebrowText, title, intro) {
-    eyebrow(`${index}  ·  ${eyebrowText}`, M, doc.y, FAINT, 8);
+  function sectionHead(num, eyebrowText, title, intro) {
+    need(92); doc.y += 8;
+    doc.font(MONO_M).fontSize(8.5).fillColor(GOLD).text(String(num), M, doc.y, { continued: true, characterSpacing: 1 });
+    doc.font(MONO).fontSize(8.5).fillColor(MUTE).text('   ' + String(eyebrowText).toUpperCase(), { characterSpacing: 1.8, lineBreak: false });
     doc.y += 16;
-    doc.font(SERIF_B).fontSize(27).fillColor(CREAM).text(title, M, doc.y, { width: W });
-    doc.y += 6;
-    if (intro) { doc.font(SANS).fontSize(9.5).fillColor(DIM).text(intro, M, doc.y, { width: W * 0.92, lineGap: 3 }); doc.y += 8; }
+    doc.font(SERIF_B).fontSize(20).fillColor(INK).text(title, M, doc.y, { width: W });
+    doc.rect(M, doc.y + 3, 44, 2).fill(GOLD); doc.y += 12;
+    if (intro) { doc.font(SERIF).fontSize(9.5).fillColor(INK2).text(intro, M, doc.y, { width: W, lineGap: 3 }); doc.y += 8; }
   }
 
-  // Verdict colours (match the web reading page): actionable green, leverage blue,
-  // fixed grey. Each verdict is a coloured pill with a small shape marker.
-  const V_GREEN = '#6fae8e', V_BLUE = '#7da0c4', V_GREY = '#8a8a93';
-  function fixedTag(m) {
-    const s = typeof m.score10 === 'number' ? m.score10 : 6;
-    if (s >= 7.5) return 'Strong'; if (s >= 6.5) return 'Asset';
-    if (s >= 5.5) return 'Balanced'; if (s >= 4.5) return 'Even'; return 'Neutral';
-  }
-  function verdict(m, graded) {
-    if (graded && m.class === 'leverage') return { label: 'Leverage via state', color: V_BLUE, shape: 'dia' };
-    if (graded && m.class !== 'fixed') return { label: 'Actionable', color: V_GREEN, shape: 'dot' };
-    return { label: graded ? 'Fixed · context' : fixedTag(m), color: V_GREY, shape: 'ring' };
-  }
-  function vMarker(shape, cx, cy, color) {
-    if (shape === 'dia') diamond(cx, cy, 5, color);
-    else if (shape === 'ring') { doc.circle(cx, cy, 2.6).lineWidth(1.1).strokeColor(color).stroke(); }
-    else doc.circle(cx, cy, 2.8).fill(color);
-  }
-  // Outlined pill, coloured by verdict, with its marker on the left.
-  function verdictPill(v, x, y) {
-    const t = String(v.label).toUpperCase();
-    doc.font(SANS_B).fontSize(6.8);
-    const tw = doc.widthOfString(t, { characterSpacing: 0.8 });
-    const h = 15, w = 20 + tw + 9;
-    doc.roundedRect(x, y, w, h, 7.5).lineWidth(0.9).strokeColor(v.color).stroke();
-    vMarker(v.shape, x + 11, y + h / 2, v.color);
-    doc.fillColor(v.color).font(SANS_B).fontSize(6.8).text(t, x + 20, y + 4.4, { characterSpacing: 0.8, lineBreak: false });
-  }
-
-  // One analysis row, stacked for visual rhythm (like the web reading page):
-  // name + score on top, a score bar, the root cause, then a coloured verdict pill.
-  function metricRow(m, graded) {
-    const hasScore = typeof m.score10 === 'number';
-    const desc = m.rootCause || '';
-    const nameW = W - 64;            // leave room for the score on the right
-    // measure for the page-break check
-    doc.font(SERIF).fontSize(12); let h = 8 + doc.heightOfString(fmt(m.metric), { width: nameW });
-    if (m.subtitle) { doc.font(SERIF_I).fontSize(8.5); h += doc.heightOfString(m.subtitle, { width: nameW }) + 1; }
-    if (hasScore) h += 13;          // score bar
-    if (desc) { doc.font(SANS).fontSize(8.5); h += doc.heightOfString(desc, { width: W, lineGap: 1.6 }) + 8; }
-    h += 28;                         // pill + paddings
-    need(h);
-
-    doc.y += 8;
-    const top = doc.y;
-    doc.font(SERIF).fontSize(12).fillColor(CREAM).text(fmt(m.metric), M, top, { width: nameW });
-    const nameBottom = doc.y;
-    if (hasScore) {
-      doc.font(SERIF_B).fontSize(16).fillColor(CREAM).text(m.score10.toFixed(1), M + W - 56, top - 2, { width: 44, align: 'right', lineBreak: false });
-      doc.font(SANS).fontSize(7).fillColor(FAINT).text('/10', M + W - 11, top + 5, { lineBreak: false });
-    }
-    doc.y = nameBottom;
-    if (m.subtitle) doc.font(SERIF_I).fontSize(8.5).fillColor(DIM).text(m.subtitle, M, doc.y + 1, { width: nameW });
-    if (hasScore) {
-      const by = doc.y + 7, pct = Math.max(0.04, Math.min(1, m.score10 / 10));
-      doc.roundedRect(M, by, W, 3, 1.5).fill('#262629');
-      doc.roundedRect(M, by, W * pct, 3, 1.5).fill(SILVER);
-      doc.y = by + 3;
-    }
-    if (desc) doc.font(SANS).fontSize(8.5).fillColor(DIM).text(desc, M, doc.y + 8, { width: W, lineGap: 1.6 });
-    verdictPill(verdict(m, graded), M, doc.y + 9);
-    doc.y = doc.y + 9 + 15 + 11;
-    doc.moveTo(M, doc.y - 5).lineTo(M + W, doc.y - 5).lineWidth(0.5).strokeColor(FAINTLINE).stroke();
+  // KPI table: FOCUS AREA | WHAT THE PHOTOGRAPHS SUGGEST | SCORE · PRIORITY
+  function kpiTable(label, metrics) {
+    if (!metrics || !metrics.length) return;
+    const w1 = 142, c3w = 96;
+    const c1 = M, c2 = M + w1 + 14, c3 = M + W - c3w, w2 = c3 - 14 - c2;
+    if (label) { need(20); eyebrow(label, M, doc.y, TAN, 8.5); doc.y += 14; }
+    need(40);
+    let hy = doc.y;
+    doc.rect(M, hy, W, 20).fill(IVORY2);
+    doc.rect(M, hy, W, 20).lineWidth(0.7).strokeColor(LINE).stroke();
+    eyebrow('Focus Area', c1 + 10, hy + 6.5, MUTE, 6.8);
+    eyebrow('What the Photographs Suggest', c2, hy + 6.5, MUTE, 6.8);
+    doc.font(MONO).fontSize(6.8).fillColor(MUTE).text('SCORE · PRIORITY', c3, hy + 6.5, { width: c3w - 8, align: 'right', characterSpacing: 1.6, lineBreak: false });
+    doc.y = hy + 20;
+    metrics.forEach((m) => {
+      const sugg = m.rootCause || '';
+      doc.font(SERIF).fontSize(9); const sH = doc.heightOfString(sugg, { width: w2, lineGap: 1.55 });
+      doc.font(SERIF_B).fontSize(10); let lH = doc.heightOfString(fmt(m.metric), { width: w1 - 14 });
+      if (m.subtitle) { doc.font(SERIF_I).fontSize(8); lH += doc.heightOfString(m.subtitle, { width: w1 - 14 }) + 2; }
+      const rowH = Math.max(sH, lH, 30) + 18;
+      need(rowH);
+      const y0 = doc.y;
+      doc.rect(M, y0, W, rowH).lineWidth(0.6).strokeColor(LINE).stroke();
+      doc.moveTo(c2 - 14, y0).lineTo(c2 - 14, y0 + rowH).lineWidth(0.5).strokeColor(LINE).stroke();
+      doc.moveTo(c3 - 14, y0).lineTo(c3 - 14, y0 + rowH).lineWidth(0.5).strokeColor(LINE).stroke();
+      doc.font(SERIF_B).fontSize(10).fillColor(INK).text(fmt(m.metric), c1 + 10, y0 + 11, { width: w1 - 14 });
+      if (m.subtitle) doc.font(SERIF_I).fontSize(8).fillColor(MUTE).text(m.subtitle, c1 + 10, doc.y + 1, { width: w1 - 14 });
+      doc.font(SERIF).fontSize(9).fillColor(INK2).text(sugg, c2, y0 + 11, { width: w2, lineGap: 1.55 });
+      const sc = typeof m.score10 === 'number' ? m.score10.toFixed(1) : '–';
+      doc.font(SERIF_B).fontSize(13).fillColor(INK).text(sc + ' / 10', c3, y0 + 10, { width: c3w - 8, align: 'right', lineBreak: false });
+      const pr = priority(m);
+      const pl = pr.label.toUpperCase();
+      doc.font(MONO_M).fontSize(6.8);
+      const plw = doc.widthOfString(pl, { characterSpacing: 1 });
+      const px = M + W - 8 - plw, py = y0 + 30;
+      doc.circle(px - 8, py + 3, 2.6).fill(pr.color);
+      doc.font(MONO_M).fontSize(6.8).fillColor(pr.color).text(pl, px, py, { characterSpacing: 1, lineBreak: false });
+      doc.y = y0 + rowH;
+    });
+    doc.y += 12;
   }
 
-  // ════════════════════ PAGE 1 · COVER ════════════════════
+  // ════════════════ PAGE 1 · COVER ════════════════
   let y = M + 4;
-  // top brand row
-  if (mark) { try { doc.image(mark, M, y - 2, { width: 17 }); } catch { /* ignore */ } }
-  doc.font(SANS_B).fontSize(9).fillColor(SILVER).text('MAINCHARACTER', M + 24, y, { characterSpacing: 3, lineBreak: false });
-  doc.font(SANS).fontSize(7).fillColor(FAINT).text('BESPOKE IMAGE ATELIER', M + 24, y + 12, { characterSpacing: 2, lineBreak: false });
-  doc.font(SANS).fontSize(6.5).fillColor(GHOST)
+  doc.font(SERIF_B).fontSize(13).fillColor(INK).text('MainCharacter', M, y, { lineBreak: false });
+  doc.font(MONO).fontSize(7.5).fillColor(MUTE).text('PILLAR II · BESPOKE AESTHETIC BLUEPRINT', M, y + 18, { characterSpacing: 1.2, lineBreak: false });
+  doc.font(MONO).fontSize(6.5).fillColor(MUTE)
      .text('CONFIDENTIAL', M, y, { width: W, align: 'right', lineBreak: false })
      .text('BESPOKE · SINGLE SUBJECT', M, y + 9, { width: W, align: 'right', lineBreak: false })
      .text('NOT FOR REDISTRIBUTION', M, y + 18, { width: W, align: 'right', lineBreak: false });
+  doc.moveTo(M, y + 34).lineTo(M + W, y + 34).lineWidth(0.8).strokeColor(LINE).stroke();
+  y += 58;
 
-  // photo (top-right, rounded) — sets how far the title block can run
-  const photoW = 116, photoH = 142, photoX = M + W - photoW, photoY = y + 44;
+  const photoW = 104, photoH = 128, photoX = M + W - photoW, photoY = y - 2;
   let titleW = W;
   if (photoBuffer) {
     try {
-      doc.save();
-      doc.roundedRect(photoX, photoY, photoW, photoH, 10).clip();
+      doc.save(); doc.roundedRect(photoX, photoY, photoW, photoH, 4).clip();
       doc.image(photoBuffer, photoX, photoY, { cover: [photoW, photoH], align: 'center', valign: 'center' });
       doc.restore();
-      doc.roundedRect(photoX, photoY, photoW, photoH, 10).lineWidth(1).strokeColor(HAIR).stroke();
+      doc.roundedRect(photoX, photoY, photoW, photoH, 4).lineWidth(1).strokeColor(LINE).stroke();
       titleW = W - photoW - 26;
     } catch { titleW = W; }
   }
+  eyebrow('BESPOKE IMAGE ATELIER', M, y, GOLD, 7.5); y += 18;
+  doc.font(SERIF_B).fontSize(30).fillColor(INK).text('The Presence Dossier', M, y, { width: titleW });
+  y = doc.y + 4;
+  doc.font(SERIF_I).fontSize(12).fillColor(MUTE).text('A 90-Day Presence Optimization Dossier', M, y, { width: titleW });
+  y = Math.max(doc.y, photoY + photoH) + 24;
 
-  y += 52;
-  eyebrow('PILLAR II', M, y, FAINT, 8);
-  doc.font(SANS_B).fontSize(8);
-  const pwii = doc.widthOfString('PILLAR II', { characterSpacing: 2.2 });
-  diamond(M + pwii + 16, y + 4, 5, SILVER);
-  eyebrow('LOOKMAXXING', M + pwii + 28, y, FAINT, 8);
-  y += 20;
-  doc.font(SERIF_BK).fontSize(38).fillColor(CREAM).text('The Presence', M, y, { width: titleW });
-  doc.font(SERIF_BK).fontSize(38).fillColor(CREAM).text('Dossier', M, doc.y - 2, { width: titleW });
-  y = doc.y + 8;
-  doc.font(SERIF_I).fontSize(12).fillColor(DIM).text('A ninety-day reading, prepared from your own capture.', M, y, { width: titleW });
-
-  // metadata strip
-  y = Math.max(doc.y, photoY + photoH) + 26;
-  doc.moveTo(M, y - 12).lineTo(M + W, y - 12).lineWidth(0.5).strokeColor(FAINTLINE).stroke();
   const archetype = report.archetype || cap(report.rank || 'The Seeker');
   const meta = [
     ['PREPARED FOR', 'Client ' + ('A-' + String(auditId).slice(0, 4)).toUpperCase()],
     ['STYLING DIRECTION', archetype],
-    ['ASSESSMENT BASIS', photoBuffer ? 'Frontal capture' : 'Quiz answers'],
-    ['DATE OF ISSUE', new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })],
-    ['PREPARED BY', 'The Consultant'],
+    ['ENGAGEMENT', '90-Day Programme'],
+    ['DATE OF ISSUE', new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, ' · ')],
   ];
-  const colW = W / meta.length;
-  meta.forEach((mrow, i) => {
-    const cx = M + colW * i;
-    doc.font(SANS_B).fontSize(6).fillColor(FAINT).text(mrow[0], cx, y, { characterSpacing: 1, width: colW - 8, lineBreak: false });
-    doc.font(SERIF).fontSize(10.5).fillColor(CREAM).text(mrow[1], cx, y + 12, { width: colW - 10 });
+  const mcw = W / meta.length, mmh = 40;
+  doc.rect(M, y, W, mmh).fill(IVORY);
+  doc.rect(M, y, W, mmh).lineWidth(0.7).strokeColor(LINE).stroke();
+  meta.forEach((mr, i) => {
+    const cx = M + mcw * i;
+    if (i > 0) doc.moveTo(cx, y).lineTo(cx, y + mmh).lineWidth(0.5).strokeColor(LINE).stroke();
+    eyebrow(mr[0], cx + 12, y + 9, MUTE, 6.2);
+    doc.font(SERIF_B).fontSize(10.5).fillColor(INK).text(mr[1], cx + 12, y + 20, { width: mcw - 18, lineBreak: false });
   });
-  y += 54;
+  y += mmh + 18;
 
-  // score card — height grows to fit the narrative so long status text can never overflow
-  const pad = 24;
   const g10 = num1(typeof report.globalScore10 === 'number' ? report.globalScore10 : (report.auraScore != null ? report.auraScore / 10 : null));
-  const nx = M + W * 0.5, nw = W * 0.5 - pad;       // narrative column (right half)
-  const coverNarr = report.statusAlert || report.firstImpression || '';
-  doc.font(SANS).fontSize(9);
-  const narrH = coverNarr ? doc.heightOfString(coverNarr, { width: nw, lineGap: 2.5 }) : 0;
-  const cardH = Math.max(132, narrH + pad * 2);     // left column (score + pill) ≈ 116
-  const cardY = y;
-  doc.roundedRect(M, cardY, W, cardH, 12).fill(CARD);
-  doc.roundedRect(M, cardY, W, cardH, 12).lineWidth(1).strokeColor(HAIR).stroke();
-  eyebrow('OVERALL PRESENCE READ', M + pad, cardY + pad, FAINT, 7.5);
-  {
-    const sx = M + pad, sy = cardY + pad + 14;
-    doc.font(SERIF_BK).fontSize(52).fillColor(CREAM).text(g10 != null ? g10 : '-', sx, sy, { lineBreak: false });
-    if (g10 != null) { const sw = doc.widthOfString(String(g10)); doc.font(SANS).fontSize(13).fillColor(DIM).text('/10', sx + sw + 8, sy + 30, { lineBreak: false }); }
-  }
   const projHi = num1(report.projection && report.projection.globalDay90);
+  const ch = 58, cy0 = y;
+  doc.rect(M, cy0, W, ch).fill(IVORY);
+  doc.rect(M, cy0, 4, ch).fill(GOLD);
+  doc.rect(M, cy0, W, ch).lineWidth(0.7).strokeColor(LINE).stroke();
+  eyebrow('OVERALL PRESENCE READ', M + 18, cy0 + 12, MUTE, 7);
+  doc.font(SERIF_B).fontSize(26).fillColor(INK).text((g10 != null ? g10 : '–') + ' / 10', M + 18, cy0 + 24, { lineBreak: false });
   if (projHi) {
-    const py = cardY + cardH - pad - 4;
-    pillLeft('Projected ' + projHi + ' with full adherence', M + pad, py, false);
+    doc.font(MONO).fontSize(8).fillColor(MUTE).text('PROJECTED', M + 230, cy0 + 16, { lineBreak: false });
+    doc.font(SERIF_B).fontSize(22).fillColor(GREEN).text('→  ' + projHi, M + 230, cy0 + 26, { lineBreak: false });
+    doc.font(SERIF_I).fontSize(9).fillColor(MUTE).text('with full 90-day adherence', M + 340, cy0 + 33, { width: W - 340 - 18, lineBreak: false });
   }
-  // narrative on the right half of the card (kept clear of the pill column)
-  if (coverNarr) doc.font(SANS).fontSize(9).fillColor(SILVER).text(coverNarr, nx, cardY + pad, { width: nw, lineGap: 2.5 });
-  y = cardY + cardH + 22;
+  y = cy0 + ch + 18;
 
-  // method note + legend
-  doc.font(SANS).fontSize(8).fillColor(FAINT).text(
-    'A note on method. This is an image and styling read built from your photograph. A photograph shows how a feature appears, not the biology beneath it, so each score is a considered stylist read for setting priorities, not a clinical measurement.',
+  const summary = report.statusAlert || report.firstImpression || '';
+  if (summary) {
+    eyebrow('EXECUTIVE SUMMARY', M, y, TAN, 8.5); y += 14;
+    doc.font(SERIF).fontSize(9.5).fillColor(INK2).text(summary, M, y, { width: W, lineGap: 3 });
+    y = doc.y + 8;
+  }
+  doc.font(SERIF_I).fontSize(8.5).fillColor(MUTE).text(
+    'A note on method: this is an aesthetic and image-consulting assessment based on photographs, which reveal how a feature appears, not the biology beneath it. Scores are a directional stylist read, a way to prioritise, not a clinical measurement.',
     M, y, { width: W, lineGap: 2.5 });
-  y = doc.y + 14;
-  // Legend, stacked one per line so the descriptions never collide.
-  const legend = [['High Focus', 'where attention pays off most'], ['Refine', 'small habits that compound'], ['Natural Asset', 'an existing strength']];
-  legend.forEach((lg) => {
-    diamond(M + 3, y + 5.5, 6, SILVER);
-    doc.font(SANS_B).fontSize(8.5).fillColor(SILVER).text(lg[0], M + 14, y, { continued: true, lineBreak: false })
-       .font(SANS).fontSize(8.5).fillColor(FAINT).text('     ' + lg[1], { lineBreak: false });
-    y += 16;
+  y = doc.y + 12;
+  const leg = [['High', 'primary focus', GOLD], ['Medium', 'refine & maintain', MUTE], ['Natural Asset', 'existing strength', GREEN]];
+  let lx = M;
+  leg.forEach((lg) => {
+    doc.circle(lx + 3, y + 5, 2.8).fill(lg[2]);
+    doc.font(MONO_M).fontSize(7.5).fillColor(INK).text(lg[0].toUpperCase(), lx + 11, y + 1, { lineBreak: false, characterSpacing: 0.5 });
+    const w0 = doc.widthOfString(lg[0].toUpperCase(), { characterSpacing: 0.5 });
+    doc.font(SERIF_I).fontSize(8.5).fillColor(MUTE).text('  ' + lg[1], lx + 11 + w0 + 4, y + 1, { lineBreak: false });
+    lx += W / 3;
   });
 
-  // ════════════════════ PAGES 2–4 · THE ANALYSIS (graded vectors) ════════════════════
+  // ════════════════ ANALYSIS TABLES (report vectors) ════════════════
   const vectors = Array.isArray(report.vectors) ? report.vectors : [];
-  const allMetrics = vectors.flatMap((v) => (v.metrics || []).map((m) => ({ ...m, _vector: v })));
-  const graded = vectors.map((v) => ({ ...v, metrics: (v.metrics || []).filter((m) => m.class !== 'fixed') }))
-    .filter((v) => v.metrics.length);
-  const fixed = allMetrics.filter((m) => m.class === 'fixed');
-
-  startSection(420);
-  sectionHead('01', 'THE READING', 'Where Presence Is Leaking',
-    'A vector-by-vector read of where perceived status is leaking, and where it is already working for you. Each line pairs the cause with a score and a verdict.');
-  doc.y += 4;
-  graded.forEach((v) => {
-    need(54);
-    doc.y += 10;
-    eyebrow(`${v.name || 'Vector'}${v.numeral ? '  ·  ' + v.numeral : ''}`, M, doc.y, SILVER, 8.5);
-    doc.y += 12;
-    doc.moveTo(M, doc.y).lineTo(M + W, doc.y).lineWidth(0.5).strokeColor(HAIR).stroke();
-    doc.y += 2;
-    v.metrics.forEach((m) => metricRow(m, true));
-  });
-
-  // ════════════════════ FIXED ARCHITECTURE ════════════════════
-  if (fixed.length) {
-    startSection(220);
-    sectionHead('02', 'READ AS CONTEXT, NOT GRADED', 'Your Fixed Architecture',
-      'Bone structure does not change without surgery, so it is not graded. Read this as context, then build on it. Most of it is already working for you.');
-    doc.y += 6;
-    doc.moveTo(M, doc.y).lineTo(M + W, doc.y).lineWidth(0.5).strokeColor(HAIR).stroke();
-    doc.y += 2;
-    fixed.forEach((m) => metricRow(m, false));
-    need(60); doc.y += 18;
-    doc.font(SERIF_I).fontSize(12).fillColor(SILVER).text('Read this page once, then set it aside.', M, doc.y, { width: W, align: 'center' });
-    doc.font(SERIF_I).fontSize(12).fillColor(SILVER).text('Your effort belongs in the layers that move.', M, doc.y + 2, { width: W, align: 'center' });
+  if (vectors.length) {
+    newPage();
+    sectionHead('01', 'THE READING', 'Focus Areas & Priorities',
+      'Each focus area carries a 1–10 read and a priority. Score reflects the current appearance; priority reflects where effort pays off most, so a high-importance habit can still carry a solid score.');
+    doc.y += 4;
+    vectors.forEach((v) => { kpiTable((v.name || 'Vector') + (v.numeral ? '  ·  ' + v.numeral : ''), v.metrics || []); });
   }
 
-  // ════════════════════ THE CHROMATIC ARSENAL ════════════════════
+  // ════════════════ CHROMATIC ARSENAL ════════════════
   const c = report.chromatic;
   if (c) {
-    startSection(300);
-    sectionHead('03', 'THE LEVER WITH NO EFFORT', 'The Chromatic Arsenal',
-      'Colour is the highest-return, lowest-effort lever in the dossier. It changes how your skin reads with no physical intervention. The codes below are calibrated to your colouring.');
-    doc.y += 6;
-    // three trait cards
-    const triple = [
-      ['UNDERTONE', c.undertone || '-', c.undertoneNote || ''],
-      ['CONTRAST', c.contrast || '-', c.contrastNote || ''],
-      ['FAMILY', c.profile || '-', c.profileNote || ''],
-    ];
-    const gap = 12, tcW = (W - gap * 2) / 3, tcY = doc.y;
-    // height = tallest of the three (title can wrap, note sits under it)
-    let tcH = 74;
-    triple.forEach((t) => {
-      doc.font(SERIF).fontSize(15); let h = 26 + doc.heightOfString(t[1], { width: tcW - 28 });
-      if (t[2]) { doc.font(SANS).fontSize(7); h += 6 + doc.heightOfString(String(t[2]).toUpperCase(), { width: tcW - 28, characterSpacing: 0.5 }); }
-      tcH = Math.max(tcH, h + 16);
-    });
+    newPage();
+    sectionHead('02', 'THE LEVER WITH NO EFFORT', 'The Chromatic Arsenal',
+      'Colour is the highest-return, lowest-effort lever in this dossier: it re-engineers how your skin reads with no physical intervention. The specifications below are calibrated to your colouring.');
+    doc.y += 4;
+    const triple = [['UNDERTONE', c.undertone, c.undertoneNote], ['CONTRAST', c.contrast, c.contrastNote], ['FAMILY', c.profile, c.profileNote]];
+    const tcw = (W - 24) / 3, tch = 56, tyy = doc.y;
     triple.forEach((t, i) => {
-      const tx = M + (tcW + gap) * i;
-      doc.roundedRect(tx, tcY, tcW, tcH, 10).fill(CARD);
-      doc.roundedRect(tx, tcY, tcW, tcH, 10).lineWidth(1).strokeColor(HAIR).stroke();
-      eyebrow(t[0], tx + 14, tcY + 14, FAINT, 6.5);
-      doc.font(SERIF).fontSize(15).fillColor(CREAM).text(t[1], tx + 14, tcY + 26, { width: tcW - 28 });
-      if (t[2]) doc.font(SANS).fontSize(7).fillColor(DIM).text(String(t[2]).toUpperCase(), tx + 14, doc.y + 6, { width: tcW - 28, characterSpacing: 0.5 });
+      const tx = M + (tcw + 12) * i;
+      doc.rect(tx, tyy, tcw, tch).fill(IVORY);
+      doc.rect(tx, tyy, tcw, tch).lineWidth(0.7).strokeColor(LINE).stroke();
+      eyebrow(t[0], tx + 12, tyy + 10, MUTE, 6.5);
+      doc.font(SERIF_B).fontSize(13).fillColor(INK).text(t[1] || '–', tx + 12, tyy + 21, { width: tcw - 18, lineBreak: false });
+      if (t[2]) doc.font(SERIF_I).fontSize(8).fillColor(MUTE).text(t[2], tx + 12, tyy + 39, { width: tcw - 18, lineBreak: false });
     });
-    doc.y = tcY + tcH + 16;
-
-    // power palette — swatch cards (3 per row), each row sized to its tallest note
+    doc.y = tyy + tch + 16;
+    function swatchRow(s, avoid) {
+      const sw = 26;
+      doc.font(SERIF).fontSize(9); const nH = doc.heightOfString(s.note || s.impact || '', { width: W - sw - 24, lineGap: 1.5 });
+      const h = Math.max(sw + 6, nH + 24);
+      need(h + 4);
+      const y0 = doc.y;
+      doc.rect(M, y0 + 2, sw, sw).fill(safeHex(s.hex));
+      doc.rect(M, y0 + 2, sw, sw).lineWidth(0.6).strokeColor(LINE).stroke();
+      doc.font(SERIF_B).fontSize(10.5).fillColor(avoid ? RED : INK).text((avoid ? '✕  ' : '') + (s.name || ''), M + sw + 14, y0, { continued: true, lineBreak: false })
+         .font(MONO).fontSize(8).fillColor(MUTE).text('   ' + safeHex(s.hex).toUpperCase(), { lineBreak: false });
+      doc.font(SERIF).fontSize(9).fillColor(INK2).text(s.note || s.impact || '', M + sw + 14, y0 + 14, { width: W - sw - 24, lineGap: 1.5 });
+      doc.y = y0 + h;
+    }
     if (Array.isArray(c.powerPalette) && c.powerPalette.length) {
-      eyebrow('POWER PALETTE  ·  WEAR AT THE COLLAR', M, doc.y, FAINT, 7.5); doc.y += 16;
-      const per = 3, pgap = 12, pcW = (W - pgap * (per - 1)) / per;
-      const items = c.powerPalette.slice(0, 6);
-      let rowTop = doc.y;
-      for (let r = 0; r < items.length; r += per) {
-        const row = items.slice(r, r + per);
-        let noteH = 0;
-        row.forEach((s) => { if (s.note) { doc.font(SANS).fontSize(7.5); noteH = Math.max(noteH, doc.heightOfString(s.note, { width: pcW - 24, lineGap: 1.4 })); } });
-        const pcH = 78 + noteH;                 // swatch(40) + name line + note + pad
-        if (rowTop + pcH > BOTTOM) { doc.addPage(); doc.x = M; doc.y = M + 6; rowTop = doc.y; }
-        row.forEach((s, ci) => {
-          const sx = M + (pcW + pgap) * ci, sy = rowTop;
-          doc.roundedRect(sx, sy, pcW, pcH, 9).fill(CARD);
-          doc.roundedRect(sx, sy, pcW, pcH, 9).lineWidth(1).strokeColor(HAIR).stroke();
-          doc.save(); doc.roundedRect(sx, sy, pcW, 40, 9).clip(); doc.rect(sx, sy, pcW, 40).fill(safeHex(s.hex)); doc.restore();
-          doc.font(SERIF).fontSize(11).fillColor(CREAM).text(s.name || '', sx + 12, sy + 50, { continued: true, lineBreak: false })
-             .font(MONO).fontSize(7).fillColor(FAINT).text('   ' + safeHex(s.hex).toUpperCase(), { lineBreak: false });
-          if (s.note) doc.font(SANS).fontSize(7.5).fillColor(DIM).text(s.note, sx + 12, sy + 66, { width: pcW - 24, lineGap: 1.4 });
-        });
-        rowTop += pcH + pgap;
+      eyebrow('THE POWER PALETTE · WEAR AT THE COLLAR', M, doc.y, TAN, 8.5); doc.y += 14;
+      c.powerPalette.forEach((s) => swatchRow(s, false));
+      doc.y += 4;
+    }
+    if (c.supportingNeutrals) { doc.font(SERIF_I).fontSize(8.5).fillColor(MUTE).text('Supporting neutrals: ' + c.supportingNeutrals, M, doc.y, { width: W, lineGap: 1.5 }); doc.y += 10; }
+    if (Array.isArray(c.antiPalette) && c.antiPalette.length) {
+      eyebrow('THE ANTI-PALETTE · AVOID AT THE FACE', M, doc.y, RED, 8.5); doc.y += 14;
+      c.antiPalette.forEach((s) => swatchRow(s, true));
+      doc.y += 4;
+    }
+    if (c.metals || c.stylingCorrections) {
+      need(70);
+      doc.font(SERIF).fontSize(9);
+      let ph = 16;
+      if (c.metals && c.metals.note) ph += doc.heightOfString(c.metals.note, { width: W - 36, lineGap: 1.5 }) + 18;
+      if (c.stylingCorrections) ph += doc.heightOfString(c.stylingCorrections, { width: W - 36, lineGap: 1.5 }) + 18;
+      ph += 8;
+      const py = doc.y;
+      doc.rect(M, py, W, ph).fill(IVORY); doc.rect(M, py, W, ph).lineWidth(0.7).strokeColor(LINE).stroke();
+      let iy = py + 12;
+      if (c.metals) { doc.font(SERIF_B).fontSize(9.5).fillColor(INK).text((c.metals.locked || 'Metals') + '   ', M + 16, iy, { continued: true, lineBreak: false }).font(MONO).fontSize(7).fillColor(GREEN).text('RECOMMENDED', { lineBreak: false }); iy += 14; if (c.metals.note) { doc.font(SERIF).fontSize(9).fillColor(INK2).text(c.metals.note, M + 16, iy, { width: W - 36, lineGap: 1.5 }); iy = doc.y + 8; } }
+      if (c.stylingCorrections) { doc.font(SERIF_B).fontSize(9).fillColor(INK).text('Styling. ', M + 16, iy, { continued: true, lineBreak: false }).font(SERIF).fillColor(INK2).text(c.stylingCorrections, { width: W - 36, lineGap: 1.5 }); }
+      doc.y = py + ph + 10;
+    }
+    if (c.cosmetic) {
+      if (Array.isArray(c.cosmetic.lipWardrobe) && c.cosmetic.lipWardrobe.length) {
+        need(30); eyebrow('THE COSMETIC ARSENAL · THE LIP WARDROBE', M, doc.y, TAN, 8.5); doc.y += 14;
+        c.cosmetic.lipWardrobe.forEach((s) => swatchRow(s, false));
+        doc.y += 4;
       }
-      doc.y = rowTop - pgap + 16;
+      if (Array.isArray(c.cosmetic.complexion) && c.cosmetic.complexion.length) {
+        need(24); eyebrow('COMPLEXION · CHEEK · EYE', M, doc.y, TAN, 8.5); doc.y += 12;
+        c.cosmetic.complexion.forEach((it) => { need(20); doc.font(SERIF_B).fontSize(9).fillColor(INK).text((it.area || '') + '.  ', M, doc.y, { continued: true, lineBreak: false }).font(SERIF).fillColor(INK2).text(it.directive || '', { width: W, lineGap: 1.4 }); doc.y += 4; });
+      }
+      doc.font(SERIF_I).fontSize(7.5).fillColor(MUTE).text('Cosmetic guidance is calibrated to colour theory only and is independent of gender expression.', M, doc.y + 4, { width: W }); doc.y += 8;
     }
-    if (c.supportingNeutrals) { doc.font(SANS_I).fontSize(8).fillColor(FAINT).text('Supporting neutrals. ' + c.supportingNeutrals, M, doc.y, { width: W }); doc.y += 6; }
-
-    // avoid + metals panels
-    doc.y += 8;
-    const panW = (W - 16) / 2, tw = panW - 32;
-    const anti = (Array.isArray(c.antiPalette) ? c.antiPalette : []).slice(0, 3);
-    // measure both columns so the panels are exactly as tall as their content
-    let avoidH = 34;
-    anti.forEach((a) => {
-      doc.font(SANS_B).fontSize(8.5); avoidH += doc.heightOfString((a.name || '') + (a.hex ? '  ' + safeHex(a.hex).toUpperCase() : ''), { width: tw });
-      if (a.impact) { doc.font(SANS).fontSize(8); avoidH += doc.heightOfString(a.impact, { width: tw, lineGap: 1.4 }) + 2; }
-      avoidH += 8;
-    });
-    let metalsH = 34;
-    if (c.metals && c.metals.note) { doc.font(SANS).fontSize(8); metalsH += doc.heightOfString(c.metals.note, { width: tw, lineGap: 1.5 }) + 6; }
-    if (c.stylingCorrections) { metalsH += 13; doc.font(SANS).fontSize(8); metalsH += doc.heightOfString(c.stylingCorrections, { width: tw, lineGap: 1.5 }); }
-    const panH = Math.max(avoidH, metalsH, 64) + 16;
-    need(panH + 12);
-    const panY = doc.y, mX = M + panW + 16;
-    // avoid
-    doc.roundedRect(M, panY, panW, panH, 10).fill(CARD);
-    doc.roundedRect(M, panY, panW, panH, 10).lineWidth(1).strokeColor(HAIR).stroke();
-    doc.font(SANS_B).fontSize(9).fillColor('#d98a8a').text('Avoid at the Face', M + 16, panY + 16, { lineBreak: false });
-    let ay = panY + 34;
-    anti.forEach((a) => {
-      doc.font(SANS_B).fontSize(8.5).fillColor(SILVER).text((a.name || '') + (a.hex ? '  ' + safeHex(a.hex).toUpperCase() : ''), M + 16, ay, { width: tw });
-      if (a.impact) doc.font(SANS).fontSize(8).fillColor(DIM).text(a.impact, M + 16, doc.y + 2, { width: tw, lineGap: 1.4 });
-      ay = doc.y + 8;
-    });
-    // metals
-    doc.roundedRect(mX, panY, panW, panH, 10).fill(CARD);
-    doc.roundedRect(mX, panY, panW, panH, 10).lineWidth(1).strokeColor(HAIR).stroke();
-    doc.font(SANS_B).fontSize(9).fillColor(SILVER).text('Metals', mX + 16, panY + 16, { lineBreak: false });
-    if (c.metals && c.metals.locked) pillLeft(c.metals.locked, mX + 16 + 52, panY + 13, false);
-    let my = panY + 34;
-    if (c.metals && c.metals.note) { doc.font(SANS).fontSize(8).fillColor(DIM).text(c.metals.note, mX + 16, my, { width: tw, lineGap: 1.5 }); my = doc.y + 6; }
-    if (c.stylingCorrections) {
-      doc.font(SANS_B).fontSize(8).fillColor(SILVER).text('Styling', mX + 16, my, { width: tw });
-      doc.font(SANS).fontSize(8).fillColor(DIM).text(c.stylingCorrections, mX + 16, doc.y + 2, { width: tw, lineGap: 1.5 });
-    }
-    doc.y = panY + panH + 8;
   }
 
-  // ════════════════════ THE 90-DAY PROTOCOL ════════════════════
+  // ════════════════ THE 90-DAY PROTOCOL ════════════════
   const iv = report.intervention;
   if (iv) {
-    startSection(220);
-    sectionHead('04', 'THE WORK', 'The 90-Day Protocol',
-      'Your quick reference. Two daily routines and a short set of drills, each step chosen to support a focus area above. Every step here is a health-positive habit.');
-    doc.y += 6;
-    const blocks = [
-      ['Morning · Vitality & Defence', 'ANCHOR IT TO BRUSHING YOUR TEETH', iv.morning],
-      ['Night · Repair & Resurface', 'CLEAR THE DAY, THEN LET THE SKIN RECOVER', iv.night],
-      ['Carriage · Structure & Posture', 'SCATTER THE DRILLS ACROSS THE DAY', iv.mechanical],
-    ];
-    const AGENT_W = 138, DESC_X = 196, DESC_W = W - DESC_X - 22;
-    // per-step height = the taller of the step-name column and the rationale column,
-    // measured at the EXACT widths used to draw — so nothing can spill the box.
-    const stepH = (s) => {
-      doc.font(SERIF).fontSize(10.5);
-      const aH = doc.heightOfString((s.agent || s.step || '') + (s.rx ? '  [Rx]' : ''), { width: AGENT_W });
-      doc.font(SANS).fontSize(8.5);
-      const dH = doc.heightOfString(s.rationale || s.spec || '', { width: DESC_W, lineGap: 1.5 });
-      return Math.max(aH, dH, 16) + 13;
-    };
-    blocks.forEach(([title, sub, steps]) => {
+    newPage();
+    sectionHead('03', 'THE WORK', 'The 90-Day Protocol',
+      'Your quick-reference guide. Two daily routines and a mechanical protocol, each step chosen to support a specific focus area above. Items marked Rx are prescription-grade, bring them to a dermatology consult rather than self-sourcing.');
+    doc.y += 4;
+    function protoTable(label, steps) {
       if (!Array.isArray(steps) || !steps.length) return;
-      let body = 0; steps.forEach((s) => { body += stepH(s); });
-      const h = 58 + body + 8;
-      need(h + 14);
-      const by = doc.y, bx = M;
-      doc.roundedRect(bx, by, W, h, 12).fill(CARD);
-      doc.roundedRect(bx, by, W, h, 12).lineWidth(1).strokeColor(HAIR).stroke();
-      doc.font(SERIF).fontSize(14).fillColor(CREAM).text(title, bx + 22, by + 18, { lineBreak: false });
-      eyebrow(sub, bx + 22, by + 38, FAINT, 6.5);
-      let sy = by + 58;
+      need(24); eyebrow(label, M, doc.y, TAN, 8.5); doc.y += 14;
+      const w1 = 30, w2 = 150, c2 = M + w1, c3 = M + w1 + w2 + 12, w3 = M + W - c3;
+      need(20); let hy = doc.y;
+      doc.rect(M, hy, W, 18).fill(IVORY2); doc.rect(M, hy, W, 18).lineWidth(0.7).strokeColor(LINE).stroke();
+      eyebrow('STEP', M + 8, hy + 5.5, MUTE, 6.5); eyebrow('Agent · Action', c2, hy + 5.5, MUTE, 6.5); eyebrow('Rationale & Directive', c3, hy + 5.5, MUTE, 6.5);
+      doc.y = hy + 18;
       steps.forEach((s, i) => {
-        const sh = stepH(s);
-        doc.font(MONO).fontSize(9).fillColor(GHOST).text(String(i + 1).padStart(2, '0'), bx + 22, sy + 1, { lineBreak: false });
-        doc.font(SERIF).fontSize(10.5).fillColor(CREAM).text((s.agent || s.step || '') + (s.rx ? '  [Rx]' : ''), bx + 52, sy, { width: AGENT_W });
-        doc.font(SANS).fontSize(8.5).fillColor(DIM).text(s.rationale || s.spec || '', bx + DESC_X, sy, { width: DESC_W, lineGap: 1.5 });
-        sy += sh;
+        const rat = s.rationale || '';
+        doc.font(SERIF).fontSize(9); const rH = doc.heightOfString(rat, { width: w3 - 8, lineGap: 1.5 });
+        doc.font(SERIF_B).fontSize(9.5); let aH = doc.heightOfString(fmt(s.agent || s.step || ''), { width: w2 - 12 });
+        if (s.spec) { doc.font(SERIF_I).fontSize(8); aH += doc.heightOfString(s.spec, { width: w2 - 12 }) + 2; }
+        const rowH = Math.max(rH, aH, 24) + 16;
+        need(rowH);
+        const y0 = doc.y;
+        doc.rect(M, y0, W, rowH).lineWidth(0.6).strokeColor(LINE).stroke();
+        doc.moveTo(c2, y0).lineTo(c2, y0 + rowH).lineWidth(0.5).strokeColor(LINE).stroke();
+        doc.moveTo(c3 - 12, y0).lineTo(c3 - 12, y0 + rowH).lineWidth(0.5).strokeColor(LINE).stroke();
+        doc.font(MONO_M).fontSize(9).fillColor(GOLD).text(String(i + 1).padStart(2, '0'), M + 8, y0 + 11, { lineBreak: false });
+        doc.font(SERIF_B).fontSize(9.5).fillColor(INK).text(fmt(s.agent || s.step || ''), c2 + 6, y0 + 10, { width: w2 - 12 });
+        if (s.rx) doc.font(MONO).fontSize(7).fillColor(RED).text('Rx', c2 + 6, doc.y + 1, { lineBreak: false });
+        if (s.spec) doc.font(SERIF_I).fontSize(8).fillColor(MUTE).text(s.spec, c2 + 6, doc.y + (s.rx ? 1 : 1), { width: w2 - 12 });
+        doc.font(SERIF).fontSize(9).fillColor(INK2).text(rat, c3, y0 + 10, { width: w3 - 8, lineGap: 1.5 });
+        doc.y = y0 + rowH;
       });
-      doc.y = by + h + 14;
-    });
+      doc.y += 12;
+    }
+    protoTable('Morning Protocol · Vitality & Defence', iv.morning);
+    protoTable('Night Protocol · Repair & Resurface', iv.night);
+    protoTable('Mechanical Protocol · Structure & Carriage', iv.mechanical);
+    need(30);
+    doc.font(SERIF_I).fontSize(9).fillColor(MUTE).text('How to make it stick: anchor the two skincare routines to brushing your teeth, and scatter the posture drills across the day. Consistency, not perfection on any single day, produces the 90-day result.', M, doc.y, { width: W, lineGap: 2 });
+    doc.y += 8;
   }
 
-  // ════════════════════ THE HORIZON ════════════════════
+  // ════════════════ THE 90-DAY HORIZON ════════════════
   const proj = report.projection;
   if (proj) {
-    startSection(260);
-    sectionHead('05', 'THE HORIZON', 'What Ninety Days Produces',
-      'Kept consistently, here is an honest picture of what ninety days changes. No percentiles. Just the qualities that shift when these habits compound.');
-    doc.y += 8;
-    eyebrow('PROJECTED EVOLUTION  ·  MODELLED NINETY-DAY OUTCOME, STRICT ADHERENCE', M, doc.y, FAINT, 7.5);
-    doc.y += 18;
-    const rows = Array.isArray(proj.rows) ? proj.rows.slice(0, 8) : [];
-    const barX = M + 180, barW = W - 180 - 150, barRightLabelX = M + W - 130, gainRightX = M + W;
-    rows.forEach((r) => {
-      need(30);
-      const ry = doc.y;
-      doc.font(SERIF).fontSize(11).fillColor(CREAM).text(fmt(r.vector), M, ry + 1, { width: 170 });
-      const d0 = Number(r.day0) || 0, d90 = Number(r.day90) || 0;
-      // track + fill
-      doc.roundedRect(barX, ry + 6, barW, 5, 2.5).fill('#222228');
-      const fillW = Math.max(3, Math.min(1, d90 / 10) * barW);
-      doc.roundedRect(barX, ry + 6, fillW, 5, 2.5).fill(SILVER);
-      doc.font(MONO).fontSize(8.5).fillColor(DIM).text(d0.toFixed(1), barRightLabelX, ry + 1, { width: 24, align: 'right', lineBreak: false });
-      arrow(barRightLabelX + 30, ry + 5, 12, FAINT);
-      doc.font(MONO).fontSize(9).fillColor(CREAM).text(d90.toFixed(1), barRightLabelX + 50, ry + 1, { width: 28, align: 'left', lineBreak: false });
-      pillRight('+' + (Number(r.delta) || (d90 - d0)).toFixed(1), gainRightX, ry - 2, false);
-      doc.y = ry + 22;
-      doc.moveTo(M, doc.y).lineTo(M + W, doc.y).lineWidth(0.5).strokeColor(FAINTLINE).stroke();
-      doc.y += 2;
-    });
-    // global score card
-    need(96); doc.y += 14;
-    const gY = doc.y, gH = 80;
-    doc.roundedRect(M, gY, W, gH, 12).fill(CARD);
-    doc.roundedRect(M, gY, W, gH, 12).lineWidth(1).strokeColor(HAIR).stroke();
-    eyebrow('OVERALL PRESENCE READ', M + 24, gY + 18, FAINT, 7.5);
-    const gd0 = num1(proj.globalDay0), gd90 = num1(proj.globalDay90);
-    doc.font(SERIF_BK).fontSize(34).fillColor(CREAM).text(gd0 || '-', M + 24, gY + 30, { lineBreak: false });
-    const gw0 = doc.widthOfString(gd0 || '-');
-    arrow(M + 24 + gw0 + 16, gY + 48, 22, FAINT);
-    doc.font(SERIF_BK).fontSize(34).fillColor(CREAM).text(gd90 || '-', M + 24 + gw0 + 50, gY + 30, { lineBreak: false });
-    if (gd0 && gd90) {
-      pillLeft('+' + (Number(proj.globalDay90) - Number(proj.globalDay0)).toFixed(1) + ' in 90 days', M + W * 0.46, gY + 24, false);
-      doc.font(SANS).fontSize(8.5).fillColor(DIM).text('Fixed structural features are held constant, so the ceiling is realistic, not inflated.', M + W * 0.46, gY + 46, { width: W * 0.54 - 24, lineGap: 1.5 });
+    newPage();
+    sectionHead('04', 'THE HORIZON', 'The 90-Day Horizon',
+      'Executed consistently, here is a realistic picture of what 90 days produces, the qualities that change when these habits compound.');
+    doc.y += 6;
+    const rows = Array.isArray(proj.rows) ? proj.rows : [];
+    if (rows.length) {
+      eyebrow('PROJECTED EVOLUTION · MODELLED 90-DAY OUTCOME', M, doc.y, TAN, 8.5); doc.y += 14;
+      const c3 = M + W - 150, c4 = M + W - 80, c5 = M + W;
+      let hy = doc.y;
+      doc.rect(M, hy, W, 18).fill(IVORY2); doc.rect(M, hy, W, 18).lineWidth(0.7).strokeColor(LINE).stroke();
+      eyebrow('Actionable Focus', M + 10, hy + 5.5, MUTE, 6.5);
+      doc.font(MONO).fontSize(6.5).fillColor(MUTE).text('DAY 0', c3 - 40, hy + 5.5, { width: 36, align: 'right', lineBreak: false });
+      doc.text('DAY 90', c4 - 44, hy + 5.5, { width: 40, align: 'right', lineBreak: false });
+      doc.text('Δ', c5 - 40, hy + 5.5, { width: 36, align: 'right', lineBreak: false });
+      doc.y = hy + 18;
+      rows.forEach((r) => {
+        need(20); const y0 = doc.y;
+        doc.rect(M, y0, W, 19).lineWidth(0.5).strokeColor(LINE).stroke();
+        doc.font(SERIF).fontSize(9.5).fillColor(INK).text(fmt(r.vector), M + 10, y0 + 5.5, { width: W - 240, lineBreak: false });
+        doc.font(MONO).fontSize(9).fillColor(MUTE).text(Number(r.day0).toFixed(1), c3 - 40, y0 + 5.5, { width: 36, align: 'right', lineBreak: false });
+        doc.font(MONO_M).fontSize(9).fillColor(INK).text(Number(r.day90).toFixed(1), c4 - 44, y0 + 5.5, { width: 40, align: 'right', lineBreak: false });
+        doc.font(MONO_M).fontSize(9).fillColor(GREEN).text('+' + Number(r.delta).toFixed(1), c5 - 40, y0 + 5.5, { width: 36, align: 'right', lineBreak: false });
+        doc.y = y0 + 19;
+      });
+      if (proj.globalDay0 != null && proj.globalDay90 != null) {
+        const y0 = doc.y;
+        doc.rect(M, y0, W, 22).fill(IVORY); doc.rect(M, y0, W, 22).lineWidth(0.7).strokeColor(GOLD).stroke();
+        doc.font(SERIF_B).fontSize(10).fillColor(INK).text('Overall Presence Read', M + 10, y0 + 6.5, { lineBreak: false });
+        doc.font(MONO).fontSize(9.5).fillColor(MUTE).text(Number(proj.globalDay0).toFixed(1), c3 - 40, y0 + 6.5, { width: 36, align: 'right', lineBreak: false });
+        doc.font(MONO_M).fontSize(9.5).fillColor(INK).text(Number(proj.globalDay90).toFixed(1), c4 - 44, y0 + 6.5, { width: 40, align: 'right', lineBreak: false });
+        doc.font(MONO_M).fontSize(9.5).fillColor(GREEN).text('+' + (Number(proj.globalDay90) - Number(proj.globalDay0)).toFixed(1), c5 - 40, y0 + 6.5, { width: 36, align: 'right', lineBreak: false });
+        doc.y = y0 + 22;
+      }
+      doc.y += 6;
+      doc.font(SERIF_I).fontSize(8).fillColor(MUTE).text('Projection assumes strict adherence. Fixed structural features are held constant, so the ceiling is realistic, not inflated.', M, doc.y, { width: W, lineGap: 1.5 });
+      doc.y += 12;
     }
-    doc.y = gY + gH + 18;
-    if (proj.narrative) { need(40); doc.font(SERIF_I).fontSize(12).fillColor(SILVER).text(proj.narrative, M, doc.y, { width: W, align: 'center', lineGap: 3 }); }
+    if (proj.narrative) { need(40); doc.font(SERIF_I).fontSize(11).fillColor(INK).text(proj.narrative, M, doc.y, { width: W, align: 'center', lineGap: 3 }); doc.y += 10; }
   }
 
-  // ════════════════════ THE PROGRAMME ════════════════════
-  startSection(260);
-  sectionHead('06', 'THE PROGRAMME', 'How This Continues',
-    'This blueprint is your baseline, a single photograph in time. The programme keeps reading you, day by day, so the work shows up in numbers you can watch.');
-  doc.y += 8;
-  // four feature cards (real product features — short factual labels)
-  const feats = [
-    ['DAILY', 'The Daily Mirror', 'A ten-second morning scan. A fresh Sharpness Score, today against yesterday.'],
-    ['DAILY', 'One Action', 'A single task aimed at your weakest signal that day. Never a verdict, always a fix.'],
-    ['WEEKLY', 'The Trajectory', 'The slow metrics re-scored each week and projected forward, to a date you can see.'],
-    ['DAY 30', 'The Re-Audit', 'A full re-read against this baseline. The measured change, on your own face.'],
-  ];
-  const fg = 12, fcW = (W - fg * 3) / 4, fcH = 116, fcY = doc.y;
-  feats.forEach((f, i) => {
-    const fx = M + (fcW + fg) * i;
-    doc.roundedRect(fx, fcY, fcW, fcH, 10).fill(CARD);
-    doc.roundedRect(fx, fcY, fcW, fcH, 10).lineWidth(1).strokeColor(HAIR).stroke();
-    eyebrow(f[0], fx + 13, fcY + 14, FAINT, 6.5);
-    doc.font(SERIF).fontSize(12.5).fillColor(CREAM).text(f[1], fx + 13, fcY + 25, { width: fcW - 26 });
-    doc.font(SANS).fontSize(8).fillColor(DIM).text(f[2], fx + 13, doc.y + 5, { width: fcW - 26, lineGap: 1.6 });
-  });
-  doc.y = fcY + fcH + 16;
-
-  // method & honest limitations (from the report's own methodology when present)
+  // ════════════════ CLINICAL DISCLAIMER ════════════════
   if (report.methodology) {
-    need(96);
-    const mY = doc.y, mH = Math.min(150, 44 + doc.heightOfString(report.methodology, { width: W - 48, lineGap: 2 }));
-    doc.roundedRect(M, mY, W, mH, 10).fill(CARD);
-    doc.roundedRect(M, mY, W, mH, 10).lineWidth(1).strokeColor(HAIR).stroke();
-    eyebrow('METHOD & HONEST LIMITATIONS', M + 24, mY + 16, FAINT, 7);
-    doc.font(SANS).fontSize(8.5).fillColor(DIM).text(report.methodology, M + 24, mY + 32, { width: W - 48, lineGap: 2 });
-    doc.y = mY + mH + 10;
+    need(70); doc.y += 6;
+    eyebrow('CLINICAL DISCLAIMER', M, doc.y, MUTE, 8); doc.y += 12;
+    doc.font(SERIF).fontSize(8).fillColor(MUTE).text(report.methodology, M, doc.y, { width: W, lineGap: 2 });
+    doc.y += 4;
   }
 
-  // ════════════════════ FOOTERS (every page) ════════════════════
+  // ════════════════ FOOTERS ════════════════
   const range = doc.bufferedPageRange();
   for (let i = 0; i < range.count; i++) {
     doc.switchToPage(range.start + i);
-    // Writing into the bottom margin band would otherwise make pdfkit auto-add a
-    // blank page per iteration — zero the bottom margin while we draw the footer.
     const bm = doc.page.margins.bottom; doc.page.margins.bottom = 0;
-    const fy = PH - 32;
-    doc.moveTo(M, fy - 8).lineTo(M + W, fy - 8).lineWidth(0.5).strokeColor(FAINTLINE).stroke();
-    doc.font(SANS).fontSize(7).fillColor(FAINT)
-       .text('THE PRESENCE DOSSIER', M, fy, { width: W * 0.7, characterSpacing: 1.2, lineBreak: false });
-    doc.font(SANS).fontSize(7).fillColor(FAINT)
-       .text(`MAINCHARACTER  ·  ${String(i + 1).padStart(2, '0')}`, M, fy, { width: W, align: 'right', characterSpacing: 1.2, lineBreak: false });
+    const fy = PH - 30;
+    doc.moveTo(M, fy - 8).lineTo(M + W, fy - 8).lineWidth(0.6).strokeColor(LINE).stroke();
+    doc.font(MONO).fontSize(7).fillColor(MUTE).text('THE PRESENCE DOSSIER', M, fy, { width: W * 0.7, characterSpacing: 1.2, lineBreak: false });
+    doc.font(MONO).fontSize(7).fillColor(MUTE).text('MAINCHARACTER  ·  ' + String(i + 1).padStart(2, '0'), M, fy, { width: W, align: 'right', characterSpacing: 1.2, lineBreak: false });
     doc.page.margins.bottom = bm;
   }
 }

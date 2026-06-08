@@ -58,10 +58,34 @@
       .lm-skeleton { animation: none; background: var(--mc-silver-ghost); }
     }
 
-    /* ── Score block ── */
+    /* ── Score block — the single hero, framed as a dossier cover ── */
     .lm-score-block {
+      position: relative;
+      isolation: isolate;
       text-align: center;
+      padding: var(--mc-sp-7) 0 0;
       margin-bottom: var(--mc-sp-6);
+    }
+    .lm-score-block::before {
+      content: '';
+      position: absolute;
+      width: 300px; height: 300px;
+      left: 50%; top: 46%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, var(--mc-light-point-glow-soft) 0%, transparent 62%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .lm-score-block > * { position: relative; z-index: 1; }
+    /* closing hairline that turns the floating score into the cover of a document */
+    .lm-score-block::after {
+      content: '';
+      display: block;
+      height: 1px;
+      background: var(--mc-line);
+      max-width: var(--mc-content-max, 720px);
+      margin: var(--mc-sp-6) auto 0;
+      z-index: 1; position: relative;
     }
     .lm-score-eyebrow { margin: 0 0 var(--mc-sp-4); }
 
@@ -160,7 +184,13 @@
       display: flex;
       align-items: center;
       gap: var(--mc-sp-3);
-      margin: var(--mc-sp-6) 0 var(--mc-sp-4);
+      margin: var(--mc-sp-7) 0 var(--mc-sp-4);
+    }
+    .lm-section-label__index {
+      font-family: var(--mc-font-mono);
+      font-size: var(--mc-fs-eyebrow);
+      letter-spacing: var(--mc-ls-wide);
+      color: var(--mc-silver-faint);
     }
     .lm-section-label__text {
       font-family: var(--mc-font-mono);
@@ -171,6 +201,18 @@
       white-space: nowrap;
     }
     .lm-section-label__line { flex: 1; height: 1px; background: var(--mc-line); }
+
+    /* ── Reading-page tuning of the shared premium-blur gate (tokens.css untouched) ── */
+    body.lookmaxing .mc-blur-gate { filter: blur(5px) saturate(0.85); }
+    body.lookmaxing .mc-blur-wrap:hover,
+    body.lookmaxing .mc-blur-wrap:focus-within { box-shadow: 0 0 26px var(--mc-light-point-glow-soft); }
+    .lm-lock-tag {
+      position: absolute; top: var(--mc-sp-3); right: var(--mc-sp-3); z-index: 3;
+      font-family: var(--mc-font-mono); font-size: 10px; letter-spacing: var(--mc-ls-wide);
+      text-transform: uppercase; color: var(--mc-silver-dim);
+      display: inline-flex; align-items: center; gap: var(--mc-sp-2); pointer-events: none;
+    }
+    .lm-lock-tag::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--mc-silver-faint); }
 
     /* ── First impression ── */
     .lm-impression {
@@ -212,8 +254,8 @@
     }
     .lm-signal-sep { color: var(--mc-silver-faint); }
 
-    /* ── Blur wrappers ── */
-    .lm-blur-block { margin-bottom: var(--mc-sp-5); }
+    /* ── Blur wrappers (chapters 02-05 of the locked volume — wide chapter rhythm) ── */
+    .lm-blur-block { margin-bottom: var(--mc-sp-7); }
     .lm-blur-block__header {
       font-family: var(--mc-font-mono);
       font-size: var(--mc-fs-eyebrow);
@@ -245,7 +287,10 @@
     /* ── Paywall gate CTA (centred over first blurred block) ── */
     .lm-gate-teaser {
       text-align: center;
-      margin: var(--mc-sp-6) 0 var(--mc-sp-4);
+      border-top: 1px solid var(--mc-line-strong);
+      border-bottom: 1px solid var(--mc-line-strong);
+      padding: var(--mc-sp-6) 0;
+      margin: var(--mc-sp-7) 0;
     }
     .lm-gate-teaser__line {
       font-size: var(--mc-fs-small);
@@ -520,6 +565,7 @@
       data-event="lookmaxing_paywall_blurred_metric_tapped"
       data-event-props='{"block":"decomposition"}'
     >
+      <div class="lm-lock-tag" aria-hidden="true">Locked</div>
       <div class="mc-blur-gate" aria-hidden="true" id="decomposition-content">
         <!-- Populated by JS -->
       </div>
@@ -537,6 +583,7 @@
       data-event="lookmaxing_paywall_blurred_metric_tapped"
       data-event-props='{"block":"biggestLever"}'
     >
+      <div class="lm-lock-tag" aria-hidden="true">Locked</div>
       <div class="mc-blur-gate" aria-hidden="true" id="biggest-lever-content">
         <!-- Populated by JS -->
       </div>
@@ -554,6 +601,7 @@
       data-event="lookmaxing_paywall_blurred_metric_tapped"
       data-event-props='{"block":"quests"}'
     >
+      <div class="lm-lock-tag" aria-hidden="true">Locked</div>
       <div class="mc-blur-gate" aria-hidden="true" id="quests-content">
         <!-- Populated by JS -->
       </div>
@@ -571,6 +619,7 @@
       data-event="lookmaxing_paywall_blurred_metric_tapped"
       data-event-props='{"block":"styleColour"}'
     >
+      <div class="lm-lock-tag" aria-hidden="true">Locked</div>
       <div class="mc-blur-gate" aria-hidden="true" id="style-content">
         <!-- Populated by JS -->
       </div>
@@ -588,6 +637,7 @@
       data-event="lookmaxing_paywall_blurred_metric_tapped"
       data-event-props='{"block":"starterPlan"}'
     >
+      <div class="lm-lock-tag" aria-hidden="true">Locked</div>
       <div class="mc-blur-gate" aria-hidden="true" id="plan-content">
         <!-- Populated by JS -->
       </div>

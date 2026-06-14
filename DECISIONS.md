@@ -1336,3 +1336,26 @@ Added a visible "Questions" FAQ section to `landing.html` (10 looksmaxxing/aura-
 Other decisions: `sameAs` social URLs omitted (no real handles — placeholders would be worse than none); `Organization.logo` → real `/maincharacter-mark-3d.png`; no `aggregateRating` (no verified reviews); em-dashes normalized to colons/commas, matching the founder's earlier "remove em dashes" preference for Lookmaxxing surfaces. Visible answer text is kept **byte-identical** to the FAQPage schema (Google rich-result requirement) and locked by `tests/landing-faq-schema.test.js` (9 tests, incl. claim-accuracy regression guards).
 
 Verified: new guard 9/9, landing locked-copy 22/22, full suite **1552 passed**, `npm run smoke` 44/44; all 4 JSON-LD blocks parse off the served page, ₹ intact. **Held on branch — NOT merged to main; awaiting founder approval (user-facing copy + live deploy checkpoints).**
+
+---
+
+## 2026-06-14 — On-page + technical SEO (branch `seo/onpage-technical`)
+
+Implemented `maincharacter-seo-technical.md` §1–6 across the 5 public pages (`/`, `/lookmaxing/`, `/lookmaxing/start`, `/privacy`, `/terms`): per-page title tags, meta descriptions, self-referencing canonicals, Open Graph + Twitter cards, image alt text, and `noindex` on the sign-in page only. Guarded by `tests/seo.test.js` (32 tests).
+
+**Corrections made vs the doc (verified against the live product / code):**
+- **`/lookmaxxing` (two x) → `/lookmaxing` (one x) in every URL.** The doc spelled the path with two x's; the live route is one-x (`server.js`). Two-x canonicals/sitemap/robots would 404. The two-x "Looksmaxxing" spelling is kept only as the visible SEO *keyword*, never in a URL. (A test asserts no page emits a two-x URL.)
+- **"7-day glow up protocol" → "daily glow up protocol"** in the homepage meta + OG/Twitter descriptions — same overstatement corrected in the FAQ (the 7-day protocol is Orator, coming soon; the live Lookmaxxing product is the daily mirror protocol + monthly re-audit).
+- **Reading-page canonical/og:url + sitemap entry → `/lookmaxing/` (trailing slash).** `GET /lookmaxing` 301-redirects to `/lookmaxing/` (pre-existing `express.static` directory behavior); the canonical must point at the 200 URL, not the redirect.
+
+**§2 H1s (founder decision):** homepage H1 left **locked** (`Become the Main Character`, untouched). Reading-page H1 extended in The Consultant's voice — kept the iconic *"Before you open your mouth, you have already been read."* and appended *"This is your aura reading."* (adds the keyword without hype). The doc's hyped keyword-stuffed H1s were NOT applied. Did **not** fabricate body copy for the doc's extra section H2s (rule 5) — keyword coverage rides in the title tags, the "Get Your Aura Reading" CTA, and the FAQ. FAQ H2 renamed to `Looksmaxxing & Aura Reading — FAQ`.
+
+**§4–5 robots/sitemap:** pre-existing static `public/robots.txt` + `public/sitemap.xml` already exist and are richer than the doc (admin/api disallows; tools/face/studio + tool-slug URLs). Rather than regress them with the doc's 4-URL version (the doc said "framework-native *if needed*" — not needed), edited the static files: added `Disallow: /lookmaxing/start` to robots; sitemap already excluded the noindex page. Removed the dead Express route + `lib/seo-routes.js` I'd briefly added (static wins over it).
+
+**§6 images:** the only `<img>` on these pages are brand marks → `alt="MainCharacter logo"`. The doc's aura-score / before-after alt guidance is N/A here (those images live on tool/report pages, out of scope).
+
+**og-image:** the doc references `/og-image.png` which did not exist → generated a real 1200×630 `public/og-image.png` (brand mark centred on obsidian via `sips`). A designed version with the tagline can replace it later (one-line URL swap).
+
+**§7 Core Web Vitals:** advisory checklist; key text (H1/intro/FAQ) is already in server-rendered HTML, and the only images are above-the-fold marks (correctly NOT lazy-loaded). No code change; the rest (WebP/AVIF, defer JS) is a founder follow-up.
+
+Verified: `tests/seo.test.js` 32/32, landing + frontend guards green, full suite **1584 passed**, `npm run smoke` 44/44; live local check confirms correct canonicals (one-x, 200 URL), `noindex` on start only, robots disallow, sitemap intact (15 URLs), og-image 200, zero two-x URLs served. **Held on branch — NOT merged to main; awaiting founder approval.** Follow-up for founder: add designed `og-image.png` + `sameAs` socials; Search Console sitemap resubmit after deploy.

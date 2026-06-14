@@ -164,6 +164,10 @@ function servePage(res, absPath) {
 // tags (versioned) are injected into every page; this only covers bare probes.
 app.get('/favicon.ico', (req, res) => res.redirect(302, '/favicon-32.png?v=5'));
 
+// robots.txt + sitemap.xml are static files in /public (served by express.static
+// above). The sign-in page (/lookmaxing/start) is noindex; it is Disallowed in
+// robots.txt and intentionally absent from sitemap.xml.
+
 // Homepage
 app.get('/', (req, res) => {
   servePage(res, path.join(__dirname, 'landing.html'));

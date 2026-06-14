@@ -8,5 +8,6 @@ Disallow: /dashboard/
 Disallow: /payment-confirmed
 Disallow: /uploads/
 Disallow: /api/
+Disallow: /lookmaxing/start
 
 Sitemap: https://maincharacter.digitglobalservices.com/sitemap.xml

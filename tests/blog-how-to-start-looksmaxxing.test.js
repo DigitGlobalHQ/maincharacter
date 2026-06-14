@@ -118,4 +118,8 @@ describe('blog/how-to-start-looksmaxxing — sitemap + routing', () => {
     const server = readFileSync(join(root, 'server.js'), 'utf8');
     expect(server).toMatch(/app\.get\('\/blog\/:slug'/);
   });
+  it('is discoverable from the homepage footer (not an orphan)', () => {
+    const home = readFileSync(join(root, 'landing.html'), 'utf8');
+    expect(home).toMatch(/<a href="\/blog\/how-to-start-looksmaxxing">[^<]+<\/a>/);
+  });
 });

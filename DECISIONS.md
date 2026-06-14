@@ -1393,3 +1393,11 @@ First pillar blog post, targeting the keyword **"how to start looksmaxxing."** E
 Guarded by `tests/blog-how-to-start-looksmaxxing.test.js` (17 tests: word count, single keyworded H1, keyword placement + anti-stuffing cap, topic coverage, mewing accuracy, no-exclamation voice check, internal links, JSON-LD fields, sitemap lastmod, route presence). Full suite **1601 passed**, `npm run smoke` 44/44; live check: route 200, bad slug 302→`/`, JSON-LD parses off the served page, both internal-link targets 200.
 
 **Branch note:** branched off `main`, so it does NOT include the still-pending `seo/completeness-pass` branch. Both branches edit `sitemap.xml` (completeness changes the tools-hub line to a trailing slash; this adds the blog line) — different lines, but if completeness-pass merges first, re-verify the sitemap on merge. **Held on branch — NOT merged to main; awaiting founder approval.**
+
+---
+
+## 2026-06-14 — Blog discoverability: homepage footer link (branch `seo/blog-homepage-link`)
+
+The blog post shipped with a route + sitemap entry but **no on-site link**, so it was a visitor-orphan (reachable only by direct URL / sitemap). Founder flagged it. Added a **"Field Notes"** link to the homepage footer (`landing.html`, first in `footer__links`, before Privacy/Terms/Contact) → `/blog/how-to-start-looksmaxxing`. Label chosen to match the post's own section eyebrow (◆ MainCharacter · Field Notes); founder-selected over "Blog"/nav placement. With one post it links straight to the post; it becomes the `/blog` index once there are 2+ posts.
+
+Guarded by an added assertion in `tests/blog-how-to-start-looksmaxxing.test.js` (now 18 tests: homepage must link to the post — anti-orphan regression guard). Full suite **1609 passed**, `npm run smoke` 44/44; live local check confirms the footer link serves and resolves (200). **Held on branch — NOT merged to main; awaiting founder approval.**

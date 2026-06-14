@@ -320,8 +320,11 @@
   </style>
 <style>.lm-nav__brand{display:inline-flex;align-items:center;gap:8px;min-width:0;}.lm-nav__wordmark{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.lm-nav__logo{width:24px;height:24px;flex-shrink:0;object-fit:contain;}.lm-quiz-nav__brand{display:inline-flex;align-items:center;}#lm-nav-auth{white-space:nowrap;flex-shrink:0;}</style>
   <style id="mc-footer-fix">.lm-footer p{display:flex;justify-content:center;align-items:center;gap:5px;margin:0;}.lm-footer img.mc-ico{height:.95em;}</style>
+  <style>/* Starfield layer — behind all content, theme-aware via --mc-* tokens. */
+  #mc-starfield{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}</style>
 </head>
 <body class="lookmaxing">
+<canvas id="mc-starfield" aria-hidden="true"></canvas>
 
 <!-- ── Navigation ── -->
 <nav class="lm-nav" aria-label="Main navigation">
@@ -550,6 +553,56 @@
 </div>
 
 <script src="/track.js" defer></script>
+<!-- 3D star-travel starfield, recoloured to the lookmaxing silver palette. -->
+<script>
+(function () {
+  window.addEventListener('load', function () {
+    var c = document.getElementById('mc-starfield'); if (!c) return;
+    var ctx = c.getContext('2d'); if (!ctx) return;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var W = 0, H = 0, cx = 0, cy = 0, focal = 0, MAXZ = 1150, stars = [];
+    function tok(n, f) { var v = getComputedStyle(document.documentElement).getPropertyValue(n).trim(); return v || f; }
+    var BRIGHT = tok('--mc-silver-bright', '#e8e8e8'), DIM = tok('--mc-silver-mid', '#c0c0c0');
+    new MutationObserver(function () { BRIGHT = tok('--mc-silver-bright', '#e8e8e8'); DIM = tok('--mc-silver-mid', '#c0c0c0'); })
+      .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    function rnd(a, b) { return a + Math.random() * (b - a); }
+    function spawn(s) { s.x = rnd(-W, W); s.y = rnd(-H, H); s.z = rnd(1, MAXZ); s.pz = s.z; s.dim = Math.random() < 0.4; }
+    function build() {
+      W = window.innerWidth; H = window.innerHeight; cx = W / 2; cy = H / 2; focal = Math.max(W, H) * 0.5;
+      c.width = W * dpr; c.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      var n = Math.round(Math.min(540, W * H / 3600));
+      stars = []; for (var i = 0; i < n; i++) { var s = {}; spawn(s); stars.push(s); }
+    }
+    var mx = 0, my = 0, tmx = 0, tmy = 0;
+    window.addEventListener('mousemove', function (e) { tmx = e.clientX / W - 0.5; tmy = e.clientY / H - 0.5; }, { passive: true });
+    var SPEED = 2.0;
+    function paint() {
+      mx += (tmx - mx) * 0.04; my += (tmy - my) * 0.04;
+      var ox = cx + mx * 75, oy = cy + my * 75;
+      ctx.clearRect(0, 0, W, H);
+      for (var i = 0; i < stars.length; i++) {
+        var s = stars[i];
+        if (!reduce) { s.pz = s.z; s.z -= SPEED; if (s.z < 1) { spawn(s); } }
+        var k = focal / s.z, sx = ox + s.x * k, sy = oy + s.y * k;
+        if (sx < -30 || sx > W + 30 || sy < -30 || sy > H + 30) continue;
+        var depth = 1 - s.z / MAXZ, size = depth * 2.7 + 0.4, alpha = Math.min(1, 0.12 + depth * 0.95);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = s.dim ? DIM : BRIGHT;
+        ctx.fillRect(sx - size / 2, sy - size / 2, size, size);
+      }
+      ctx.globalAlpha = 1;
+    }
+    var run = true, raf = null;
+    function frame() { if (!run) { raf = null; return; } paint(); raf = requestAnimationFrame(frame); }
+    function start() { if (!raf) raf = requestAnimationFrame(frame); }
+    function stop() { if (raf) { cancelAnimationFrame(raf); raf = null; } }
+    build();
+    window.addEventListener('resize', function () { build(); if (reduce) paint(); }, { passive: true });
+    if (reduce) { paint(); } else { document.addEventListener('visibilitychange', function () { run = !document.hidden; if (run) start(); else stop(); }); start(); }
+  });
+})();
+</script>
 <script>
 (function () {
   'use strict';

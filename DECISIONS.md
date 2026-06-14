@@ -1310,3 +1310,15 @@ opt-in (toggle + follows device on first visit, persisted).
   decide the continuation-pricing copy before it's added (orchestrator checkpoint #7).
 - **Tests:** tests/lookmaxing-pdf.test.js +3 (blueprint multi-page render asserting %PDF +
   page-tree /Count ≥ 7; cover-photo embed; legacy path still renders). Suite 1543 pass; smoke 44/44.
+
+---
+
+## 2026-06-14 — Hero atmosphere: 3D starfield + volumetric light beam (live)
+
+Founder-directed, reference images provided. Purely additive atmosphere on the existing silver/obsidian theme — no copy, route, CTA, or flow changes.
+
+- **Starfield** (`/` landing.html + `/lookmaxing/` index.html): a 3D star-travel field — 2D canvas, perspective-projected stars drifting toward the viewer, mouse-parallax depth, recoloured to the site palette via tokens (silver in dark / graphite in light), `prefers-reduced-motion` static, pauses when the tab is hidden. Fixed `#mc-starfield` canvas at `z-index:-1` behind all content. (Motion-streak trails were removed — they drew stray full-width lines.)
+- **Light beam** (`/`): a white volumetric god-ray shaft (CSS conic-gradients + core glow, gentle breathing) descending over the M monogram and the headline. `.hero__beam`.
+- **Section dividers removed** (`/`): `.gap` / `.paywall` / `.cta-close` / `.footer` border hairlines set transparent, and `.paywall` / `.cta-close` backgrounds made transparent, so the starfield shows uniformly across the page.
+
+Verified: landing locked-copy guard 22/22, theme-head 5/5, full suite + `npm run smoke` green before merge. Server caches page HTML in memory — restart `node server.js` after editing any served HTML (cost real debugging time this session).

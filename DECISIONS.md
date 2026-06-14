@@ -1376,3 +1376,20 @@ Audited the live pages after the on-page/technical SEO deploy. Two issues found 
 - Self-audit: all 5 canonicals return **200** (none point at a 301); no two-x `/lookmaxxing` URL in any href/link context (the only two-x strings are the visible brand name "Lookmaxxing", correct); no indexable page carries a stray `noindex` (only `/lookmaxing/start` is noindex, as intended).
 
 Guarded by `tests/seo.test.js` (now 39 tests: + internal-linking, sitemap-200-only, and server-rendered-text checks). Full suite **1591 passed**, `npm run smoke` 44/44; live local re-verify of both fixes green. **Held on branch — NOT merged to main; awaiting founder approval.**
+
+---
+
+## 2026-06-14 — First SEO blog post: "How to Start Looksmaxxing" (branch `seo/blog-how-to-start-looksmaxxing`)
+
+First pillar blog post, targeting the keyword **"how to start looksmaxxing."** Establishes the blog pattern: standalone static HTML in `public/blog/<slug>.html`, served at the clean URL `/blog/<slug>` via a new `app.get('/blog/:slug', …)` route (mirrors the tools-slug pattern; slug-validated, 404→`/`). A `/blog` index page is deferred until there are 2+ posts (founder agreed).
+
+- **Post:** `public/blog/how-to-start-looksmaxxing.html` at `/blog/how-to-start-looksmaxxing` (clean URL, returns **200** directly — no static mount at `/blog`, so no trailing-slash 301). ~1,340 words, The Consultant's voice (no hype, no exclamation marks), modelled on the `privacy.html` content-page theme.
+- **On-page SEO:** keyword in H1 (single H1), `<title>`, meta description, slug, and naturally through the body (3 exact uses; 7 "looksmaxxing" mentions — not stuffed). Covers what looksmaxxing is, softmaxxing vs hardmaxxing, the five fundamentals (skincare/grooming/fitness/posture/style), the quiet multipliers (sleep/food/daylight), realistic timelines, and what to avoid.
+- **Accuracy:** mewing explicitly flagged as having "no strong scientific evidence" of reshaping an adult jaw; no overpromising; no fabricated stats or reviews.
+- **Structured data:** `BlogPosting` JSON-LD with `datePublished` + `dateModified` (2026-06-14), `image` (reuses `/og-image.png`), author = Person "The Consultant", publisher = Organization "MainCharacter", `mainEntityOfPage`. Self-canonical + OG (`og:type article`) + Twitter tags.
+- **Internal links (descriptive anchors):** homepage via "become the main character" → `/`; aura reading page via "get your free aura reading" → `/lookmaxing/` (the 200 URL).
+- **Sitemap:** added with a real `<lastmod>2026-06-14</lastmod>`.
+
+Guarded by `tests/blog-how-to-start-looksmaxxing.test.js` (17 tests: word count, single keyworded H1, keyword placement + anti-stuffing cap, topic coverage, mewing accuracy, no-exclamation voice check, internal links, JSON-LD fields, sitemap lastmod, route presence). Full suite **1601 passed**, `npm run smoke` 44/44; live check: route 200, bad slug 302→`/`, JSON-LD parses off the served page, both internal-link targets 200.
+
+**Branch note:** branched off `main`, so it does NOT include the still-pending `seo/completeness-pass` branch. Both branches edit `sitemap.xml` (completeness changes the tools-hub line to a trailing slash; this adds the blog line) — different lines, but if completeness-pass merges first, re-verify the sitemap on merge. **Held on branch — NOT merged to main; awaiting founder approval.**

@@ -173,6 +173,17 @@ app.get('/', (req, res) => {
   servePage(res, path.join(__dirname, 'landing.html'));
 });
 
+// Blog — SEO pillar posts. Standalone static HTML in public/blog/<slug>.html,
+// served at the clean URL /blog/<slug>. Mirrors the tools-slug pattern. A /blog
+// index page is intentionally deferred until there are 2+ posts.
+const _blogDir = path.join(__dirname, 'public', 'blog');
+app.get('/blog/:slug', (req, res) => {
+  if (!/^[a-z0-9-]{2,80}$/.test(req.params.slug)) return res.redirect(302, '/');
+  const f = path.join(_blogDir, req.params.slug + '.html');
+  if (!fs.existsSync(f)) return res.redirect(302, '/');
+  return servePage(res, f);
+});
+
 // Free Trial Enrollment — cordoned off (stage-1-audit-spec.md §1, Wave 2C)
 // Orator is "Coming Soon" pending Meta WhatsApp Cloud API setup.
 // public/start.html is preserved on disk so Orator can be relaunched later.

@@ -1415,3 +1415,20 @@ GSC live test (Googlebot smartphone, ~22:44 IST) reported `/lookmaxing/` "blocke
 **Fix (defensive, unambiguous):** added an explicit `Allow: /lookmaxing/` (plus the existing `Allow: /`). By Google's longest-match, the reading page and its sub-paths (tools, etc.) are now explicitly crawlable, `/lookmaxing/start` stays blocked (its rule is longer/more specific), and the `/lookmax/` PWA app stays blocked. All intended blocks (`/admin`, `/dashboard/`, `/payment-confirmed`, `/uploads/`, `/api/`, `/lookmaxing/start`) kept.
 
 Guarded by `tests/robots-crawlability.test.js` (10 tests) — a Google-style longest-match evaluator over the real file: ALLOW `/`, `/lookmaxing/`, `/lookmaxing/tools/`; DISALLOW `/lookmaxing/start`, `/lookmax/`, and the private surfaces. Full suite **1619 passed**, `npm run smoke` 44/44. **Held on branch — NOT merged to main; awaiting founder approval.** After merge/deploy: in GSC, re-run the live test / use "Validate Fix" so Google refetches robots.txt.
+
+---
+
+## 2026-06-14 — Updated Terms of Use + new Refund & Cancellation Policy (branch `legal/terms-refunds`)
+
+Founder supplied two legal drafts (`MainCharacter_Terms_of_Use.md`, `MainCharacter_Refund_and_Cancellation_Policy.md`) and asked to publish them with **existing live pricing**. Built both as themed pages (matching the privacy/terms content-page template).
+
+- **Terms** (`public/terms.html`): replaced the old short 10-section terms with the new 19-section version (medical disclaimer, assumption of risk, no-guarantee, subscriptions, IP, indemnity, liability, third-parties, termination, responsible-use, governing law). Kept the existing SEO head.
+- **Refunds** (`public/refunds.html`, NEW): served at **`/refunds`** (new route in `server.js`); the Terms link to it. Added to `sitemap.xml` and the homepage footer ("Refunds").
+
+**Pricing reconciled to the live model (founder: "keep pricing same as before"):** the drafts' placeholder `₹599/month` / `₹4,999/year` / paid one-time `₹99` audit were replaced with the truth — **the aura reading is free; the paid plan is ₹99/month, recurring via Razorpay, cancel anytime**. No annual plan, no paid audit. Trials referenced generally ("shown before you start").
+
+**Legal placeholders — no fabrication.** The drafts' `[registered address]`, jurisdiction `[city]`, Grievance Officer `[name/email/address]`, liability cap `₹[amount]`, and the optional arbitration clause were NOT invented. I followed the **existing live site's general approach** (which already omitted these): "operated by Digit Global Services, India", "governed by the laws of India", complaints via `consultant@…`, and a self-contained 12-month liability cap (dropped the blank "or ₹X"). The "DRAFT FOR LEGAL REVIEW" banners were removed per the founder's decision to publish.
+
+> **Open for founder/counsel:** these remain coaching-grade drafts. Before relying on them, a lawyer should confirm the liability cap, add a named Grievance Officer + registered address (DPDPA), and set the jurisdiction city / arbitration wording. Pricing reflects today's live ₹99/mo model — revisit when Orator (₹799) launches or annual plans are added.
+
+Guarded by `tests/legal-pages.test.js` (19 tests: no `[bracketed]` placeholders or DRAFT banner in source, pricing reconciled (₹99/mo, free reading, no ₹599/₹4,999/paid-audit), key clauses present, cross-links, `/refunds` canonical/OG/route/sitemap, homepage footer link). Full suite **1638 passed**, `npm run smoke` 44/44; live local check: `/refunds` + `/terms` 200, correct pricing served, no placeholders in source. **Held on branch — NOT merged to main; awaiting founder go.**

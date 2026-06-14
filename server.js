@@ -238,6 +238,9 @@ app.get('/terms', (req, res) => {
 app.get('/privacy', (req, res) => {
   servePage(res, path.join(__dirname, 'public', 'privacy.html'));
 });
+app.get('/refunds', (req, res) => {
+  servePage(res, path.join(__dirname, 'public', 'refunds.html'));
+});
 
 // Audit result magic-link target (audit-confirmation email). Serves the audit
 // SPA; deep result rehydration from the link is a V4 item (BACKLOG).

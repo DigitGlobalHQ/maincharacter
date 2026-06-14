@@ -125,3 +125,45 @@ describe('SEO — brand mark alt text', () => {
     expect(read(PAGES.reading.file)).toContain('class="lm-nav__logo" src="/maincharacter-mark-3d.png" alt="MainCharacter logo"');
   });
 });
+
+describe('SEO — internal linking (no orphans)', () => {
+  it('homepage links to the reading page with a descriptive keyword anchor', () => {
+    const home = read(PAGES.home.file);
+    // hero CTA: <a href="/lookmaxing" ...>Get Your Aura Reading →</a>
+    expect(home).toMatch(/href="\/lookmaxing"[^>]*>Get Your Aura Reading/);
+  });
+  it('reading page links back to the homepage (crawlable backlink)', () => {
+    expect(read(PAGES.reading.file)).toMatch(/<a href="\/">/);
+  });
+  it('Privacy and Terms are reachable from the homepage footer', () => {
+    const home = read(PAGES.home.file);
+    expect(home).toContain('href="/privacy"');
+    expect(home).toContain('href="/terms"');
+  });
+  it('Privacy and Terms are reachable from the reading-page footer', () => {
+    const reading = read(PAGES.reading.file);
+    expect(reading).toContain('href="/privacy"');
+    expect(reading).toContain('href="/terms"');
+  });
+});
+
+describe('SEO — sitemap lists 200 URLs only (no 301 trailing-slash forms)', () => {
+  const xml = read('public/sitemap.xml');
+  it('uses the 200 trailing-slash form for the tools hub', () => {
+    expect(xml).toContain(`<loc>${BASE}/lookmaxing/tools/</loc>`);
+    // the bare /lookmaxing/tools (no slash) 301-redirects — must not be listed
+    expect(xml).not.toContain(`<loc>${BASE}/lookmaxing/tools</loc>`);
+  });
+});
+
+describe('SEO — key text is in server-rendered HTML (crawlable without JS)', () => {
+  it('homepage H1, intro and FAQ are static in the file', () => {
+    const home = read(PAGES.home.file);
+    expect(home).toContain('<h1 class="hero__headline">Become the Main Character</h1>');
+    expect(home).toContain('You already know who you want to be');
+    expect(home).toContain('What is looksmaxxing?');
+  });
+  it('reading H1 is static in the file', () => {
+    expect(read(PAGES.reading.file)).toContain('you have already been read. This is your aura reading.');
+  });
+});

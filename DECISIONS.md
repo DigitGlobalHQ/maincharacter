@@ -1359,3 +1359,20 @@ Implemented `maincharacter-seo-technical.md` §1–6 across the 5 public pages (
 **§7 Core Web Vitals:** advisory checklist; key text (H1/intro/FAQ) is already in server-rendered HTML, and the only images are above-the-fold marks (correctly NOT lazy-loaded). No code change; the rest (WebP/AVIF, defer JS) is a founder follow-up.
 
 Verified: `tests/seo.test.js` 32/32, landing + frontend guards green, full suite **1584 passed**, `npm run smoke` 44/44; live local check confirms correct canonicals (one-x, 200 URL), `noindex` on start only, robots disallow, sitemap intact (15 URLs), og-image 200, zero two-x URLs served. **Held on branch — NOT merged to main; awaiting founder approval.** Follow-up for founder: add designed `og-image.png` + `sameAs` socials; Search Console sitemap resubmit after deploy.
+
+---
+
+## 2026-06-14 — SEO completeness pass (branch `seo/completeness-pass`)
+
+Audited the live pages after the on-page/technical SEO deploy. Two issues found and fixed; everything else passed.
+
+**Found & fixed:**
+- **Reading page had no link back to the homepage** (its nav brand links to `/lookmaxing`, i.e. itself; zero `href="/"` on the page) → made the existing footer brand line a homepage link: `<a href="/">◆ MainCharacter</a> · The Consultant`. Crawlable, on-voice, reuses existing text (no fabricated copy). Resolves the homepage's missing internal inbound link / orphan risk.
+- **Sitemap listed `/lookmaxing/tools` which 301-redirects** to `/lookmaxing/tools/` → changed the sitemap entry to the 200 trailing-slash form. (All other 14 sitemap URLs already return 200.)
+
+**Audited, no change needed:**
+- Internal linking: homepage → reading uses descriptive keyword anchors ("Get Your Aura Reading →", "Get Your Reading →"). Privacy + Terms reachable via crawlable footer links on both the homepage and the reading page.
+- Crawlability: homepage H1, gap intro, and FAQ (question + answer) and the reading-page H1 are all present in the raw server-rendered HTML (confirmed via `curl` with no JS) — nothing critical is client-only.
+- Self-audit: all 5 canonicals return **200** (none point at a 301); no two-x `/lookmaxxing` URL in any href/link context (the only two-x strings are the visible brand name "Lookmaxxing", correct); no indexable page carries a stray `noindex` (only `/lookmaxing/start` is noindex, as intended).
+
+Guarded by `tests/seo.test.js` (now 39 tests: + internal-linking, sitemap-200-only, and server-rendered-text checks). Full suite **1591 passed**, `npm run smoke` 44/44; live local re-verify of both fixes green. **Held on branch — NOT merged to main; awaiting founder approval.**

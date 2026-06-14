@@ -127,6 +127,11 @@ describe('Surface 1 — index.html', () => {
     expect(SURFACES.index).toContain('<!-- REPLACE WITH YOUTUBE EMBED — autoplay-muted, loop, minimal controls -->');
   });
 
+  it('footer brand link aligns the swapped mark with the text (inline-flex + vertical-align)', () => {
+    expect(SURFACES.index).toContain('.lm-footer p a{display:inline-flex;align-items:center;');
+    expect(SURFACES.index).toMatch(/\.lm-footer img\.mc-ico\{[^}]*vertical-align:middle/);
+  });
+
   it('embedded tools grid uses the symmetric 3-column layout (no auto-fit orphan)', () => {
     expect(SURFACES.index).toContain('class="lm-tools__grid"');
     expect(SURFACES.index).toMatch(/@media \(min-width: 860px\) \{ \.lm-tools__grid \{ grid-template-columns: repeat\(3, 1fr\); \} \}/);

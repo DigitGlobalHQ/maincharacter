@@ -1462,3 +1462,11 @@ Updated `tests/lookmaxing-frontend.test.js` (the old assertion required `orator_
 Founder-requested follow-up to the above: the tools grid embedded on `/lookmaxing/` used an inline `grid-template-columns:repeat(auto-fit,minmax(230px,1fr))` that rendered 9 cards as 4+4+1 (AI Studio orphaned). Replaced the inline style with a `.lm-tools__grid` class on the same responsive ladder as the standalone hub: 1 col → 2 (≥560px) → **3×3 (≥860px)**. Browser-verified on localhost: computed 3 columns, cards-per-row [3,3,3], AI Studio is the last cell of a full 3×3.
 
 Guarded by an assertion in `tests/lookmaxing-frontend.test.js` (uses `.lm-tools__grid`, has the 3-col rule, no `auto-fit` orphan layout). Full suite **1646 passed** (1 file failed = the known intermittent tmp-dir `ENOTEMPTY` teardown flake, not an assertion), `npm run smoke` 44/44. **Held on branch — NOT merged to main; awaiting founder go.**
+
+---
+
+## 2026-06-15 — Lookmaxing footer alignment fix (branch `ui/lookmaxing-footer-align`)
+
+Founder flagged the `/lookmaxing/` footer as misaligned. Cause: the runtime mark-swap (`lib/mark-swap.js`) replaces the `◆` in `◆ MainCharacter` with an `<img class="mc-ico">` carrying `vertical-align:-0.14em`; inside the flex footer line that pushed the icon to the **top** of a 36px-tall `<a>` box while the text sat ~9px lower (icon floating above "MainCharacter · The Consultant"). Fixed in the page's `#mc-footer-fix` style: the footer brand link is now `display:inline-flex;align-items:center;gap:.35em`, the `mc-ico` is `vertical-align:middle`, and the footer `<p>` got `line-height:1.5` + `flex-wrap:wrap`. Browser-verified on localhost: icon center-Y == text center-Y (offset 0), `<a>` height 36px → 21px, all three footer lines centered on one line each.
+
+Guarded by an assertion in `tests/lookmaxing-frontend.test.js`. Full suite **1647 passed**, `npm run smoke` 44/44. **Held on branch — NOT merged to main; awaiting founder go.**

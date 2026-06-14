@@ -123,6 +123,10 @@
     @media (min-width: 768px) { .lm-how { padding: 0 var(--mc-sp-6) var(--mc-sp-7); } }
 
     .lm-section-eyebrow { margin: 0 0 var(--mc-sp-6); text-align: center; }
+    /* Embedded tools grid: 9 cards lay out symmetrically 1 → 2 → 3×3. */
+    .lm-tools__grid { display: grid; grid-template-columns: 1fr; gap: var(--mc-sp-3); max-width: var(--mc-content-max); margin: 0 auto; }
+    @media (min-width: 560px) { .lm-tools__grid { grid-template-columns: 1fr 1fr; } }
+    @media (min-width: 860px) { .lm-tools__grid { grid-template-columns: repeat(3, 1fr); } }
 
     .lm-how__steps {
       display: grid;
@@ -415,7 +419,7 @@
   <p style="text-align:center;max-width:var(--mc-reading-max);margin:0 auto var(--mc-sp-2);color:var(--mc-ink-dim);line-height:var(--mc-lh-body);">Map 478 landmarks from one photo and measure what aesthetics communities actually track. Every tool runs entirely in your browser. Your photo never leaves your device.</p>
   <p style="text-align:center;margin:0 auto var(--mc-sp-5);color:var(--mc-ink-faint);font-size:var(--mc-fs-small);">◆ <b style="color:var(--mc-ink-dim);">Private by design.</b> Nothing is uploaded.</p>
 
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:var(--mc-sp-3);max-width:var(--mc-content-max);margin:0 auto;">
+  <div class="lm-tools__grid">
     <a class="mc-card" href="/lookmaxing/tools/attractiveness-score" style="text-decoration:none;display:block;">
       <h3 style="margin:0 0 var(--mc-sp-1);font-size:var(--mc-fs-h3);color:var(--mc-ink-white);">Attractiveness Score</h3>
       <p style="margin:0;color:var(--mc-ink-dim);font-size:var(--mc-fs-small);line-height:var(--mc-lh-body);">A 0-100 composite from symmetry, ratios, jawline and tilt.</p>

@@ -1454,3 +1454,11 @@ Page section order is now: hero → (hidden intro video) → how-it-works → to
 Updated `tests/lookmaxing-frontend.test.js` (the old assertion required `orator_waitlist_joined` on the page → flipped to a removal guard: no `orator`/`TWO QUESTS` on the index). Full suite **1645 passed**, `npm run smoke` 44/44; browser-verified on localhost: section gone, hero CTA + tools intact, no JS console errors. **Held on branch — NOT merged to main; awaiting founder go.**
 
 > Noticed but out of scope: the tools grid *embedded on the reading page* (`repeat(auto-fit,minmax(230px,1fr))`) shows 9 cards as 4+4+1 — same orphan as the standalone `/tools/` hub had. Offered to symmetrize it as a follow-up.
+
+---
+
+## 2026-06-15 — Reading-page embedded tools grid → symmetric 3×3 (branch `ui/reading-tools-3col`)
+
+Founder-requested follow-up to the above: the tools grid embedded on `/lookmaxing/` used an inline `grid-template-columns:repeat(auto-fit,minmax(230px,1fr))` that rendered 9 cards as 4+4+1 (AI Studio orphaned). Replaced the inline style with a `.lm-tools__grid` class on the same responsive ladder as the standalone hub: 1 col → 2 (≥560px) → **3×3 (≥860px)**. Browser-verified on localhost: computed 3 columns, cards-per-row [3,3,3], AI Studio is the last cell of a full 3×3.
+
+Guarded by an assertion in `tests/lookmaxing-frontend.test.js` (uses `.lm-tools__grid`, has the 3-col rule, no `auto-fit` orphan layout). Full suite **1646 passed** (1 file failed = the known intermittent tmp-dir `ENOTEMPTY` teardown flake, not an assertion), `npm run smoke` 44/44. **Held on branch — NOT merged to main; awaiting founder go.**

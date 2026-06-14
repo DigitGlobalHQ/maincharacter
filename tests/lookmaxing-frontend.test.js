@@ -127,6 +127,12 @@ describe('Surface 1 — index.html', () => {
     expect(SURFACES.index).toContain('<!-- REPLACE WITH YOUTUBE EMBED — autoplay-muted, loop, minimal controls -->');
   });
 
+  it('embedded tools grid uses the symmetric 3-column layout (no auto-fit orphan)', () => {
+    expect(SURFACES.index).toContain('class="lm-tools__grid"');
+    expect(SURFACES.index).toMatch(/@media \(min-width: 860px\) \{ \.lm-tools__grid \{ grid-template-columns: repeat\(3, 1fr\); \} \}/);
+    expect(SURFACES.index).not.toContain('repeat(auto-fit,minmax(230px,1fr))');
+  });
+
   it('hero headline is present in the page', () => {
     // The hero section must exist in the page — the style block precedes body content,
     // so we test for presence rather than position in first N chars.

@@ -1432,3 +1432,13 @@ Founder supplied two legal drafts (`MainCharacter_Terms_of_Use.md`, `MainCharact
 > **Open for founder/counsel:** these remain coaching-grade drafts. Before relying on them, a lawyer should confirm the liability cap, add a named Grievance Officer + registered address (DPDPA), and set the jurisdiction city / arbitration wording. Pricing reflects today's live ₹99/mo model — revisit when Orator (₹799) launches or annual plans are added.
 
 Guarded by `tests/legal-pages.test.js` (19 tests: no `[bracketed]` placeholders or DRAFT banner in source, pricing reconciled (₹99/mo, free reading, no ₹599/₹4,999/paid-audit), key clauses present, cross-links, `/refunds` canonical/OG/route/sitemap, homepage footer link). Full suite **1638 passed**, `npm run smoke` 44/44; live local check: `/refunds` + `/terms` 200, correct pricing served, no placeholders in source. **Held on branch — NOT merged to main; awaiting founder go.**
+
+---
+
+## 2026-06-15 — Tools hub: symmetric 3×3 grid (branch `ui/tools-grid-symmetry`)
+
+Founder flagged the `/lookmaxing/tools/` grid as asymmetric (the 9th card, AI Studio, orphaned in its own row) and wanted all tabs working. **Investigation:** the live page renders 2 columns in an 860px wrap (the founder's screenshot showed a wide 4-col layout — that was a cached/older build; current live is the 2-col serif version). Either way, 9 cards never divide evenly across 2 or 4 columns → a lone trailing card. All 9 cards are already full-card `<a>` links to pages that return 200 (verified live: e.g. `/lookmaxing/tools/attractiveness-score` loads its H1, photo drop-zone + file input, and `face-metrics.js`/`analyzer.js`) — so the "tabs" function; the issue was purely layout.
+
+**Fix (CSS only):** `.tool-grid` responsive ladder is now 1 col (mobile) → 2 (≥560px) → **3×3 (≥860px)**, and the hub container widened via a scoped `.wrap--hub{max-width:1040px}` (other tool pages keep the 860px `.wrap`, untouched). Browser-verified on localhost: computed `gridTemplateColumns` = 3 tracks (~323px each), cards-per-row = [3,3,3], AI Studio is now the last cell of a full 3×3.
+
+Guarded by `tests/tools-hub.test.js` (7 tests: 9 cards divisible by 3, the 3-column + responsive rules present, hub uses `.wrap--hub`, every card is an anchor with a valid href to the 8 tools + `/studio`, and each tool slug resolves to an existing file). Full suite **1645 passed**, `npm run smoke` 44/44. **Held on branch — NOT merged to main; awaiting founder go.** (Did not deep-QA each tool's in-browser analysis end-to-end — that's a separate per-tool QA pass; offered.)

@@ -12,6 +12,7 @@ body{margin:0;background:var(--obsidian);color:var(--ink);
 .nav__brand b{font-weight:600}
 .nav__cta{color:var(--gold);text-decoration:none;font-size:0.74rem;letter-spacing:0.06em}
 .wrap{max-width:860px;margin:0 auto;padding:48px 22px 80px}
+.wrap--hub{max-width:1040px}
 .eyebrow{font-size:0.72rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--gold);margin:0 0 14px}
 h1{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500;font-size:2.8rem;line-height:1.1;margin:0 0 16px}
 .sub{color:var(--dim);font-size:1.02rem;max-width:600px;margin:0 0 14px}
@@ -53,8 +54,11 @@ canvas{display:block;width:100%;height:auto}
 .prose{margin-top:48px;border-top:1px solid var(--line);padding-top:34px}
 .prose h2{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500;font-size:1.6rem;margin:0 0 12px}
 .prose p{color:var(--dim);font-size:0.95rem;margin:0 0 16px}
+/* 9 tool cards lay out symmetrically: 1 col (mobile) → 2 (tablet) → 3×3 (desktop).
+   The hub uses .wrap--hub (wider) so the 3-up grid has room to breathe. */
 .tool-grid{display:grid;grid-template-columns:1fr;gap:14px;margin-top:30px}
-@media(min-width:640px){.tool-grid{grid-template-columns:1fr 1fr}}
+@media(min-width:560px){.tool-grid{grid-template-columns:1fr 1fr}}
+@media(min-width:860px){.tool-grid{grid-template-columns:repeat(3,1fr)}}
 .tool-link{display:block;text-decoration:none;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;transition:border-color .2s}
 .tool-link:hover{border-color:rgba(255,255,255,0.4)}
 .tool-link h3{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500;font-size:1.45rem;color:var(--ink);margin:0 0 6px}

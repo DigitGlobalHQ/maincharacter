@@ -1442,3 +1442,15 @@ Founder flagged the `/lookmaxing/tools/` grid as asymmetric (the 9th card, AI St
 **Fix (CSS only):** `.tool-grid` responsive ladder is now 1 col (mobile) → 2 (≥560px) → **3×3 (≥860px)**, and the hub container widened via a scoped `.wrap--hub{max-width:1040px}` (other tool pages keep the 860px `.wrap`, untouched). Browser-verified on localhost: computed `gridTemplateColumns` = 3 tracks (~323px each), cards-per-row = [3,3,3], AI Studio is now the last cell of a full 3×3.
 
 Guarded by `tests/tools-hub.test.js` (7 tests: 9 cards divisible by 3, the 3-column + responsive rules present, hub uses `.wrap--hub`, every card is an anchor with a valid href to the 8 tools + `/studio`, and each tool slug resolves to an existing file). Full suite **1645 passed**, `npm run smoke` 44/44. **Held on branch — NOT merged to main; awaiting founder go.** (Did not deep-QA each tool's in-browser analysis end-to-end — that's a separate per-tool QA pass; offered.)
+
+---
+
+## 2026-06-15 — Removed the Orator from the lookmaxing reading page (branch `ui/remove-orator-lookmaxing`)
+
+Founder asked to remove "the Orator part" from the `/lookmaxing/` reading page (screenshot of the "TWO QUESTS · ONE PROTOCOL" section with the Orator coming-soon card). Removed the **entire two-quest section** — not just the Orator card — because the surviving Lookmaxing card's CTA ("Get Your Aura Reading" → `/lookmaxing/start`) is **identical to the hero CTA**, so it was redundant, and a lone card under a "TWO QUESTS" header would have been broken + needed invented copy. Also removed the **Orator waitlist modal** and its **JS handler**, and collapsed the two surrounding hairlines into one so how-it-works → tools flows cleanly.
+
+Page section order is now: hero → (hidden intro video) → how-it-works → tools → repeat-CTA. No `orator`/`TWO QUESTS` text remains in the page body (the only `orator` left is the shared `--orator-glow` theme token injected by `lib/theme-head.js` into every page — a CSS var name, unrelated). Dead CSS for `.lm-pillars*` / `.lm-modal*` left in place (harmless, scoped to this file). The `orator_waitlist_joined` name stays in the server `ALLOWED_EVENTS` allowlist (`tests/lookmaxing-events.test.js` unaffected) — only the page emitter was removed.
+
+Updated `tests/lookmaxing-frontend.test.js` (the old assertion required `orator_waitlist_joined` on the page → flipped to a removal guard: no `orator`/`TWO QUESTS` on the index). Full suite **1645 passed**, `npm run smoke` 44/44; browser-verified on localhost: section gone, hero CTA + tools intact, no JS console errors. **Held on branch — NOT merged to main; awaiting founder go.**
+
+> Noticed but out of scope: the tools grid *embedded on the reading page* (`repeat(auto-fit,minmax(230px,1fr))`) shows 9 cards as 4+4+1 — same orphan as the standalone `/tools/` hub had. Offered to symmetrize it as a follow-up.

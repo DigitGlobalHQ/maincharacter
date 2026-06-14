@@ -79,8 +79,12 @@ describe('KPI data-event attributes', () => {
   it('index: has lookmaxing_cta_clicked', () => {
     expect(SURFACES.index).toContain('data-event="lookmaxing_cta_clicked"');
   });
-  it('index: has orator_waitlist_joined', () => {
-    expect(SURFACES.index).toContain('data-event="orator_waitlist_joined"');
+  it('index: Orator pillar + waitlist removed (no Orator on the lookmaxing page)', () => {
+    // Founder-directed removal (2026-06-15): the "TWO QUESTS" section, the
+    // Orator coming-soon card, its waitlist modal and JS are gone.
+    expect(SURFACES.index).not.toContain('orator_waitlist_joined');
+    expect(SURFACES.index).not.toMatch(/orator/i);
+    expect(SURFACES.index).not.toContain('TWO QUESTS');
   });
   it('start: guest flow removed (no lookmaxing_fork_guest)', () => {
     expect(SURFACES.start).not.toContain('lookmaxing_fork_guest');

@@ -408,47 +408,6 @@
 
 <hr class="mc-hairline" style="max-width:var(--mc-content-max);margin:0 auto var(--mc-sp-6);">
 
-<!-- ── Pillars ── -->
-<section class="lm-pillars" aria-labelledby="pillars-heading">
-  <p class="mc-eyebrow lm-section-eyebrow" id="pillars-heading">TWO QUESTS · ONE PROTOCOL</p>
-  <div class="lm-pillars__grid">
-    <!-- Lookmaxing pillar — live -->
-    <div class="mc-card lm-pillar-card">
-      <p class="mc-eyebrow lm-pillar-card__eyebrow">LOOKMAXING</p>
-      <h2 class="mc-serif mc-serif--italic lm-pillar-card__hook">The room reads you before you speak.</h2>
-      <p class="lm-pillar-card__body">The reading is free. The work begins the day after.</p>
-      <a
-        href="/lookmaxing/start"
-        class="mc-btn-ghost"
-        data-event="lookmaxing_cta_clicked"
-        data-event-props='{"position":"pillar"}'
-      >
-        Get Your Aura Reading →
-      </a>
-    </div>
-
-    <!-- Orator pillar — coming soon -->
-    <div class="mc-card lm-pillar-card">
-      <p class="mc-eyebrow lm-pillar-card__eyebrow">THE ORATOR</p>
-      <span class="lm-pillar-card__status">COMING SOON</span>
-      <h2 class="mc-serif mc-serif--italic lm-pillar-card__hook">The way you sound when it matters.</h2>
-      <p class="lm-pillar-card__body" style="color:var(--mc-silver-dim)">The protocol is being rebuilt. A seat on the waitlist holds your place.</p>
-      <button
-        class="mc-btn-ghost"
-        id="orator-waitlist-btn"
-        data-event="orator_waitlist_joined"
-        data-event-props='{"step":"modal_open"}'
-        aria-haspopup="dialog"
-        aria-expanded="false"
-      >
-        Join the waitlist →
-      </button>
-    </div>
-  </div>
-</section>
-
-<hr class="mc-hairline" style="max-width:var(--mc-content-max);margin:0 auto var(--mc-sp-6);">
-
 <!-- ── Free analysis tools (relocated off the brand landing; SEO hub stays at /lookmaxing/tools) ── -->
 <section class="lm-tools" aria-labelledby="tools-heading">
   <p class="mc-eyebrow lm-section-eyebrow" id="tools-heading">Free · Browser-Based · No Account</p>
@@ -526,46 +485,6 @@
   </p>
 </footer>
 
-<!-- ── Orator Waitlist Modal ── -->
-<div
-  class="lm-modal-backdrop"
-  id="orator-modal"
-  role="dialog"
-  aria-modal="true"
-  aria-labelledby="orator-modal-heading"
-  aria-hidden="true"
->
-  <div class="mc-card lm-modal lm-modal--relative">
-    <button class="lm-modal__close" id="orator-modal-close" aria-label="Close waitlist">&#215;</button>
-    <p class="mc-eyebrow lm-modal__eyebrow">THE ORATOR</p>
-    <h2 id="orator-modal-heading" class="mc-serif mc-serif--italic lm-modal__heading">Hold a seat.</h2>
-    <p class="lm-modal__body">A short note when the protocol opens. No marketing in between. Leave the address you actually read.</p>
-    <div id="orator-modal-form-wrap">
-      <div id="orator-modal-error" class="lm-modal__error" role="alert" aria-live="polite" hidden></div>
-      <label for="orator-email" class="mc-eyebrow" style="display:block;margin-bottom:var(--mc-sp-2);">Email</label>
-      <input
-        type="email"
-        id="orator-email"
-        class="lm-modal__input"
-        placeholder="you@somewhere.com"
-        autocomplete="email"
-        required
-      >
-      <button
-        class="mc-btn-primary lm-modal__cta"
-        id="orator-modal-submit"
-        data-event="orator_waitlist_joined"
-        data-event-props='{"step":"submit"}'
-      >
-        Hold my seat ◆
-      </button>
-    </div>
-    <div id="orator-modal-success" class="lm-modal__success" hidden aria-live="polite">
-      Held. We will write once, when it opens. ◆
-    </div>
-  </div>
-</div>
-
 <script src="/track.js" defer></script>
 <!-- 3D star-travel starfield, recoloured to the lookmaxing silver palette. -->
 <script>
@@ -638,72 +557,6 @@
     if (window.mc && window.mc.trackOnce) {
       window.mc.trackOnce('lookmaxing_landing_viewed', {});
     }
-  });
-
-  // ── Waitlist modal ──
-  var modal = document.getElementById('orator-modal');
-  var openBtn = document.getElementById('orator-waitlist-btn');
-  var closeBtn = document.getElementById('orator-modal-close');
-  var submitBtn = document.getElementById('orator-modal-submit');
-  var emailInput = document.getElementById('orator-email');
-  var errorEl = document.getElementById('orator-modal-error');
-  var formWrap = document.getElementById('orator-modal-form-wrap');
-  var successEl = document.getElementById('orator-modal-success');
-
-  function openModal() {
-    modal.classList.add('is-open');
-    modal.setAttribute('aria-hidden', 'false');
-    openBtn.setAttribute('aria-expanded', 'true');
-    setTimeout(function () { emailInput.focus(); }, 300);
-    document.body.style.overflow = 'hidden';
-  }
-
-  function closeModal() {
-    modal.classList.remove('is-open');
-    modal.setAttribute('aria-hidden', 'true');
-    openBtn.setAttribute('aria-expanded', 'false');
-    document.body.style.overflow = '';
-    openBtn.focus();
-  }
-
-  openBtn.addEventListener('click', openModal);
-  closeBtn.addEventListener('click', closeModal);
-  modal.addEventListener('click', function (e) {
-    if (e.target === modal) closeModal();
-  });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
-  });
-
-  submitBtn.addEventListener('click', function () {
-    var email = emailInput.value.trim();
-    if (!email || !email.includes('@')) {
-      errorEl.textContent = 'A valid email address is required.';
-      errorEl.hidden = false;
-      emailInput.focus();
-      return;
-    }
-    errorEl.hidden = true;
-    submitBtn.setAttribute('aria-busy', 'true');
-    submitBtn.disabled = true;
-    submitBtn.textContent = '· · ·';
-
-    fetch('/api/waitlist', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email, source: 'orator_waitlist' }),
-    })
-      .then(function () {
-        formWrap.hidden = true;
-        successEl.hidden = false;
-      })
-      .catch(function () {
-        submitBtn.setAttribute('aria-busy', 'false');
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Hold my seat ◆';
-        errorEl.textContent = 'Something went wrong. Try again.';
-        errorEl.hidden = false;
-      });
   });
 
   // ── Intro video — reveal only when configured ──

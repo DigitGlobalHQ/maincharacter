@@ -1322,3 +1322,17 @@ Founder-directed, reference images provided. Purely additive atmosphere on the e
 - **Section dividers removed** (`/`): `.gap` / `.paywall` / `.cta-close` / `.footer` border hairlines set transparent, and `.paywall` / `.cta-close` backgrounds made transparent, so the starfield shows uniformly across the page.
 
 Verified: landing locked-copy guard 22/22, theme-head 5/5, full suite + `npm run smoke` green before merge. Server caches page HTML in memory — restart `node server.js` after editing any served HTML (cost real debugging time this session).
+
+---
+
+## 2026-06-14 — SEO FAQ + JSON-LD structured data on the homepage (branch `seo/faq-schema`)
+
+Added a visible "Questions" FAQ section to `landing.html` (10 looksmaxxing/aura-reading Q&A, themed with existing tokens — Cormorant serif questions, Sora body, silver `+`/`×` toggle, hairline dividers) plus four JSON-LD blocks in `<head>`: FAQPage, Organization, WebSite, SoftwareApplication. Purely additive — no existing copy, route, CTA, or flow changed.
+
+**Two source claims were corrected before shipping** (verified against the codebase; publishing schema that overstates the product is a Google manual-penalty risk):
+- "face rating from a single photo" → "from a single photo **plus five quick questions**" — the audit requires 5 calibration answers + photo (`routes/lookmaxing.js`, `public/lookmaxing/quiz.html`).
+- ₹99 plan "unlocks the daily **7-day protocol** + **Weekly Evolution Report**" (those are Orator features) → "**daily mirror protocol** + **monthly re-audit**", matching the real `lookmax99` plan (`services/razorpay.js`).
+
+Other decisions: `sameAs` social URLs omitted (no real handles — placeholders would be worse than none); `Organization.logo` → real `/maincharacter-mark-3d.png`; no `aggregateRating` (no verified reviews); em-dashes normalized to colons/commas, matching the founder's earlier "remove em dashes" preference for Lookmaxxing surfaces. Visible answer text is kept **byte-identical** to the FAQPage schema (Google rich-result requirement) and locked by `tests/landing-faq-schema.test.js` (9 tests, incl. claim-accuracy regression guards).
+
+Verified: new guard 9/9, landing locked-copy 22/22, full suite **1552 passed**, `npm run smoke` 44/44; all 4 JSON-LD blocks parse off the served page, ₹ intact. **Held on branch — NOT merged to main; awaiting founder approval (user-facing copy + live deploy checkpoints).**

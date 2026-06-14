@@ -1,5 +1,13 @@
+# MainCharacter robots.txt
+# Googlebot uses longest-match: the explicit Allow on the public reading page
+# wins over the nearby /lookmax/ app block (a different path), and the
+# /lookmaxing/start sign-in stays blocked because its rule is longer/more specific.
+# Note: /lookmax/ (the logged-in PWA app) is a real route and is intentionally blocked;
+# it does NOT match /lookmaxing/ (the public reading page).
+
 User-agent: *
 Allow: /
+Allow: /lookmaxing/
 
 # Operational/private surfaces — no SEO value, keep crawlers out.
 Disallow: /admin

@@ -1401,3 +1401,17 @@ Guarded by `tests/blog-how-to-start-looksmaxxing.test.js` (17 tests: word count,
 The blog post shipped with a route + sitemap entry but **no on-site link**, so it was a visitor-orphan (reachable only by direct URL / sitemap). Founder flagged it. Added a **"Field Notes"** link to the homepage footer (`landing.html`, first in `footer__links`, before Privacy/Terms/Contact) → `/blog/how-to-start-looksmaxxing`. Label chosen to match the post's own section eyebrow (◆ MainCharacter · Field Notes); founder-selected over "Blog"/nav placement. With one post it links straight to the post; it becomes the `/blog` index once there are 2+ posts.
 
 Guarded by an added assertion in `tests/blog-how-to-start-looksmaxxing.test.js` (now 18 tests: homepage must link to the post — anti-orphan regression guard). Full suite **1609 passed**, `npm run smoke` 44/44; live local check confirms the footer link serves and resolves (200). **Held on branch — NOT merged to main; awaiting founder approval.**
+
+---
+
+## 2026-06-14 — robots.txt: explicit Allow for the reading page (branch `seo/robots-allow-reading`)
+
+GSC live test (Googlebot smartphone, ~22:44 IST) reported `/lookmaxing/` "blocked by robots.txt." **Investigated: the robots.txt was technically correct.**
+- Live production robots.txt is **byte-identical** to the repo source (`diff` empty); single static `public/robots.txt`, no dynamic route, no second/host robots.txt, no wildcard. `cf-cache-status: DYNAMIC` (not CDN-cached).
+- Prefix-match check (Google's matcher): `/lookmaxing/` matches **no** Disallow rule. `Disallow: /lookmax/` does not match `/lookmaxing/` (char 9 is `i`, not `/`). `/lookmax/` is a **real, intentional** block — the logged-in PWA app (`/lookmax`, `/lookmax/mirror`, … all live, returns 200), not a stray/typo, so it stays.
+- Git history: no committed robots.txt ever blocked `/lookmaxing/`.
+- **Likely cause:** Google's URL-Inspection live test reuses Google's cached robots.txt (can lag ~24h); if Googlebot fetched robots.txt during a deploy/cold-start window and got a 5xx/timeout (Render free tier sleeps; several deploys today), Google caches *disallow-all*. The file content was never the problem.
+
+**Fix (defensive, unambiguous):** added an explicit `Allow: /lookmaxing/` (plus the existing `Allow: /`). By Google's longest-match, the reading page and its sub-paths (tools, etc.) are now explicitly crawlable, `/lookmaxing/start` stays blocked (its rule is longer/more specific), and the `/lookmax/` PWA app stays blocked. All intended blocks (`/admin`, `/dashboard/`, `/payment-confirmed`, `/uploads/`, `/api/`, `/lookmaxing/start`) kept.
+
+Guarded by `tests/robots-crawlability.test.js` (10 tests) — a Google-style longest-match evaluator over the real file: ALLOW `/`, `/lookmaxing/`, `/lookmaxing/tools/`; DISALLOW `/lookmaxing/start`, `/lookmax/`, and the private surfaces. Full suite **1619 passed**, `npm run smoke` 44/44. **Held on branch — NOT merged to main; awaiting founder approval.** After merge/deploy: in GSC, re-run the live test / use "Validate Fix" so Google refetches robots.txt.

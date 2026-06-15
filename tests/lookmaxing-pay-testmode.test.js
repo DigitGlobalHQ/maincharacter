@@ -1,8 +1,9 @@
 /**
  * tests/lookmaxing-pay-testmode.test.js
- * Demo-mode ₹99 unlock: lets the full report + PDF be experienced before live
+ * Demo-mode ₹499 unlock: lets the full report + PDF be experienced before live
  * Razorpay keys exist, and is HARD-DISABLED the instant live keys are set.
- * Cited: founder directive (pre-go-live demo window).
+ * Cited: founder directive (pre-go-live demo window). Price updated ₹99→₹499
+ * per founder decision 2026-06-15.
  */
 import { describe, it, expect, afterAll, beforeAll } from 'vitest';
 import os from 'node:os';
@@ -47,7 +48,7 @@ async function newAudit(bearer) {
   return quiz.body.auditId;
 }
 
-describe('Demo-mode ₹99 unlock', () => {
+describe('Demo-mode ₹499 unlock', () => {
   let bearer; let auditId;
   beforeAll(async () => { ({ bearer } = await makeSession()); auditId = await newAudit(bearer); });
 
@@ -55,7 +56,8 @@ describe('Demo-mode ₹99 unlock', () => {
     const res = await request(app).post('/api/lookmaxing/pay/order').set('Authorization', bearer).send({ auditId });
     expect(res.status).toBe(200);
     expect(res.body.testMode).toBe(true);
-    expect(res.body.amount).toBe(9900);
+    // Price updated ₹99 (9900 paise) → ₹499 (49900 paise), founder 2026-06-15
+    expect(res.body.amount).toBe(49900);
   });
 
   it('/pay/test-confirm settles the unlock so the full report opens', async () => {

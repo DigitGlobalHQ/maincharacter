@@ -72,11 +72,23 @@ const PLANS = {
   // Separate from the ₹1,499 lookmaxxing plan (PWA daily mirror + reveal).
   // This plan is the audit-funnel entry: free reading → ₹99/month unlock.
   // The ₹1,499 plan is preserved unchanged for backward compat + existing tests.
+  // LEGACY: retained for existing subscribers. No new surfaces offer this plan.
   lookmax99: {
     amount: 9900,       // ₹99 in paise
     label: 'Lookmaxxing',
     period: 'monthly',
     display: '₹99/month',
+    description: 'Full Aura Reading + daily Mirror protocol + monthly re-audit',
+    pillars: ['lookmaxxing'],
+  },
+  // ── Lookmaxing Aura Reading funnel — ₹499/month recurring (founder, 2026-06-15) ─
+  // New plan replacing lookmax99 at the ₹499 price point. lookmax99 retained for
+  // existing subscribers (Razorpay plans are immutable). All new checkouts use this.
+  lookmax499: {
+    amount: 49900,      // ₹499 in paise
+    label: 'Lookmaxxing',
+    period: 'monthly',
+    display: '₹499/month',
     description: 'Full Aura Reading + daily Mirror protocol + monthly re-audit',
     pillars: ['lookmaxxing'],
   },
@@ -329,6 +341,21 @@ async function createSubscription(planKey, customer = {}, extraNotes = {}) {
   return { id: sub.id, short_url: sub.short_url };
 }
 
+// ── USD display helper ─────────────────────────────────────────────────────────
+// Converts INR paise to a USD display string at a FIXED rate.
+// The charge stays INR — this is a display-only conversion for international
+// visitors. Rate is configurable via USD_PER_INR_RATE env (units: USD per INR,
+// e.g. 0.012 means 1 INR = $0.012). Default: 1/83.3 ≈ 0.01200 so that
+// 49900 paise → ₹499 → ~$5.99. Minimum display value: $0.99.
+function inrPaiseToUsd(paise) {
+  const inrPerUsd = parseFloat(process.env.USD_PER_INR_RATE
+    ? String(1 / parseFloat(process.env.USD_PER_INR_RATE))
+    : '83.3');
+  const usd = (paise / 100) / inrPerUsd;
+  const rounded = Math.max(0.99, Math.round(usd * 100) / 100);
+  return '$' + rounded.toFixed(2);
+}
+
 module.exports = {
   PLANS,
   pillarsForPlan,
@@ -340,6 +367,7 @@ module.exports = {
   createPaymentLink,
   createOrFetchPlan,
   createSubscription,
+  inrPaiseToUsd,
   subscriptionsEnabled: process.env.RAZORPAY_SUBSCRIPTIONS_ENABLED !== 'false',
   razorpayKeyId: RAZORPAY_KEY_ID,
 };

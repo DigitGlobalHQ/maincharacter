@@ -1499,18 +1499,46 @@ function _paymentBypass() {
   return true;
 }
 
-// Settle a paid audit: flip paid, credit ₹99, seed the Day-30 baseline. Shared by
+// Settle a paid audit: flip paid, credit ₹499, seed the Day-30 baseline. Shared by
 // the Razorpay webhook (real capture) and the demo-mode confirm (no live keys), so
 // the unlock is identical either way and never drifts.
+// If the session has a pendingReferralCode, it is redeemed exactly once here. A
+// redeem that returns ok:false (race condition — code already exhausted) is logged
+// but does NOT block the unlock: the payment was already initiated at a valid price.
 async function _settlePaidAudit(auditId, { paymentId = null } = {}) {
   const session = _getSession(auditId);
   if (!session) return null;
   if (session.paid) return session;
 
+  // ── Referral code redemption ──────────────────────────────────────────────
+  // Atomically redeem the pending code (if any) before flipping paid=true.
+  // Guards: code is only redeemed once per audit; redeemCode is itself atomic.
+  const pendingCode = session.pendingReferralCode || null;
+  if (pendingCode) {
+    try {
+      const ReferralCodes = require('../models/referral-codes'); // eslint-disable-line global-require
+      const redeemResult  = ReferralCodes.redeemCode(pendingCode);
+      if (redeemResult.ok) {
+        log.info('PAY-SETTLE', `referral code ${pendingCode} redeemed for audit ${auditId}`);
+      } else {
+        // Code was exhausted in a race — payment already initiated, still unlock.
+        log.warn('PAY-SETTLE', `referral code ${pendingCode} redeem failed (race): ${redeemResult.reason} — unlocking anyway`);
+      }
+    } catch (err) {
+      log.warn('PAY-SETTLE', `referral redeem threw: ${err.message}`);
+    }
+  }
+
   _updateSession(auditId, {
     paid:              true,
     paidAt:            new Date().toISOString(),
     razorpayPaymentId: paymentId,
+    // Record the referral on the settled session; clear the pending field.
+    ...(pendingCode ? {
+      referralCode:        pendingCode,
+      referralPercentOff:  session.referralPercentOff || null,
+      pendingReferralCode: null,
+    } : {}),
   });
 
   if (session.userId) {
@@ -1540,13 +1568,59 @@ async function _settlePaidAudit(auditId, { paymentId = null } = {}) {
   return _getSession(auditId);
 }
 
+// ─── POST /pay/validate-code ──────────────────────────────────────────────────
+// Read-only price check for a referral code. Does NOT redeem. Returns the
+// discounted amounts and display strings so the UI can show the final price
+// before the user commits to the order. Requires a valid actor (same pattern
+// as other /pay endpoints) but does NOT require an existing audit session.
+
+router.post('/pay/validate-code', async (req, res) => {
+  const actor = resolveActor(req);
+  if (!actor) return res.status(401).json({ error: 'unauthorized' });
+
+  const { code } = req.body || {};
+  if (!code) return res.status(400).json({ error: 'code required' });
+
+  const ReferralCodes = require('../models/referral-codes'); // eslint-disable-line global-require
+  const { inrPaiseToUsd } = require('../services/razorpay'); // eslint-disable-line global-require
+
+  const BASE_PAISE = 49900; // ₹499 — lookmax499 plan base price
+  const validation  = ReferralCodes.validateCode(code);
+
+  if (!validation.valid) {
+    return res.json({
+      valid:    false,
+      reason:   validation.reason,
+      baseInr:  BASE_PAISE / 100,
+      baseUsd:  inrPaiseToUsd(BASE_PAISE),
+    });
+  }
+
+  const discountedPaise = Math.round(BASE_PAISE * (1 - validation.percentOff / 100));
+  const discountedInr   = discountedPaise / 100;
+  const discountedUsd   = inrPaiseToUsd(discountedPaise);
+
+  return res.json({
+    valid:          true,
+    percentOff:     validation.percentOff,
+    baseInr:        BASE_PAISE / 100,
+    baseUsd:        inrPaiseToUsd(BASE_PAISE),
+    discountedPaise,
+    discountedInr,
+    discountedUsd,
+  });
+});
+
 // ─── POST /pay/order ─────────────────────────────────────────────────────────
+// One-time Razorpay order for ₹499 (49900 paise). Optional referral code
+// discounts the amount; the code is stored on the session as pendingReferralCode
+// and redeemed atomically in _settlePaidAudit.
 
 router.post('/pay/order', async (req, res) => {
   const actor = resolveActor(req);
   if (!actor) return res.status(401).json({ error: 'unauthorized' });
 
-  const { auditId } = req.body || {};
+  const { auditId, code } = req.body || {};
   if (!auditId) return res.status(400).json({ error: 'auditId required' });
 
   const session = _getSession(auditId);
@@ -1557,8 +1631,32 @@ router.post('/pay/order', async (req, res) => {
     return res.json({ alreadyPaid: true, auditId });
   }
 
+  // ── Referral code validation (optional) ──────────────────────────────────
+  let orderAmount = 49900; // ₹499 base in paise
+  let referralPercentOff = null;
+  let referralCodeUsed   = null;
+
+  if (code) {
+    const ReferralCodes = require('../models/referral-codes'); // eslint-disable-line global-require
+    const validation = ReferralCodes.validateCode(code);
+    if (!validation.valid) {
+      return res.status(400).json({ error: 'invalid_code', reason: validation.reason });
+    }
+    orderAmount        = Math.round(49900 * (1 - validation.percentOff / 100));
+    referralPercentOff = validation.percentOff;
+    referralCodeUsed   = String(code).toUpperCase();
+
+    // Store the pending code on the session so _settlePaidAudit can redeem it.
+    _updateSession(auditId, {
+      pendingReferralCode:  referralCodeUsed,
+      referralPercentOff,
+    });
+  }
+
   try {
-    // Razorpay order (₹99 = 9900 paise). Mocked when bypassing (testing/demo).
+    // Razorpay order (₹499 base = 49900 paise, discounted when code applied).
+    // Mocked when bypassing (testing/demo).
+    const { inrPaiseToUsd } = require('../services/razorpay'); // eslint-disable-line global-require
     const key_id  = process.env.RAZORPAY_KEY_ID || 'rzp_test_mock';
     const live    = !_paymentBypass();
 
@@ -1567,7 +1665,7 @@ router.post('/pay/order', async (req, res) => {
       const Razorpay = require('razorpay'); // eslint-disable-line global-require
       const rz = new Razorpay({ key_id, key_secret: process.env.RAZORPAY_KEY_SECRET });
       order = await rz.orders.create({
-        amount:   9900,
+        amount:   orderAmount,
         currency: 'INR',
         receipt:  `mc_audit_${auditId.slice(0, 8)}_${Date.now()}`,
         notes:    { auditId, source: 'lookmaxing_audit_unlock' },
@@ -1576,7 +1674,7 @@ router.post('/pay/order', async (req, res) => {
       // Mock order for tests, dev, and the pre-go-live demo window.
       order = {
         id:       `order_mock_${Date.now()}`,
-        amount:   9900,
+        amount:   orderAmount,
         currency: 'INR',
         receipt:  `mc_audit_${auditId.slice(0, 8)}_${Date.now()}`,
         notes:    { auditId, source: 'lookmaxing_audit_unlock' },
@@ -1590,8 +1688,10 @@ router.post('/pay/order', async (req, res) => {
       amount:   order.amount,
       currency: order.currency,
       keyId:    key_id,
+      usd:      inrPaiseToUsd(order.amount),
       auditId,
       testMode: !live, // client settles via /pay/test-confirm instead of Razorpay
+      ...(referralCodeUsed ? { referralApplied: true, percentOff: referralPercentOff } : {}),
     });
   } catch (err) {
     log.error('PAY-ORDER', `order create failed for ${auditId}: ${err.message}`);
@@ -1600,9 +1700,11 @@ router.post('/pay/order', async (req, res) => {
 });
 
 // ─── POST /pay/subscribe ─────────────────────────────────────────────────────
-// Primary unlock path for the ₹99/month recurring subscription. Creates a
-// Razorpay subscription (lookmax99 plan) and persists the subscription id.
+// Primary unlock path for the ₹499/month recurring subscription. Creates a
+// Razorpay subscription (lookmax499 plan) and persists the subscription id.
 // The legacy /pay/order + one-time /pay/webhook remain for backward compat.
+// Note: referral code discounting is one-time-order only (founder, 2026-06-15);
+// the subscription path does not accept or apply referral codes.
 
 router.post('/pay/subscribe', async (req, res) => {
   const actor = resolveActor(req);
@@ -1629,7 +1731,7 @@ router.post('/pay/subscribe', async (req, res) => {
     const subId = 'sub_bypass_' + Date.now();
     _updateSession(auditId, { razorpaySubscriptionId: subId });
     if (user) {
-      await User.updateUser(user.phone, { razorpaySubscriptionId: subId, pendingPlan: 'lookmax99' });
+      await User.updateUser(user.phone, { razorpaySubscriptionId: subId, pendingPlan: 'lookmax499' });
     }
     events.trackAnonymous('lookmaxing_subscribe_initiated', { auditId, bypass: true }, actor.userId).catch(() => {});
     return res.json({
@@ -1645,7 +1747,7 @@ router.post('/pay/subscribe', async (req, res) => {
     const user = session.userId ? await User.getUserByToken(session.userId) : null;
 
     const sub = await razorpay.createSubscription(
-      'lookmax99',
+      'lookmax499',
       {
         phone: (user && user.phone) || '',
         name:  (user && user.name)  || '',
@@ -1664,7 +1766,7 @@ router.post('/pay/subscribe', async (req, res) => {
     if (user) {
       await User.updateUser(user.phone, {
         razorpaySubscriptionId: sub.id,
-        pendingPlan: 'lookmax99',
+        pendingPlan: 'lookmax499',
       });
     }
 

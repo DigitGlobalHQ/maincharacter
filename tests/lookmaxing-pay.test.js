@@ -67,17 +67,20 @@ describe('Lookmaxing payment flow', () => {
   });
 
   describe('POST /api/lookmaxing/pay/order', () => {
-    it('returns an order object with amount 9900', async () => {
+    it('returns an order object with amount 49900 (₹499)', async () => {
       const res = await request(app)
         .post('/api/lookmaxing/pay/order')
         .set('Authorization', bearer)
         .send({ auditId });
       expect(res.status).toBe(200);
-      expect(res.body.amount).toBe(9900);
+      // Price changed from ₹99 (9900) to ₹499 (49900) — founder, 2026-06-15
+      expect(res.body.amount).toBe(49900);
       expect(res.body.currency).toBe('INR');
       expect(res.body.orderId).toBeTruthy();
       // key_id is returned for client-side Razorpay.open()
       expect(res.body).toHaveProperty('keyId');
+      // USD display field is present
+      expect(typeof res.body.usd).toBe('string');
     });
 
     it('returns 400 when auditId is missing', async () => {

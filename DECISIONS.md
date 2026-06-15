@@ -5,6 +5,26 @@ Format: date, decision, 2-sentence rationale.
 
 ---
 
+## 2026-06-15 — Lookmaxing price change ₹99→₹499, referral codes, USD display
+
+### lookmax499 is a new plan key; lookmax99 is retained for existing subscribers
+
+`PLANS.lookmax499` (₹499/month, 49900 paise) is added alongside `PLANS.lookmax99` (₹99/month, 9900 paise) in `services/razorpay.js`; Razorpay plans are immutable so lookmax99 must stay for any subscriber created under it. All new checkouts (`/pay/subscribe` and the base amount for `/pay/order`) now use lookmax499; lookmax99 is referenced only by existing webhook events.
+
+### referral-codes model uses the same atomic JSON-file pattern as models/User.js
+
+`models/referral-codes.js` stores codes keyed by CODE string in `data/referral-codes.json` (overridable via `REFERRAL_CODES_FILE_PATH`). `redeemCode` re-reads the store atomically before checking `uses < maxUses` to guard against double-spend in the single-instance Node process; a race that slips through (valid payment was initiated at the valid price) is logged as WARN but still settles the audit — the already-captured payment takes precedence over the exhausted race.
+
+### Referral code discounting is one-time-order only; the subscription path is not discounted
+
+`POST /pay/order` accepts an optional `code` field that validates then stores `pendingReferralCode` on the session and discounts the Razorpay order amount; `_settlePaidAudit` redeems the code atomically when the order settles. `POST /pay/subscribe` (recurring path) does not accept referral codes — per founder direction, discounts on recurring subscriptions require a separate pricing strategy (Razorpay coupon or trial period) and are deferred.
+
+### inrPaiseToUsd is a display-only USD conversion helper at a fixed rate
+
+`inrPaiseToUsd(paise)` in `services/razorpay.js` converts INR paise to a USD display string using `USD_PER_INR_RATE` env (default ~83.3 INR/USD so 49900 paise → $5.99), with a $0.99 minimum. The charge always stays INR; this is purely a display affordance for international visitors and is included in `/pay/order`, `/pay/validate-code`, and `/api/admin/referral-codes` responses.
+
+---
+
 ## 2026-06-06 — Payment bypass for testing + branded report PDF
 
 ### ₹99 payment bypass is ON by default in every non-live setup

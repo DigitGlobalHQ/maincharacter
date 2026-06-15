@@ -1033,6 +1033,89 @@ router.get('/lookmax-users', requireAuth, async (req, res) => {
   });
 });
 
+// ─── Referral codes ──────────────────────────────────────────────────────────
+// POST /api/admin/referral-codes — create a new referral code.
+// GET  /api/admin/referral-codes — list all codes.
+// Auth: same requireAuth middleware as all sibling endpoints.
+//
+// ₹499 base (49900 paise) is the canonical lookmax499 price (founder, 2026-06-15).
+// discounted amounts are computed at admin endpoint time rather than cached on the
+// record so a future price change only needs one constant updated here.
+
+const REFERRAL_BASE_PAISE = 49900; // ₹499 in paise — lookmax499 plan base price
+
+router.post('/referral-codes', requireAuth, async (req, res) => {
+  const { inrPaiseToUsd } = require('../services/razorpay');
+  const ReferralCodes = require('../models/referral-codes');
+
+  const { percentOff, maxUses, note } = req.body || {};
+
+  // Validate percentOff: integer in [1, 100].
+  const pct = Number(percentOff);
+  if (!Number.isFinite(pct) || pct < 1 || pct > 100) {
+    return res.status(400).json({ error: 'percentOff must be an integer between 1 and 100' });
+  }
+
+  // Validate maxUses: positive integer, defaults to 1 when omitted.
+  const uses = maxUses === undefined || maxUses === null ? 1 : Number(maxUses);
+  if (!Number.isFinite(uses) || uses < 1 || !Number.isInteger(uses)) {
+    return res.status(400).json({ error: 'maxUses must be a positive integer (≥1)' });
+  }
+
+  try {
+    const rec = ReferralCodes.createCode({
+      percentOff: pct,
+      maxUses:    uses,
+      note:       note || undefined,
+    });
+
+    const discountedPaise = Math.round(REFERRAL_BASE_PAISE * (1 - pct / 100));
+    const discountedInr   = discountedPaise / 100;
+    const usd             = inrPaiseToUsd(discountedPaise);
+
+    log('REFERRAL', `created code ${rec.code} (${pct}% off, ${uses} max uses)`);
+
+    return res.json({
+      code:            rec.code,
+      percentOff:      rec.percentOff,
+      maxUses:         rec.maxUses,
+      uses:            rec.uses,
+      discountedPaise,
+      discountedInr,
+      usd,
+    });
+  } catch (err) {
+    log('REFERRAL-ERROR', `create failed: ${err.message}`);
+    return res.status(500).json({ error: 'Something has interrupted the work. Try again in a moment.' });
+  }
+});
+
+router.get('/referral-codes', requireAuth, async (req, res) => {
+  const { inrPaiseToUsd } = require('../services/razorpay');
+  const ReferralCodes = require('../models/referral-codes');
+
+  try {
+    const codes = ReferralCodes.listCodes().map((rec) => {
+      const discountedPaise = Math.round(REFERRAL_BASE_PAISE * (1 - rec.percentOff / 100));
+      return {
+        code:           rec.code,
+        percentOff:     rec.percentOff,
+        maxUses:        rec.maxUses,
+        uses:           rec.uses,
+        active:         rec.active,
+        note:           rec.note || null,
+        createdAt:      rec.createdAt,
+        discountedInr:  discountedPaise / 100,
+      };
+    });
+
+    return res.json({ codes });
+  } catch (err) {
+    log('REFERRAL-ERROR', `list failed: ${err.message}`);
+    return res.status(500).json({ error: 'Something has interrupted the work. Try again in a moment.' });
+  }
+});
+
 // ─── Exported helpers — used by tests and funnel tile computation ────────────
 module.exports = router;
 module.exports.isCompUser      = isCompUser;

@@ -32,3 +32,4 @@ IMG_*.jpeg
 NUL
 probe_tmp.js
 .claude/worktrees/
+data/referral-codes.json

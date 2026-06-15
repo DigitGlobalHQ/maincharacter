@@ -445,13 +445,14 @@ describe('Backward compat: /pay/order still works', () => {
     auditId = await newAudit(lmApp, bearer);
   });
 
-  it('POST /pay/order returns amount:9900 and testMode:true in mock mode', async () => {
+  it('POST /pay/order returns amount:49900 (₹499) and testMode:true in mock mode', async () => {
     const res = await request(lmApp)
       .post('/api/lookmaxing/pay/order')
       .set('Authorization', bearer)
       .send({ auditId });
     expect(res.status).toBe(200);
-    expect(res.body.amount).toBe(9900);
+    // Price updated from ₹99 (9900 paise) to ₹499 (49900 paise) — founder 2026-06-15
+    expect(res.body.amount).toBe(49900);
     expect(res.body.testMode).toBe(true);
   });
 });

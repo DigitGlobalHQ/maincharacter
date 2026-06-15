@@ -551,7 +551,7 @@
       <span class="mc-light-point" aria-hidden="true"></span>
       Generate Full Report ◆
     </button>
-    <p class="lm-gate-teaser__sub">₹99/month · cancel anytime · your free reading is the trial.</p>
+    <p class="lm-gate-teaser__sub">₹499/month · cancel anytime · your free reading is the trial.</p>
   </div>
 
   <!-- Block 4: Full decomposition (premium, blurred) -->
@@ -684,8 +684,16 @@
         <li>A seven-day starter plan. Morning and evening.</li>
       </ul>
       <div class="lm-paywall__price-line">
-        <span class="lm-paywall__price">₹99</span>
-        <span class="lm-paywall__price-sub">₹99/month · cancel anytime · UPI / cards / wallets</span>
+        <span class="lm-paywall__price" id="paywall-price">₹499</span>
+        <span class="lm-paywall__price-sub" id="paywall-price-sub">₹499/month <span style="opacity:.7">(~$5.99)</span> · cancel anytime · UPI / cards / wallets</span>
+      </div>
+      <div class="lm-referral" style="margin:var(--mc-sp-3) 0 var(--mc-sp-2);">
+        <button type="button" id="referral-toggle" class="lm-referral__toggle" aria-expanded="false" style="background:none;border:none;color:var(--mc-silver-dim);font-family:var(--mc-font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;padding:4px 0;">Have a referral code?</button>
+        <div id="referral-row" hidden style="display:flex;gap:8px;margin-top:8px;">
+          <input id="referral-input" type="text" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="CODE" maxlength="12" aria-label="Referral code" style="flex:1;min-width:0;background:var(--mc-near-black,#0c0c0e);border:1px solid var(--mc-line);border-radius:8px;color:var(--mc-silver-bright);font-family:var(--mc-font-mono);letter-spacing:.12em;text-transform:uppercase;padding:11px 12px;font-size:13px;">
+          <button type="button" id="referral-apply" class="mc-btn-ghost" style="min-height:auto;padding:11px 18px;white-space:nowrap;">Apply</button>
+        </div>
+        <p id="referral-msg" hidden style="font-size:12px;margin-top:7px;line-height:1.4;"></p>
       </div>
       <p class="lm-paywall__trust">Your reading was free. This continues it. Cancel anytime.</p>
       <p class="lm-paywall__secure">Secured by Razorpay · UPI, cards &amp; wallets · 256-bit encrypted.<br>Your photo is scored, never published. ◆</p>
@@ -694,10 +702,10 @@
         class="mc-btn-primary mc-btn-primary--filled lm-paywall__pay-btn"
         id="pay-btn"
         data-event="lookmaxing_pay_initiated"
-        aria-label="Pay ₹99 and unlock"
+        aria-label="Pay ₹499 and unlock"
       >
         <span class="mc-light-point" aria-hidden="true"></span>
-        Pay ₹99 ◆
+        Pay ₹499 ◆
       </button>
       <button
         class="mc-btn-ghost lm-paywall__later-btn"
@@ -860,6 +868,98 @@
   var payBtn = document.getElementById('pay-btn');
   var paywallCloseBtn = document.getElementById('paywall-close-btn');
   var unlockMainBtn = document.getElementById('unlock-main-btn');
+
+  // ── Referral code → one-time discounted unlock ──────────────────────────────
+  // When a valid code is applied, the Pay button switches from the ₹499/month
+  // subscription to a one-time discounted Razorpay order. No code → subscription.
+  var appliedReferral = null; // { code, percentOff, discountedInr, discountedUsd }
+  var refToggle = document.getElementById('referral-toggle');
+  var refRow    = document.getElementById('referral-row');
+  var refInput  = document.getElementById('referral-input');
+  var refApply  = document.getElementById('referral-apply');
+  var refMsg    = document.getElementById('referral-msg');
+  var priceEl   = document.getElementById('paywall-price');
+  var priceSub  = document.getElementById('paywall-price-sub');
+  function setPayLabel(txt) { if (payBtn) payBtn.innerHTML = '<span class="mc-light-point" aria-hidden="true"></span> ' + txt; }
+  function resetPayBtn() {
+    if (!payBtn) return;
+    payBtn.setAttribute('aria-busy', 'false');
+    payBtn.disabled = false;
+    setPayLabel(appliedReferral ? ('Pay ₹' + appliedReferral.discountedInr + ' ◆') : 'Pay ₹499 ◆');
+  }
+  if (refToggle) refToggle.addEventListener('click', function () {
+    var open = !refRow.hidden;
+    refRow.hidden = open;
+    refToggle.setAttribute('aria-expanded', String(!open));
+    if (!open && refInput) refInput.focus();
+  });
+  if (refApply) refApply.addEventListener('click', function () {
+    var code = (refInput.value || '').trim().toUpperCase();
+    if (!code) { return; }
+    refApply.disabled = true; refMsg.hidden = true;
+    fetch('/api/lookmaxing/pay/validate-code', {
+      method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ code: code }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        refApply.disabled = false;
+        if (d && d.valid) {
+          appliedReferral = { code: code, percentOff: d.percentOff, discountedInr: d.discountedInr, discountedUsd: d.discountedUsd };
+          if (priceEl) priceEl.innerHTML = '₹' + d.discountedInr + ' <span style="text-decoration:line-through;opacity:.4;font-size:.55em;">₹' + d.baseInr + '</span>';
+          if (priceSub) priceSub.innerHTML = 'One-time · ₹' + d.discountedInr + ' (~' + d.discountedUsd + ') · ' + d.percentOff + '% off';
+          refMsg.style.color = 'var(--mc-silver-bright)';
+          refMsg.textContent = 'Code applied — ' + d.percentOff + '% off. You pay ₹' + d.discountedInr + ' once.';
+          refMsg.hidden = false;
+          setPayLabel('Pay ₹' + d.discountedInr + ' ◆');
+          refInput.disabled = true; refApply.textContent = 'Applied';
+          if (window.mc) window.mc.track('lookmaxing_referral_applied', { percentOff: d.percentOff });
+        } else {
+          appliedReferral = null;
+          refMsg.style.color = 'var(--mc-error, #d98a8a)';
+          refMsg.textContent = (d && d.reason) ? ('Invalid code: ' + d.reason) : 'That code is not valid.';
+          refMsg.hidden = false;
+        }
+      })
+      .catch(function () {
+        refApply.disabled = false;
+        refMsg.style.color = 'var(--mc-error, #d98a8a)';
+        refMsg.textContent = 'Could not check the code. Try again.';
+        refMsg.hidden = false;
+      });
+  });
+
+  // One-time discounted unlock via /pay/order (used when a referral code is applied).
+  function payOneTimeWithReferral() {
+    fetch('/api/lookmaxing/pay/order', {
+      method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ auditId: auditId, code: appliedReferral.code }),
+    })
+      .then(function (res) { if (!res.ok) { return res.json().then(function (e) { throw new Error(e && e.reason ? e.reason : 'order_failed'); }); } return res.json(); })
+      .then(function (order) {
+        if (order.testMode) {
+          fetch('/api/lookmaxing/pay/test-confirm', { method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ auditId: auditId }) })
+            .then(function (r) { if (!r.ok) throw new Error('test-confirm failed'); return r.json(); })
+            .then(function () { if (window.mc) window.mc.track('lookmaxing_pay_succeeded', { testMode: true, referral: true }); paywallForm.hidden = true; paywallSuccess.hidden = false; pollForPaid(0); })
+            .catch(function () { resetPayBtn(); paywallError.textContent = 'Could not complete the unlock. Try again.'; paywallError.hidden = false; });
+          return;
+        }
+        var options = {
+          key: order.keyId, order_id: order.orderId, amount: order.amount, currency: order.currency,
+          name: 'MainCharacter', description: 'Aura Reading — one-time (' + appliedReferral.percentOff + '% off)',
+          theme: { color: '#000000' },
+          modal: { ondismiss: function () { if (window.mc) window.mc.track('lookmaxing_pay_failed', { reason: 'dismissed' }); resetPayBtn(); } },
+          handler: function () { if (window.mc) window.mc.track('lookmaxing_pay_succeeded', { referral: true }); paywallForm.hidden = true; paywallSuccess.hidden = false; pollForPaid(0); },
+        };
+        var rzp = new Razorpay(options);
+        rzp.on('payment.failed', function () { if (window.mc) window.mc.track('lookmaxing_pay_failed', { reason: 'failed' }); resetPayBtn(); paywallError.textContent = 'The payment did not complete. Try again.'; paywallError.hidden = false; });
+        rzp.open();
+      })
+      .catch(function (err) {
+        resetPayBtn();
+        paywallError.textContent = (String(err.message).indexOf('code') > -1 || String(err.message).indexOf('invalid') > -1) ? 'This code is no longer valid. Remove it and try again.' : 'Could not open payment. Try again.';
+        paywallError.hidden = false;
+      });
+  }
 
   if (auditId) {
     auditIdDisplay.textContent = 'AUDIT · ' + auditId.slice(0, 9).toUpperCase();
@@ -1117,7 +1217,7 @@
   });
 
   // ── Razorpay subscription checkout ──
-  // Calls /pay/subscribe (recurring ₹99/month) instead of the legacy /pay/order
+  // Calls /pay/subscribe (recurring ₹499/month) instead of the legacy /pay/order
   // (one-time). In demo/test mode the unlock is settled via /pay/test-confirm so
   // the founder can experience the full flow before live Razorpay keys exist.
   payBtn.addEventListener('click', function () {
@@ -1125,6 +1225,9 @@
     payBtn.disabled = true;
     payBtn.textContent = 'One moment…';
     paywallError.hidden = true;
+
+    // Referral code applied → one-time discounted order. Otherwise → subscription.
+    if (appliedReferral) { payOneTimeWithReferral(); return; }
 
     fetch('/api/lookmaxing/pay/subscribe', {
       method: 'POST',
@@ -1163,7 +1266,7 @@
             .catch(function () {
               payBtn.setAttribute('aria-busy', 'false');
               payBtn.disabled = false;
-              payBtn.innerHTML = '<span class="mc-light-point" aria-hidden="true"></span> Pay ₹99 ◆';
+              payBtn.innerHTML = '<span class="mc-light-point" aria-hidden="true"></span> Pay ₹499 ◆';
               paywallError.textContent = 'Could not complete the unlock. Try again.';
               paywallError.hidden = false;
             });
@@ -1176,14 +1279,14 @@
           key: order.keyId,
           subscription_id: order.subscriptionId,
           name: 'MainCharacter',
-          description: 'Aura Reading: ₹99/month',
+          description: 'Aura Reading: ₹499/month',
           prefill: {},
           theme: { color: '#000000' },
           modal: { ondismiss: function () {
             if (window.mc) window.mc.track('lookmaxing_pay_failed', { reason: 'dismissed' });
             payBtn.setAttribute('aria-busy', 'false');
             payBtn.disabled = false;
-            payBtn.innerHTML = '<span class="mc-light-point" aria-hidden="true"></span> Pay ₹99 ◆';
+            payBtn.innerHTML = '<span class="mc-light-point" aria-hidden="true"></span> Pay ₹499 ◆';
           }},
           handler: function (response) {
             if (window.mc) window.mc.track('lookmaxing_pay_succeeded', {});
@@ -1208,7 +1311,7 @@
           if (window.mc) window.mc.track('lookmaxing_pay_failed', { reason: 'failed' });
           payBtn.setAttribute('aria-busy', 'false');
           payBtn.disabled = false;
-          payBtn.innerHTML = '<span class="mc-light-point" aria-hidden="true"></span> Pay ₹99 ◆';
+          payBtn.innerHTML = '<span class="mc-light-point" aria-hidden="true"></span> Pay ₹499 ◆';
           paywallError.textContent = 'The payment did not complete. Try again, or pick another method.';
           paywallError.hidden = false;
         });
@@ -1217,7 +1320,7 @@
       .catch(function () {
         payBtn.setAttribute('aria-busy', 'false');
         payBtn.disabled = false;
-        payBtn.innerHTML = '<span class="mc-light-point" aria-hidden="true"></span> Pay ₹99 ◆';
+        payBtn.innerHTML = '<span class="mc-light-point" aria-hidden="true"></span> Pay ₹499 ◆';
         paywallError.textContent = 'Could not open payment. Try again.';
         paywallError.hidden = false;
       });

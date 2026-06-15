@@ -613,6 +613,37 @@
       </button>
     </div>
   </div>
+
+  <!-- Referral Codes — generate one-time discount codes for the ₹499 report -->
+  <div class="dogfood-panel">
+    <h3>◆ Referral Codes</h3>
+    <p style="font-size:0.75rem;color:var(--text-faint);margin-bottom:14px;">
+      Generate a discount code for the ₹499 report unlock. Set the % off and how many times it can be used.
+      A 50% code makes the report ₹250. Single-use by default — set Max uses higher to allow more redemptions.
+    </p>
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <label style="font-size:0.7rem;color:var(--text-faint);">% off</label>
+        <input id="ref-pct" type="number" min="1" max="100" value="50" style="padding:8px 10px;background:var(--bg-card2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:0.85rem;width:90px;outline:none;">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <label style="font-size:0.7rem;color:var(--text-faint);">Max uses</label>
+        <input id="ref-max" type="number" min="1" value="1" style="padding:8px 10px;background:var(--bg-card2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:0.85rem;width:90px;outline:none;">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;">
+        <label style="font-size:0.7rem;color:var(--text-faint);">Note (optional)</label>
+        <input id="ref-note" type="text" placeholder="e.g. launch promo" style="padding:8px 10px;background:var(--bg-card2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:0.85rem;outline:none;">
+      </div>
+      <button class="dogfood-btn" id="ref-generate" style="min-width:140px;">Generate code</button>
+    </div>
+    <div id="ref-result" style="font-size:0.8rem;margin-bottom:14px;min-height:1.2em;"></div>
+    <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+      <thead><tr style="color:var(--text-faint);text-align:left;border-bottom:1px solid var(--border);">
+        <th style="padding:6px 8px;">Code</th><th style="padding:6px 8px;">% Off</th><th style="padding:6px 8px;">Price</th><th style="padding:6px 8px;">Uses</th><th style="padding:6px 8px;">Note</th>
+      </tr></thead>
+      <tbody id="ref-table"><tr><td colspan="5" style="padding:8px;color:var(--text-faint);">Loading…</td></tr></tbody>
+    </table>
+  </div>
 </div>
 
 <script>
@@ -643,6 +674,7 @@ function doLogin() {
       loadData();
       loadFunnel();
       loadLookmaxUsers();
+      loadReferralCodes();
       // Poll funnel tiles every 60 seconds (no websocket needed)
       if (funnelInterval) clearInterval(funnelInterval);
       funnelInterval = setInterval(loadFunnel, 60000);
@@ -1051,6 +1083,51 @@ async function executeDogfood() {
     _dogfoodPending = null;
   }
 }
+
+// ── Referral codes ──
+function loadReferralCodes() {
+  fetch('/api/admin/referral-codes', { headers: authHeaders() })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      var codes = (d && d.codes) || [];
+      var tbody = document.getElementById('ref-table');
+      if (!tbody) return;
+      if (!codes.length) { tbody.innerHTML = '<tr><td colspan="5" style="padding:8px;color:var(--text-faint);">No codes yet.</td></tr>'; return; }
+      tbody.innerHTML = codes.map(function (c) {
+        var used = c.uses >= c.maxUses;
+        return '<tr style="border-bottom:1px solid var(--border);">'
+          + '<td style="padding:7px 8px;font-family:monospace;letter-spacing:.06em;color:' + (used ? 'var(--text-faint)' : 'var(--text)') + ';">' + c.code + '</td>'
+          + '<td style="padding:7px 8px;">' + c.percentOff + '%</td>'
+          + '<td style="padding:7px 8px;">₹' + c.discountedInr + '</td>'
+          + '<td style="padding:7px 8px;color:' + (used ? '#d98a8a' : 'var(--text)') + ';">' + c.uses + ' / ' + c.maxUses + (used ? ' · used up' : '') + '</td>'
+          + '<td style="padding:7px 8px;color:var(--text-faint);">' + (c.note || '') + '</td>'
+          + '</tr>';
+      }).join('');
+    })
+    .catch(function () {});
+}
+(function () {
+  var btn = document.getElementById('ref-generate');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var pct = parseInt(document.getElementById('ref-pct').value, 10);
+    var max = parseInt(document.getElementById('ref-max').value, 10) || 1;
+    var note = document.getElementById('ref-note').value || '';
+    var res = document.getElementById('ref-result');
+    if (!(pct >= 1 && pct <= 100)) { res.style.color = '#d98a8a'; res.textContent = '% off must be 1–100.'; return; }
+    btn.disabled = true; res.style.color = 'var(--text-faint)'; res.textContent = 'Generating…';
+    fetch('/api/admin/referral-codes', { method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ percentOff: pct, maxUses: max, note: note }) })
+      .then(function (r) { if (!r.ok) return r.json().then(function (e) { throw new Error((e && e.error) || 'failed'); }); return r.json(); })
+      .then(function (c) {
+        btn.disabled = false;
+        res.style.color = 'var(--text)';
+        res.innerHTML = 'New code: <b style="font-family:monospace;font-size:1.05rem;letter-spacing:.08em;">' + c.code + '</b> — ' + c.percentOff + '% off → ₹' + c.discountedInr + ' (' + c.usd + '), ' + c.maxUses + ' use' + (c.maxUses === 1 ? '' : 's') + '. Share it.';
+        document.getElementById('ref-note').value = '';
+        loadReferralCodes();
+      })
+      .catch(function (e) { btn.disabled = false; res.style.color = '#d98a8a'; res.textContent = 'Error: ' + e.message; });
+  });
+}());
 </script>
 
 </body>

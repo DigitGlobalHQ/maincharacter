@@ -1653,6 +1653,20 @@ router.post('/pay/order', async (req, res) => {
     });
   }
 
+  // 100%-off (free) code → ₹0. Razorpay rejects a ₹0 order (min ₹1), so settle the
+  // unlock directly and redeem the code, with no Razorpay round-trip.
+  if (orderAmount <= 0) {
+    try {
+      const settled = await _settlePaidAudit(auditId, { paymentId: 'referral_free' });
+      events.trackAnonymous('lookmaxing_pay_succeeded', { auditId, free: true, referral: true }, actor.userId).catch(() => {});
+      log.info('PAY-ORDER', `free unlock (100% referral code) for audit ${auditId}`);
+      return res.json({ free: true, unlocked: !!(settled && settled.paid), auditId });
+    } catch (err) {
+      log.error('PAY-ORDER', `free unlock failed for ${auditId}: ${err.message}`);
+      return res.status(500).json({ error: 'Something has interrupted the work. Try again in a moment.' });
+    }
+  }
+
   try {
     // Razorpay order (₹499 base = 49900 paise, discounted when code applied).
     // Mocked when bypassing (testing/demo).
@@ -1905,19 +1919,23 @@ async function _activateSubUser(userId) {
 router.post('/pay/verify', async (req, res) => {
   const actor = resolveActor(req);
   if (!actor) return res.status(401).json({ error: 'unauthorized' });
-  const { auditId, razorpay_payment_id, razorpay_subscription_id, razorpay_signature } = req.body || {};
-  if (!auditId || !razorpay_payment_id || !razorpay_subscription_id || !razorpay_signature) {
+  const { auditId, razorpay_payment_id, razorpay_subscription_id, razorpay_order_id, razorpay_signature } = req.body || {};
+  // Two unlock shapes: subscription (subscription_id) or one-time order (order_id).
+  if (!auditId || !razorpay_payment_id || !razorpay_signature || (!razorpay_subscription_id && !razorpay_order_id)) {
     return res.status(400).json({ error: 'missing payment fields' });
   }
   const session = _getSession(auditId);
   if (!session) return res.status(404).json({ error: 'audit not found' });
   if (!canAccess(session, actor)) return res.status(403).json({ error: 'forbidden' });
 
-  const ok = razorpay.verifySubscriptionPayment(razorpay_payment_id, razorpay_subscription_id, razorpay_signature);
+  // One-time discounted order → verify order signature; subscription → subscription signature.
+  const ok = razorpay_subscription_id
+    ? razorpay.verifySubscriptionPayment(razorpay_payment_id, razorpay_subscription_id, razorpay_signature)
+    : razorpay.verifyPayment(razorpay_order_id, razorpay_payment_id, razorpay_signature);
   if (!ok) return res.status(400).json({ error: 'signature verification failed' });
 
   const settled = await _settlePaidAudit(auditId, { paymentId: razorpay_payment_id });
-  await _activateSubUser(actor.userId);
+  if (razorpay_subscription_id) await _activateSubUser(actor.userId);
   events.trackAnonymous('lookmaxing_pay_verified', { auditId }, actor.userId).catch(() => {});
   log.info('PAY-VERIFY', `verified unlock for audit ${auditId}`);
   return res.json({ ok: true, paid: !!(settled && settled.paid) });

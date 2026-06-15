@@ -25,6 +25,7 @@ process.env.EVENTS_BACKEND          = 'file';
 process.env.EVENTS_JSONL_PATH       = path.join(tmpDir, 'events.jsonl');
 process.env.JWT_SECRET              = 'test-jwt-secret-refpay';
 process.env.RAZORPAY_WEBHOOK_SECRET = 'test_webhook_secret_refpay';
+process.env.RAZORPAY_KEY_SECRET      = 'test_key_secret_refpay';
 process.env.REFERRAL_CODES_FILE_PATH = path.join(tmpDir, 'referral-codes.json');
 
 const request          = (await import('supertest')).default;
@@ -48,6 +49,28 @@ afterAll(() => fs.rmSync(tmpDir, { recursive: true, force: true }));
 /** Build a valid Razorpay webhook signature for a raw body. */
 function razorpaySign(rawBody, secret = 'test_webhook_secret_refpay') {
   return crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+}
+
+/** Build a valid Razorpay one-time-order payment signature: HMAC(orderId|paymentId). */
+function razorpayOrderSign(orderId, paymentId, secret = 'test_key_secret_refpay') {
+  return crypto.createHmac('sha256', secret).update(`${orderId}|${paymentId}`).digest('hex');
+}
+
+/** Run a fresh quiz and return its auditId — avoids the alreadyPaid short-circuit. */
+async function freshAuditId() {
+  const res = await request(app)
+    .post('/api/lookmaxing/quiz')
+    .set('Authorization', bearer)
+    .send({
+      answers: [
+        { questionId: 'q1', choice: 'A', label: 'Powerful.' },
+        { questionId: 'q2', choice: 'C', label: 'Oily.' },
+        { questionId: 'q3', choice: 'A', label: 'Thick.' },
+        { questionId: 'q4', choice: 'B', label: 'Six hours.' },
+        { questionId: 'q5', choice: 'B', label: 'Basic routine.' },
+      ],
+    });
+  return res.body.auditId;
 }
 
 // ── inrPaiseToUsd ─────────────────────────────────────────────────────────────
@@ -339,5 +362,113 @@ describe('Referral code redeemed on settlement (pay/webhook)', () => {
     // Uses must still be 1 — no double-redeem
     const codeAfterDouble = ReferralCodes.getCode(rec.code);
     expect(codeAfterDouble.uses).toBe(1);
+  });
+});
+
+// ── 100%-off (free) referral code → no Razorpay round-trip ────────────────────
+
+describe('POST /api/lookmaxing/pay/order — 100%-off free unlock', () => {
+  it('settles a ₹0 order directly and redeems the code exactly once', async () => {
+    const rec = ReferralCodes.createCode({ percentOff: 100, maxUses: 1 });
+    const freeAuditId = await freshAuditId();
+
+    const res = await request(app)
+      .post('/api/lookmaxing/pay/order')
+      .set('Authorization', bearer)
+      .send({ auditId: freeAuditId, code: rec.code });
+
+    // No Razorpay order is created — server settles directly and reports free.
+    expect(res.status).toBe(200);
+    expect(res.body.free).toBe(true);
+    expect(res.body.unlocked).toBe(true);
+    expect(res.body.auditId).toBe(freeAuditId);
+    // No mock order id leaks back on the free path.
+    expect(res.body.orderId).toBeUndefined();
+
+    // Code redeemed exactly once and now exhausted.
+    expect(ReferralCodes.getCode(rec.code).uses).toBe(1);
+    expect(ReferralCodes.validateCode(rec.code).valid).toBe(false);
+
+    // A second attempt with the now-exhausted code is rejected (no double unlock).
+    const repeatAuditId = await freshAuditId();
+    const repeat = await request(app)
+      .post('/api/lookmaxing/pay/order')
+      .set('Authorization', bearer)
+      .send({ auditId: repeatAuditId, code: rec.code });
+    expect(repeat.status).toBe(400);
+    expect(repeat.body.error).toBe('invalid_code');
+  });
+});
+
+// ── POST /pay/verify — one-time discounted order settlement ───────────────────
+
+describe('POST /api/lookmaxing/pay/verify — one-time order', () => {
+  it('verifies a one-time order signature and flips the audit to paid', async () => {
+    const rec = ReferralCodes.createCode({ percentOff: 50, maxUses: 1 });
+    const orderAuditId = await freshAuditId();
+
+    const orderRes = await request(app)
+      .post('/api/lookmaxing/pay/order')
+      .set('Authorization', bearer)
+      .send({ auditId: orderAuditId, code: rec.code });
+    expect(orderRes.status).toBe(200);
+    expect(orderRes.body.amount).toBe(24950); // 49900 * 0.50
+    const orderId = orderRes.body.orderId;
+    expect(orderId).toBeTruthy();
+
+    const paymentId = 'pay_onetime_test_001';
+    const sig = razorpayOrderSign(orderId, paymentId);
+
+    const verifyRes = await request(app)
+      .post('/api/lookmaxing/pay/verify')
+      .set('Authorization', bearer)
+      .send({
+        auditId: orderAuditId,
+        razorpay_order_id: orderId,
+        razorpay_payment_id: paymentId,
+        razorpay_signature: sig,
+      });
+
+    expect(verifyRes.status).toBe(200);
+    expect(verifyRes.body.ok).toBe(true);
+    expect(verifyRes.body.paid).toBe(true);
+
+    // Settlement redeemed the pending referral code exactly once.
+    expect(ReferralCodes.getCode(rec.code).uses).toBe(1);
+  });
+
+  it('rejects a one-time order with a bad signature', async () => {
+    const orderAuditId = await freshAuditId();
+    const orderRes = await request(app)
+      .post('/api/lookmaxing/pay/order')
+      .set('Authorization', bearer)
+      .send({ auditId: orderAuditId });
+    const orderId = orderRes.body.orderId;
+
+    const verifyRes = await request(app)
+      .post('/api/lookmaxing/pay/verify')
+      .set('Authorization', bearer)
+      .send({
+        auditId: orderAuditId,
+        razorpay_order_id: orderId,
+        razorpay_payment_id: 'pay_onetime_test_002',
+        razorpay_signature: 'deadbeef_not_a_real_signature',
+      });
+
+    expect(verifyRes.status).toBe(400);
+    expect(verifyRes.body.error).toBe('signature verification failed');
+  });
+
+  it('returns 400 when neither order_id nor subscription_id is present', async () => {
+    const verifyRes = await request(app)
+      .post('/api/lookmaxing/pay/verify')
+      .set('Authorization', bearer)
+      .send({
+        auditId,
+        razorpay_payment_id: 'pay_x',
+        razorpay_signature: 'sig_x',
+      });
+    expect(verifyRes.status).toBe(400);
+    expect(verifyRes.body.error).toBe('missing payment fields');
   });
 });

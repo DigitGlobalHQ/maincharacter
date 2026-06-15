@@ -935,6 +935,12 @@
     })
       .then(function (res) { if (!res.ok) { return res.json().then(function (e) { throw new Error(e && e.reason ? e.reason : 'order_failed'); }); } return res.json(); })
       .then(function (order) {
+        // 100%-off code → free unlock settled server-side, no Razorpay.
+        if (order.free || order.alreadyPaid) {
+          if (window.mc) window.mc.track('lookmaxing_pay_succeeded', { free: true, referral: true });
+          paywallForm.hidden = true; paywallSuccess.hidden = false; pollForPaid(0);
+          return;
+        }
         if (order.testMode) {
           fetch('/api/lookmaxing/pay/test-confirm', { method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ auditId: auditId }) })
             .then(function (r) { if (!r.ok) throw new Error('test-confirm failed'); return r.json(); })
@@ -947,7 +953,21 @@
           name: 'MainCharacter', description: 'Aura Reading — one-time (' + appliedReferral.percentOff + '% off)',
           theme: { color: '#000000' },
           modal: { ondismiss: function () { if (window.mc) window.mc.track('lookmaxing_pay_failed', { reason: 'dismissed' }); resetPayBtn(); } },
-          handler: function () { if (window.mc) window.mc.track('lookmaxing_pay_succeeded', { referral: true }); paywallForm.hidden = true; paywallSuccess.hidden = false; pollForPaid(0); },
+          // Verify the order payment synchronously so the report unlocks immediately
+          // (the webhook remains a backstop). Then poll for the paid flag.
+          handler: function (response) {
+            if (window.mc) window.mc.track('lookmaxing_pay_succeeded', { referral: true });
+            paywallForm.hidden = true; paywallSuccess.hidden = false;
+            fetch('/api/lookmaxing/pay/verify', {
+              method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }),
+              body: JSON.stringify({
+                auditId: auditId,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id || order.orderId,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            }).then(function () { pollForPaid(0); }).catch(function () { pollForPaid(0); });
+          },
         };
         var rzp = new Razorpay(options);
         rzp.on('payment.failed', function () { if (window.mc) window.mc.track('lookmaxing_pay_failed', { reason: 'failed' }); resetPayBtn(); paywallError.textContent = 'The payment did not complete. Try again.'; paywallError.hidden = false; });

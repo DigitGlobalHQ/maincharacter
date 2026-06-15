@@ -1063,7 +1063,7 @@ router.post('/referral-codes', requireAuth, async (req, res) => {
   }
 
   try {
-    const rec = ReferralCodes.createCode({
+    const rec = await ReferralCodes.createCode({
       percentOff: pct,
       maxUses:    uses,
       note:       note || undefined,
@@ -1095,7 +1095,7 @@ router.get('/referral-codes', requireAuth, async (req, res) => {
   const ReferralCodes = require('../models/referral-codes');
 
   try {
-    const codes = ReferralCodes.listCodes().map((rec) => {
+    const codes = (await ReferralCodes.listCodes()).map((rec) => {
       const discountedPaise = Math.round(REFERRAL_BASE_PAISE * (1 - rec.percentOff / 100));
       return {
         code:           rec.code,

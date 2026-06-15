@@ -1517,7 +1517,7 @@ async function _settlePaidAudit(auditId, { paymentId = null } = {}) {
   if (pendingCode) {
     try {
       const ReferralCodes = require('../models/referral-codes'); // eslint-disable-line global-require
-      const redeemResult  = ReferralCodes.redeemCode(pendingCode);
+      const redeemResult  = await ReferralCodes.redeemCode(pendingCode);
       if (redeemResult.ok) {
         log.info('PAY-SETTLE', `referral code ${pendingCode} redeemed for audit ${auditId}`);
       } else {
@@ -1585,7 +1585,7 @@ router.post('/pay/validate-code', async (req, res) => {
   const { inrPaiseToUsd } = require('../services/razorpay'); // eslint-disable-line global-require
 
   const BASE_PAISE = 49900; // ₹499 — lookmax499 plan base price
-  const validation  = ReferralCodes.validateCode(code);
+  const validation  = await ReferralCodes.validateCode(code);
 
   if (!validation.valid) {
     return res.json({
@@ -1638,7 +1638,7 @@ router.post('/pay/order', async (req, res) => {
 
   if (code) {
     const ReferralCodes = require('../models/referral-codes'); // eslint-disable-line global-require
-    const validation = ReferralCodes.validateCode(code);
+    const validation = await ReferralCodes.validateCode(code);
     if (!validation.valid) {
       return res.status(400).json({ error: 'invalid_code', reason: validation.reason });
     }

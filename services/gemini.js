@@ -7,6 +7,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { getScoringPrompt } = require('../data/orator-content');
 const { createLogger } = require('../lib/log');
+const { classifyError } = require('../lib/gemini-health');
 
 const log = createLogger('GEMINI');
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
@@ -23,8 +24,8 @@ if (GEMINI_API_KEY) {
   log.info('INIT', 'No API key — fallback mode');
 }
 
-// Rate limiting — 10 RPM
-const RPM_LIMIT = 10;
+// Rate limiting — configurable via GEMINI_RPM_LIMIT (default 10)
+const RPM_LIMIT = Number(process.env.GEMINI_RPM_LIMIT) || 10;
 const callLog = [];
 
 function canCallGemini() {
@@ -39,12 +40,59 @@ function logCall() {
 }
 
 /**
+ * Retry a Gemini generateContent call on transient 429 / quota errors.
+ *
+ * Retries up to `maxRetries` times with exponential backoff (default: 2 retries,
+ * 500ms then 1500ms). Non-rate-limit errors are re-thrown immediately — no retry.
+ * Total added latency is bounded (2s worst case with defaults).
+ *
+ * @param {Function} fn   async () => result  — the actual generateContent call
+ * @param {number} maxRetries  default 2
+ * @param {number[]} backoffMs  delay before each retry (ms); defaults to [500, 1500]
+ * @returns {Promise<*>}  the first successful result
+ */
+async function _withGeminiRetry(fn, maxRetries = 2, backoffMs = [500, 1500]) {
+  let lastErr;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const status = classifyError(err);
+      if (status !== 'rate_limited') {
+        // Non-429 error — propagate immediately, no retry.
+        throw err;
+      }
+      lastErr = err;
+      if (attempt < maxRetries) {
+        const delay = backoffMs[attempt] !== undefined ? backoffMs[attempt] : backoffMs[backoffMs.length - 1];
+        log.warn('RETRY', `429 / rate limited — retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastErr;
+}
+
+/**
  * Score a user's daily response using Gemini Pro.
  * Returns: { scores, wordsUsed, consultantMessage, delta }
  */
 async function scoreUserResponse(userName, day, words, userResponse, previousScores) {
   if (!model || !canCallGemini()) {
     log.warn('FALLBACK', 'Using fallback scoring (no API or rate limited)');
+    // Lazy-require to avoid a circular dependency: alerts → log → (nothing), but
+    // gemini imports classifyError from gemini-health which is fine. We guard alerts
+    // lazily here because alerts may not exist in environments where it hasn't been
+    // initialised yet.
+    try {
+      const alerts = require('../lib/alerts');
+      alerts.notify({
+        severity: 'warning',
+        title: 'Gemini fallback scoring used',
+        key: 'gemini-fallback-used',
+        detail: 'canCallGemini() returned false — RPM limit hit or no API key. Falling back to synthetic scores.',
+      }).catch(() => {});
+    } catch (_) { /* alerts not available */ }
     return generateFallbackScoring(day, userName);
   }
 
@@ -52,7 +100,7 @@ async function scoreUserResponse(userName, day, words, userResponse, previousSco
 
   try {
     logCall();
-    const result = await model.generateContent(prompt);
+    const result = await _withGeminiRetry(() => model.generateContent(prompt));
     const text = result.response.text();
 
     // Extract JSON from response
@@ -110,7 +158,7 @@ Return ONLY the 3-4 sentence assessment text, no JSON.`;
 
   try {
     logCall();
-    const result = await model.generateContent(prompt);
+    const result = await _withGeminiRetry(() => model.generateContent(prompt));
     return result.response.text().trim();
   } catch (err) {
     log.error('ERROR', `Evolution assessment: ${err.message}`);
@@ -162,4 +210,6 @@ function rand(min, max) {
 module.exports = {
   scoreUserResponse,
   generateEvolutionAssessment,
+  // Test helper: exposed for unit-testing the retry logic in isolation.
+  _withGeminiRetry,
 };

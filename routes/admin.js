@@ -999,15 +999,13 @@ router.post('/simulate-reaudit', requireAuth, async (req, res) => {
 // Founder-only (requireAuth): every signed-up user with email, signup date,
 // whether they paid the ₹99 audit unlock, and their funnel stage.
 router.get('/lookmax-users', requireAuth, async (req, res) => {
-  const fs = require('fs');            // eslint-disable-line global-require
-  const path = require('path');        // eslint-disable-line global-require
-
-  // Audit sessions live in the JSON store; index the latest per user.
+  // Audit sessions: load from whichever backend is active (Postgres or file).
+  // _allSessions() is async and handles the backend selection internally,
+  // so this endpoint remains correct after the Postgres migration.
   let sessions = {};
   try {
-    const storePath = process.env.AUDIT_V2_STORE_PATH ||
-      path.join(__dirname, '..', 'data', 'audit-sessions-v2.json');
-    sessions = JSON.parse(fs.readFileSync(storePath, 'utf8'));
+    const { _allSessions } = require('./lookmaxing'); // eslint-disable-line global-require
+    sessions = await _allSessions();
   } catch { sessions = {}; }
 
   const byUser = {};

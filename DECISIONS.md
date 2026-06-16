@@ -5,6 +5,28 @@ Format: date, decision, 2-sentence rationale.
 
 ---
 
+## 2026-06-16 — Durable audit-session store (migrations/0006, routes/lookmaxing.js)
+
+### Root cause: ephemeral JSON file caused /pay/order and GET /audit/:id to 404 after Render redeploy
+
+`routes/lookmaxing.js` stored audit sessions in `data/audit-sessions-v2.json` on Render's ephemeral disk. Every redeploy (or free-instance sleep/restart) wiped that file, so `_getSession()` returned null at `/pay/order`, `/pay/subscribe`, `/pay/verify`, `/pay/test-confirm`, `GET /audit/:id`, and `GET /audit/:id/pdf` — leaving users stuck at payment with no way back except a fresh photo upload.
+
+### New audit_session_store table (migration 0006) — plain TEXT KV, not the typed audit_sessions_v2 table
+
+`migrations/0006_audit_session_store.sql` adds a `TEXT PRIMARY KEY` + `JSONB data` table. The existing `audit_sessions_v2` table (migration 0002) was not reused because its `id UUID` + `user_id UUID REFERENCES users(id)` schema does not match how the route keys sessions (plain TEXT, no FK), and adding a FK constraint risks breaking the funnel if a user record is deleted out of order. The new table is a pure KV blob store with `id`, `user_id`, and `paid` mirrored as top-level columns for index scans and admin queries.
+
+### _getSession / _putSession / _updateSession converted to async; Postgres-backed when DATABASE_URL is set
+
+The three store helpers now return Promises in both backends (identical to the pattern in `services/events.js`). When `DATABASE_URL` is set (or `AUDIT_SESSION_BACKEND=pg`), operations go to Postgres via an in-process pool with a file-backend fallback on any pg error. `AUDIT_SESSION_BACKEND=file` forces the file path even when `DATABASE_URL` is present (used by tests). Every call site in the route — `/quiz`, `/capture`, `/analyze`, `GET /audit/:id`, `_settlePaidAudit`, `/pay/order`, `/pay/subscribe`, `/pay/webhook`, `/pay/test-confirm`, `/pay/verify`, `GET /audit/:id/pdf` — was updated to `await` the async helpers.
+
+### Admin /lookmax-users endpoint repaired — reads sessions via _allSessions() not fs.readFileSync
+
+`GET /api/admin/lookmax-users` previously read `data/audit-sessions-v2.json` directly via `fs.readFileSync`, which returns stale or empty data when Postgres is the active backend. The endpoint now calls `await _allSessions()` (a new export from `routes/lookmaxing.js`) which returns the full session map from whichever backend is active. The JSON output shape is unchanged.
+
+### File backend retained for tests / no-DATABASE_URL dev
+
+The JSON file store (`AUDIT_V2_STORE_PATH`) is kept as the fallback so the full test suite (1789 tests) and `npm run smoke` pass without `DATABASE_URL`. Render free-tier boots without Postgres still work; the session store upgrades silently to durable Postgres on the first boot after `DATABASE_URL` is set and migration 0006 runs.
+
 ## 2026-06-16 — Threaded Slack user-activity feed (lib/activity-feed.js)
 
 ### Threaded via Slack Web API bot token, not incoming webhooks

@@ -759,12 +759,18 @@ function renderData(data) {
   tbody.innerHTML = currentUsers.map(u => {
     const statusCls = u.status === 'active' ? 'status-active' : (u.status === 'paused' ? 'status-paused' : 'status-completed');
     const lastActive = u.lastActive ? new Date(u.lastActive).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+    const isAesthetic = u.pillar === 'aesthetic';
+    // For aesthetic pillar users: show mirror level in rank column and lookmax streak
+    // in the streak column; the Orator day/streak fields are always 0 for them.
+    // TODO copy review — column labels below are functional labels, not Consultant copy.
+    const dayCell   = isAesthetic ? (u.mirrorLevel || 'raw') : u.day;
+    const streakCell = isAesthetic ? (u.lookmaxStreak || 0) : u.streak;
     return `<tr onclick="openDetail('${u.phone}')">
       <td style="color:var(--text)">${u.name}</td>
       <td>${u.phone}</td>
       <td>${u.pillar}</td>
-      <td>${u.day}</td>
-      <td>${u.streak}</td>
+      <td>${dayCell}</td>
+      <td>${streakCell}</td>
       <td><span class="status-badge ${statusCls}">${u.status}</span></td>
       <td style="color:var(--gold)">${u.rank}</td>
       <td>${lastActive}</td>

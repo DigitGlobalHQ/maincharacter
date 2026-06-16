@@ -1330,3 +1330,192 @@ opt-in (toggle + follows device on first visit, persisted).
   decide the continuation-pricing copy before it's added (orchestrator checkpoint #7).
 - **Tests:** tests/lookmaxing-pdf.test.js +3 (blueprint multi-page render asserting %PDF +
   page-tree /Count ≥ 7; cover-photo embed; legacy path still renders). Suite 1543 pass; smoke 44/44.
+
+---
+
+## 2026-06-14 — Hero atmosphere: 3D starfield + volumetric light beam (live)
+
+Founder-directed, reference images provided. Purely additive atmosphere on the existing silver/obsidian theme — no copy, route, CTA, or flow changes.
+
+- **Starfield** (`/` landing.html + `/lookmaxing/` index.html): a 3D star-travel field — 2D canvas, perspective-projected stars drifting toward the viewer, mouse-parallax depth, recoloured to the site palette via tokens (silver in dark / graphite in light), `prefers-reduced-motion` static, pauses when the tab is hidden. Fixed `#mc-starfield` canvas at `z-index:-1` behind all content. (Motion-streak trails were removed — they drew stray full-width lines.)
+- **Light beam** (`/`): a white volumetric god-ray shaft (CSS conic-gradients + core glow, gentle breathing) descending over the M monogram and the headline. `.hero__beam`.
+- **Section dividers removed** (`/`): `.gap` / `.paywall` / `.cta-close` / `.footer` border hairlines set transparent, and `.paywall` / `.cta-close` backgrounds made transparent, so the starfield shows uniformly across the page.
+
+Verified: landing locked-copy guard 22/22, theme-head 5/5, full suite + `npm run smoke` green before merge. Server caches page HTML in memory — restart `node server.js` after editing any served HTML (cost real debugging time this session).
+
+---
+
+## 2026-06-14 — SEO FAQ + JSON-LD structured data on the homepage (branch `seo/faq-schema`)
+
+Added a visible "Questions" FAQ section to `landing.html` (10 looksmaxxing/aura-reading Q&A, themed with existing tokens — Cormorant serif questions, Sora body, silver `+`/`×` toggle, hairline dividers) plus four JSON-LD blocks in `<head>`: FAQPage, Organization, WebSite, SoftwareApplication. Purely additive — no existing copy, route, CTA, or flow changed.
+
+**Two source claims were corrected before shipping** (verified against the codebase; publishing schema that overstates the product is a Google manual-penalty risk):
+- "face rating from a single photo" → "from a single photo **plus five quick questions**" — the audit requires 5 calibration answers + photo (`routes/lookmaxing.js`, `public/lookmaxing/quiz.html`).
+- ₹99 plan "unlocks the daily **7-day protocol** + **Weekly Evolution Report**" (those are Orator features) → "**daily mirror protocol** + **monthly re-audit**", matching the real `lookmax99` plan (`services/razorpay.js`).
+
+Other decisions: `sameAs` social URLs omitted (no real handles — placeholders would be worse than none); `Organization.logo` → real `/maincharacter-mark-3d.png`; no `aggregateRating` (no verified reviews); em-dashes normalized to colons/commas, matching the founder's earlier "remove em dashes" preference for Lookmaxxing surfaces. Visible answer text is kept **byte-identical** to the FAQPage schema (Google rich-result requirement) and locked by `tests/landing-faq-schema.test.js` (9 tests, incl. claim-accuracy regression guards).
+
+Verified: new guard 9/9, landing locked-copy 22/22, full suite **1552 passed**, `npm run smoke` 44/44; all 4 JSON-LD blocks parse off the served page, ₹ intact. **Held on branch — NOT merged to main; awaiting founder approval (user-facing copy + live deploy checkpoints).**
+
+---
+
+## 2026-06-14 — On-page + technical SEO (branch `seo/onpage-technical`)
+
+Implemented `maincharacter-seo-technical.md` §1–6 across the 5 public pages (`/`, `/lookmaxing/`, `/lookmaxing/start`, `/privacy`, `/terms`): per-page title tags, meta descriptions, self-referencing canonicals, Open Graph + Twitter cards, image alt text, and `noindex` on the sign-in page only. Guarded by `tests/seo.test.js` (32 tests).
+
+**Corrections made vs the doc (verified against the live product / code):**
+- **`/lookmaxxing` (two x) → `/lookmaxing` (one x) in every URL.** The doc spelled the path with two x's; the live route is one-x (`server.js`). Two-x canonicals/sitemap/robots would 404. The two-x "Looksmaxxing" spelling is kept only as the visible SEO *keyword*, never in a URL. (A test asserts no page emits a two-x URL.)
+- **"7-day glow up protocol" → "daily glow up protocol"** in the homepage meta + OG/Twitter descriptions — same overstatement corrected in the FAQ (the 7-day protocol is Orator, coming soon; the live Lookmaxxing product is the daily mirror protocol + monthly re-audit).
+- **Reading-page canonical/og:url + sitemap entry → `/lookmaxing/` (trailing slash).** `GET /lookmaxing` 301-redirects to `/lookmaxing/` (pre-existing `express.static` directory behavior); the canonical must point at the 200 URL, not the redirect.
+
+**§2 H1s (founder decision):** homepage H1 left **locked** (`Become the Main Character`, untouched). Reading-page H1 extended in The Consultant's voice — kept the iconic *"Before you open your mouth, you have already been read."* and appended *"This is your aura reading."* (adds the keyword without hype). The doc's hyped keyword-stuffed H1s were NOT applied. Did **not** fabricate body copy for the doc's extra section H2s (rule 5) — keyword coverage rides in the title tags, the "Get Your Aura Reading" CTA, and the FAQ. FAQ H2 renamed to `Looksmaxxing & Aura Reading — FAQ`.
+
+**§4–5 robots/sitemap:** pre-existing static `public/robots.txt` + `public/sitemap.xml` already exist and are richer than the doc (admin/api disallows; tools/face/studio + tool-slug URLs). Rather than regress them with the doc's 4-URL version (the doc said "framework-native *if needed*" — not needed), edited the static files: added `Disallow: /lookmaxing/start` to robots; sitemap already excluded the noindex page. Removed the dead Express route + `lib/seo-routes.js` I'd briefly added (static wins over it).
+
+**§6 images:** the only `<img>` on these pages are brand marks → `alt="MainCharacter logo"`. The doc's aura-score / before-after alt guidance is N/A here (those images live on tool/report pages, out of scope).
+
+**og-image:** the doc references `/og-image.png` which did not exist → generated a real 1200×630 `public/og-image.png` (brand mark centred on obsidian via `sips`). A designed version with the tagline can replace it later (one-line URL swap).
+
+**§7 Core Web Vitals:** advisory checklist; key text (H1/intro/FAQ) is already in server-rendered HTML, and the only images are above-the-fold marks (correctly NOT lazy-loaded). No code change; the rest (WebP/AVIF, defer JS) is a founder follow-up.
+
+Verified: `tests/seo.test.js` 32/32, landing + frontend guards green, full suite **1584 passed**, `npm run smoke` 44/44; live local check confirms correct canonicals (one-x, 200 URL), `noindex` on start only, robots disallow, sitemap intact (15 URLs), og-image 200, zero two-x URLs served. **Held on branch — NOT merged to main; awaiting founder approval.** Follow-up for founder: add designed `og-image.png` + `sameAs` socials; Search Console sitemap resubmit after deploy.
+
+---
+
+## 2026-06-14 — SEO completeness pass (branch `seo/completeness-pass`)
+
+Audited the live pages after the on-page/technical SEO deploy. Two issues found and fixed; everything else passed.
+
+**Found & fixed:**
+- **Reading page had no link back to the homepage** (its nav brand links to `/lookmaxing`, i.e. itself; zero `href="/"` on the page) → made the existing footer brand line a homepage link: `<a href="/">◆ MainCharacter</a> · The Consultant`. Crawlable, on-voice, reuses existing text (no fabricated copy). Resolves the homepage's missing internal inbound link / orphan risk.
+- **Sitemap listed `/lookmaxing/tools` which 301-redirects** to `/lookmaxing/tools/` → changed the sitemap entry to the 200 trailing-slash form. (All other 14 sitemap URLs already return 200.)
+
+**Audited, no change needed:**
+- Internal linking: homepage → reading uses descriptive keyword anchors ("Get Your Aura Reading →", "Get Your Reading →"). Privacy + Terms reachable via crawlable footer links on both the homepage and the reading page.
+- Crawlability: homepage H1, gap intro, and FAQ (question + answer) and the reading-page H1 are all present in the raw server-rendered HTML (confirmed via `curl` with no JS) — nothing critical is client-only.
+- Self-audit: all 5 canonicals return **200** (none point at a 301); no two-x `/lookmaxxing` URL in any href/link context (the only two-x strings are the visible brand name "Lookmaxxing", correct); no indexable page carries a stray `noindex` (only `/lookmaxing/start` is noindex, as intended).
+
+Guarded by `tests/seo.test.js` (now 39 tests: + internal-linking, sitemap-200-only, and server-rendered-text checks). Full suite **1591 passed**, `npm run smoke` 44/44; live local re-verify of both fixes green. **Held on branch — NOT merged to main; awaiting founder approval.**
+
+---
+
+## 2026-06-14 — First SEO blog post: "How to Start Looksmaxxing" (branch `seo/blog-how-to-start-looksmaxxing`)
+
+First pillar blog post, targeting the keyword **"how to start looksmaxxing."** Establishes the blog pattern: standalone static HTML in `public/blog/<slug>.html`, served at the clean URL `/blog/<slug>` via a new `app.get('/blog/:slug', …)` route (mirrors the tools-slug pattern; slug-validated, 404→`/`). A `/blog` index page is deferred until there are 2+ posts (founder agreed).
+
+- **Post:** `public/blog/how-to-start-looksmaxxing.html` at `/blog/how-to-start-looksmaxxing` (clean URL, returns **200** directly — no static mount at `/blog`, so no trailing-slash 301). ~1,340 words, The Consultant's voice (no hype, no exclamation marks), modelled on the `privacy.html` content-page theme.
+- **On-page SEO:** keyword in H1 (single H1), `<title>`, meta description, slug, and naturally through the body (3 exact uses; 7 "looksmaxxing" mentions — not stuffed). Covers what looksmaxxing is, softmaxxing vs hardmaxxing, the five fundamentals (skincare/grooming/fitness/posture/style), the quiet multipliers (sleep/food/daylight), realistic timelines, and what to avoid.
+- **Accuracy:** mewing explicitly flagged as having "no strong scientific evidence" of reshaping an adult jaw; no overpromising; no fabricated stats or reviews.
+- **Structured data:** `BlogPosting` JSON-LD with `datePublished` + `dateModified` (2026-06-14), `image` (reuses `/og-image.png`), author = Person "The Consultant", publisher = Organization "MainCharacter", `mainEntityOfPage`. Self-canonical + OG (`og:type article`) + Twitter tags.
+- **Internal links (descriptive anchors):** homepage via "become the main character" → `/`; aura reading page via "get your free aura reading" → `/lookmaxing/` (the 200 URL).
+- **Sitemap:** added with a real `<lastmod>2026-06-14</lastmod>`.
+
+Guarded by `tests/blog-how-to-start-looksmaxxing.test.js` (17 tests: word count, single keyworded H1, keyword placement + anti-stuffing cap, topic coverage, mewing accuracy, no-exclamation voice check, internal links, JSON-LD fields, sitemap lastmod, route presence). Full suite **1601 passed**, `npm run smoke` 44/44; live check: route 200, bad slug 302→`/`, JSON-LD parses off the served page, both internal-link targets 200.
+
+**Branch note:** branched off `main`, so it does NOT include the still-pending `seo/completeness-pass` branch. Both branches edit `sitemap.xml` (completeness changes the tools-hub line to a trailing slash; this adds the blog line) — different lines, but if completeness-pass merges first, re-verify the sitemap on merge. **Held on branch — NOT merged to main; awaiting founder approval.**
+
+---
+
+## 2026-06-14 — Blog discoverability: homepage footer link (branch `seo/blog-homepage-link`)
+
+The blog post shipped with a route + sitemap entry but **no on-site link**, so it was a visitor-orphan (reachable only by direct URL / sitemap). Founder flagged it. Added a **"Field Notes"** link to the homepage footer (`landing.html`, first in `footer__links`, before Privacy/Terms/Contact) → `/blog/how-to-start-looksmaxxing`. Label chosen to match the post's own section eyebrow (◆ MainCharacter · Field Notes); founder-selected over "Blog"/nav placement. With one post it links straight to the post; it becomes the `/blog` index once there are 2+ posts.
+
+Guarded by an added assertion in `tests/blog-how-to-start-looksmaxxing.test.js` (now 18 tests: homepage must link to the post — anti-orphan regression guard). Full suite **1609 passed**, `npm run smoke` 44/44; live local check confirms the footer link serves and resolves (200). **Held on branch — NOT merged to main; awaiting founder approval.**
+
+---
+
+## 2026-06-14 — robots.txt: explicit Allow for the reading page (branch `seo/robots-allow-reading`)
+
+GSC live test (Googlebot smartphone, ~22:44 IST) reported `/lookmaxing/` "blocked by robots.txt." **Investigated: the robots.txt was technically correct.**
+- Live production robots.txt is **byte-identical** to the repo source (`diff` empty); single static `public/robots.txt`, no dynamic route, no second/host robots.txt, no wildcard. `cf-cache-status: DYNAMIC` (not CDN-cached).
+- Prefix-match check (Google's matcher): `/lookmaxing/` matches **no** Disallow rule. `Disallow: /lookmax/` does not match `/lookmaxing/` (char 9 is `i`, not `/`). `/lookmax/` is a **real, intentional** block — the logged-in PWA app (`/lookmax`, `/lookmax/mirror`, … all live, returns 200), not a stray/typo, so it stays.
+- Git history: no committed robots.txt ever blocked `/lookmaxing/`.
+- **Likely cause:** Google's URL-Inspection live test reuses Google's cached robots.txt (can lag ~24h); if Googlebot fetched robots.txt during a deploy/cold-start window and got a 5xx/timeout (Render free tier sleeps; several deploys today), Google caches *disallow-all*. The file content was never the problem.
+
+**Fix (defensive, unambiguous):** added an explicit `Allow: /lookmaxing/` (plus the existing `Allow: /`). By Google's longest-match, the reading page and its sub-paths (tools, etc.) are now explicitly crawlable, `/lookmaxing/start` stays blocked (its rule is longer/more specific), and the `/lookmax/` PWA app stays blocked. All intended blocks (`/admin`, `/dashboard/`, `/payment-confirmed`, `/uploads/`, `/api/`, `/lookmaxing/start`) kept.
+
+Guarded by `tests/robots-crawlability.test.js` (10 tests) — a Google-style longest-match evaluator over the real file: ALLOW `/`, `/lookmaxing/`, `/lookmaxing/tools/`; DISALLOW `/lookmaxing/start`, `/lookmax/`, and the private surfaces. Full suite **1619 passed**, `npm run smoke` 44/44. **Held on branch — NOT merged to main; awaiting founder approval.** After merge/deploy: in GSC, re-run the live test / use "Validate Fix" so Google refetches robots.txt.
+
+---
+
+## 2026-06-14 — Updated Terms of Use + new Refund & Cancellation Policy (branch `legal/terms-refunds`)
+
+Founder supplied two legal drafts (`MainCharacter_Terms_of_Use.md`, `MainCharacter_Refund_and_Cancellation_Policy.md`) and asked to publish them with **existing live pricing**. Built both as themed pages (matching the privacy/terms content-page template).
+
+- **Terms** (`public/terms.html`): replaced the old short 10-section terms with the new 19-section version (medical disclaimer, assumption of risk, no-guarantee, subscriptions, IP, indemnity, liability, third-parties, termination, responsible-use, governing law). Kept the existing SEO head.
+- **Refunds** (`public/refunds.html`, NEW): served at **`/refunds`** (new route in `server.js`); the Terms link to it. Added to `sitemap.xml` and the homepage footer ("Refunds").
+
+**Pricing reconciled to the live model (founder: "keep pricing same as before"):** the drafts' placeholder `₹599/month` / `₹4,999/year` / paid one-time `₹99` audit were replaced with the truth — **the aura reading is free; the paid plan is ₹99/month, recurring via Razorpay, cancel anytime**. No annual plan, no paid audit. Trials referenced generally ("shown before you start").
+
+**Legal placeholders — no fabrication.** The drafts' `[registered address]`, jurisdiction `[city]`, Grievance Officer `[name/email/address]`, liability cap `₹[amount]`, and the optional arbitration clause were NOT invented. I followed the **existing live site's general approach** (which already omitted these): "operated by Digit Global Services, India", "governed by the laws of India", complaints via `consultant@…`, and a self-contained 12-month liability cap (dropped the blank "or ₹X"). The "DRAFT FOR LEGAL REVIEW" banners were removed per the founder's decision to publish.
+
+> **Open for founder/counsel:** these remain coaching-grade drafts. Before relying on them, a lawyer should confirm the liability cap, add a named Grievance Officer + registered address (DPDPA), and set the jurisdiction city / arbitration wording. Pricing reflects today's live ₹99/mo model — revisit when Orator (₹799) launches or annual plans are added.
+
+Guarded by `tests/legal-pages.test.js` (19 tests: no `[bracketed]` placeholders or DRAFT banner in source, pricing reconciled (₹99/mo, free reading, no ₹599/₹4,999/paid-audit), key clauses present, cross-links, `/refunds` canonical/OG/route/sitemap, homepage footer link). Full suite **1638 passed**, `npm run smoke` 44/44; live local check: `/refunds` + `/terms` 200, correct pricing served, no placeholders in source. **Held on branch — NOT merged to main; awaiting founder go.**
+
+---
+
+## 2026-06-15 — Tools hub: symmetric 3×3 grid (branch `ui/tools-grid-symmetry`)
+
+Founder flagged the `/lookmaxing/tools/` grid as asymmetric (the 9th card, AI Studio, orphaned in its own row) and wanted all tabs working. **Investigation:** the live page renders 2 columns in an 860px wrap (the founder's screenshot showed a wide 4-col layout — that was a cached/older build; current live is the 2-col serif version). Either way, 9 cards never divide evenly across 2 or 4 columns → a lone trailing card. All 9 cards are already full-card `<a>` links to pages that return 200 (verified live: e.g. `/lookmaxing/tools/attractiveness-score` loads its H1, photo drop-zone + file input, and `face-metrics.js`/`analyzer.js`) — so the "tabs" function; the issue was purely layout.
+
+**Fix (CSS only):** `.tool-grid` responsive ladder is now 1 col (mobile) → 2 (≥560px) → **3×3 (≥860px)**, and the hub container widened via a scoped `.wrap--hub{max-width:1040px}` (other tool pages keep the 860px `.wrap`, untouched). Browser-verified on localhost: computed `gridTemplateColumns` = 3 tracks (~323px each), cards-per-row = [3,3,3], AI Studio is now the last cell of a full 3×3.
+
+Guarded by `tests/tools-hub.test.js` (7 tests: 9 cards divisible by 3, the 3-column + responsive rules present, hub uses `.wrap--hub`, every card is an anchor with a valid href to the 8 tools + `/studio`, and each tool slug resolves to an existing file). Full suite **1645 passed**, `npm run smoke` 44/44. **Held on branch — NOT merged to main; awaiting founder go.** (Did not deep-QA each tool's in-browser analysis end-to-end — that's a separate per-tool QA pass; offered.)
+
+---
+
+## 2026-06-15 — Removed the Orator from the lookmaxing reading page (branch `ui/remove-orator-lookmaxing`)
+
+Founder asked to remove "the Orator part" from the `/lookmaxing/` reading page (screenshot of the "TWO QUESTS · ONE PROTOCOL" section with the Orator coming-soon card). Removed the **entire two-quest section** — not just the Orator card — because the surviving Lookmaxing card's CTA ("Get Your Aura Reading" → `/lookmaxing/start`) is **identical to the hero CTA**, so it was redundant, and a lone card under a "TWO QUESTS" header would have been broken + needed invented copy. Also removed the **Orator waitlist modal** and its **JS handler**, and collapsed the two surrounding hairlines into one so how-it-works → tools flows cleanly.
+
+Page section order is now: hero → (hidden intro video) → how-it-works → tools → repeat-CTA. No `orator`/`TWO QUESTS` text remains in the page body (the only `orator` left is the shared `--orator-glow` theme token injected by `lib/theme-head.js` into every page — a CSS var name, unrelated). Dead CSS for `.lm-pillars*` / `.lm-modal*` left in place (harmless, scoped to this file). The `orator_waitlist_joined` name stays in the server `ALLOWED_EVENTS` allowlist (`tests/lookmaxing-events.test.js` unaffected) — only the page emitter was removed.
+
+Updated `tests/lookmaxing-frontend.test.js` (the old assertion required `orator_waitlist_joined` on the page → flipped to a removal guard: no `orator`/`TWO QUESTS` on the index). Full suite **1645 passed**, `npm run smoke` 44/44; browser-verified on localhost: section gone, hero CTA + tools intact, no JS console errors. **Held on branch — NOT merged to main; awaiting founder go.**
+
+> Noticed but out of scope: the tools grid *embedded on the reading page* (`repeat(auto-fit,minmax(230px,1fr))`) shows 9 cards as 4+4+1 — same orphan as the standalone `/tools/` hub had. Offered to symmetrize it as a follow-up.
+
+---
+
+## 2026-06-15 — Reading-page embedded tools grid → symmetric 3×3 (branch `ui/reading-tools-3col`)
+
+Founder-requested follow-up to the above: the tools grid embedded on `/lookmaxing/` used an inline `grid-template-columns:repeat(auto-fit,minmax(230px,1fr))` that rendered 9 cards as 4+4+1 (AI Studio orphaned). Replaced the inline style with a `.lm-tools__grid` class on the same responsive ladder as the standalone hub: 1 col → 2 (≥560px) → **3×3 (≥860px)**. Browser-verified on localhost: computed 3 columns, cards-per-row [3,3,3], AI Studio is the last cell of a full 3×3.
+
+Guarded by an assertion in `tests/lookmaxing-frontend.test.js` (uses `.lm-tools__grid`, has the 3-col rule, no `auto-fit` orphan layout). Full suite **1646 passed** (1 file failed = the known intermittent tmp-dir `ENOTEMPTY` teardown flake, not an assertion), `npm run smoke` 44/44. **Held on branch — NOT merged to main; awaiting founder go.**
+
+---
+
+## 2026-06-15 — Lookmaxing footer alignment fix (branch `ui/lookmaxing-footer-align`)
+
+Founder flagged the `/lookmaxing/` footer as misaligned. Cause: the runtime mark-swap (`lib/mark-swap.js`) replaces the `◆` in `◆ MainCharacter` with an `<img class="mc-ico">` carrying `vertical-align:-0.14em`; inside the flex footer line that pushed the icon to the **top** of a 36px-tall `<a>` box while the text sat ~9px lower (icon floating above "MainCharacter · The Consultant"). Fixed in the page's `#mc-footer-fix` style: the footer brand link is now `display:inline-flex;align-items:center;gap:.35em`, the `mc-ico` is `vertical-align:middle`, and the footer `<p>` got `line-height:1.5` + `flex-wrap:wrap`. Browser-verified on localhost: icon center-Y == text center-Y (offset 0), `<a>` height 36px → 21px, all three footer lines centered on one line each.
+
+Guarded by an assertion in `tests/lookmaxing-frontend.test.js`. Full suite **1647 passed**, `npm run smoke` 44/44. **Held on branch — NOT merged to main; awaiting founder go.**
+
+---
+
+## 2026-06-16 — Lookmaxxing daily journey persisted to Postgres (migration 0005)
+
+### Bug: models/Lookmax.js was JSON-file-only; every Render redeploy wiped daily mirror/protocol/hair/nightLog history
+
+Root cause confirmed: `data/lookmax/lookmax.json` lives on Render's ephemeral disk and is wiped on every redeploy.
+User accounts survived (they are in the Postgres `users` table already migrated in 0001) but per-day mirror scores,
+protocol checklists, hair readings, and night logs were lost on every deploy. Production has Postgres (Neon) healthy
+(`DATABASE_URL` set, `/health database:true`).
+
+Fix: migration `0005_lookmax.sql` adds two tables (`lookmax_records` for append-only mirror/hair/nightlog rows keyed
+by `(user_id, kind, date)`, and `lookmax_protocols` with a `(user_id, date)` PRIMARY KEY for upsert-by-date protocol
+checklist rows). `models/Lookmax.js` now wraps every daily-journey function with the same `_adapt(jsonFn, pgFn)`
+pattern used in `models/User.js`, falling back to the JSON path when DATABASE_URL is unset or the pool is not ready.
+The JSON path is fully preserved so local dev and CI (no DATABASE_URL) are unaffected.
+
+### OTPs remain on the JSON path (deliberate scope limit)
+
+OTPs (`setOtp`/`verifyOtp`) are 10-minute login codes. Their loss on redeploy is benign — the user requests a fresh
+OTP. Persisting them to Postgres would add two round-trips per login check with negligible durability gain; the risk
+of expanding the scope of this data-integrity fix outweighed the benefit.
+
+### Admin table fix: aesthetic pillar users now show Lookmaxxing streak and mirror level
+
+The DAY and STREAK columns in `/admin` were showing Orator `day`/`streak` for all users; for `pillar === 'aesthetic'`
+users those fields are always 0. Added `lookmaxStreak` and `mirrorLevel` to the admin stats API response and updated
+the table renderer to show `mirrorLevel` in the DAY cell and `lookmaxStreak` in the STREAK cell for aesthetic users.

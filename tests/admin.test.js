@@ -55,6 +55,36 @@ describe('admin route auth', () => {
   });
 });
 
+describe('POST /api/admin/test-alert (Slack wiring verification)', () => {
+  it('401 without auth', async () => {
+    const res = await request(app).post('/api/admin/test-alert');
+    expect(res.status).toBe(401);
+  });
+
+  it('fires a dry-run alert and reports configured:false when no webhook is set', async () => {
+    delete process.env.SLACK_WEBHOOK_URL;
+    const login = await request(app).post('/api/admin/login').send({ password: 'secret123' });
+    const res = await request(app)
+      .post('/api/admin/test-alert')
+      .set('Authorization', `Bearer ${login.body.token}`)
+      .send({ severity: 'warning' });
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.configured).toBe(false);
+    expect(res.body.severity).toBe('warning');
+  });
+
+  it('defaults to critical severity when none is given', async () => {
+    const login = await request(app).post('/api/admin/login').send({ password: 'secret123' });
+    const res = await request(app)
+      .post('/api/admin/test-alert')
+      .set('Authorization', `Bearer ${login.body.token}`)
+      .send({});
+    expect(res.status).toBe(200);
+    expect(res.body.severity).toBe('critical');
+  });
+});
+
 describe('GET /api/admin/lookmax-users (funnel-repair Item 3)', () => {
   it('401 without auth', async () => {
     const res = await request(app).get('/api/admin/lookmax-users');

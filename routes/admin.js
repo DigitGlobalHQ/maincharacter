@@ -14,6 +14,7 @@ const sms = require('../services/sms');
 const auth = require('../lib/auth');
 const admin = require('../lib/admin');
 const lookmaxAuth = require('../lib/lookmax-auth');
+const alerts = require('../lib/alerts');
 const { AESTHETIC_AXES } = require('../data/lookmax-prompts');
 
 const BASE_URL = process.env.UPGRADE_BASE_URL || 'https://maincharacter.digitglobalservices.com';
@@ -169,6 +170,23 @@ router.post('/test-sms', requireAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// ─── Test alert (founder verification — Slack wiring) ───
+// Fires a real alert through lib/alerts. With SLACK_WEBHOOK_URL set this lands
+// in the Slack channel; otherwise it is a logged DRY-RUN. Uses a unique key per
+// call so the throttle never suppresses a manual test (repeated taps deliver).
+router.post('/test-alert', requireAuth, async (req, res) => {
+  const severity = (req.body && req.body.severity) === 'warning' ? 'warning' : 'critical';
+  await alerts.notify({
+    severity,
+    title: 'Test alert',
+    detail: 'Manual test from the admin panel. If you can read this in Slack, alerting is live.',
+    key: `admin-test-${Date.now()}`,
+    meta: { source: 'admin/test-alert' },
+  });
+  log('TEST-ALERT', `fired ${severity} test alert (configured=${alerts.isConfigured()})`);
+  res.json({ ok: true, configured: alerts.isConfigured(), severity });
 });
 
 // ─── Broadcast ───

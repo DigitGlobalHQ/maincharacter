@@ -1604,3 +1604,18 @@ condition keys (`gemini-key-rate_limited`, `gemini-key-invalid_key`,
 probe is the only place with a real recovery signal, so recovery notices apply
 to sustained conditions (API-key health), not one-off events like a single 500
 or a failed payment (those have no "resolved" state). 7 new tests; 1750 total.
+
+### Light theme + toggle removed — dark is the only theme (founder, 2026-06-16)
+
+The opt-in light theme didn't fit the brand. Removed it entirely from
+`lib/theme-head.js`: deleted the `:root[data-theme="light"]` palette (`LIGHT_VARS`),
+the floating `.mc-theme-toggle` (◐/◑) button + its script, and the no-flash boot's
+localStorage/prefers-color-scheme read. `themeHead()` now injects ONLY a dark pin
+(`<html data-theme="dark">`) before first paint, so a stale `localStorage('mc-theme'
+='light')` from the old toggle is ignored and any code keying off the attribute sees
+dark. Dark token values were never defined in this fragment, so dark rendering is
+byte-identical — production visual output is unchanged except the toggle disappears
+and light mode is no longer reachable. The two starfield `MutationObserver`s on
+`data-theme` are reactive-only; with no toggle they simply never fire. Tests rewritten
+to assert the removal. 1789 tests pass, smoke 44/44, real-render verified on / and
+/lookmaxing/.

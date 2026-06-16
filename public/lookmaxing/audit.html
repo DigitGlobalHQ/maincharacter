@@ -345,8 +345,14 @@
       -webkit-backdrop-filter: blur(8px);
       z-index: 100;
       display: flex;
-      align-items: center;
+      /* flex-start (not center) + overflow-y:auto so a tall card — e.g. when the
+         referral row is expanded and the mobile keyboard shrinks the viewport —
+         stays fully scrollable and the Pay CTA is always reachable. Centering a
+         taller-than-viewport card clips its top/bottom with no way to scroll. */
+      align-items: flex-start;
       justify-content: center;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
       padding: var(--mc-sp-4);
       opacity: 0;
       pointer-events: none;
@@ -359,6 +365,9 @@
     .lm-paywall-modal {
       width: 100%;
       max-width: 480px;
+      /* margin:auto centers the card when it fits; collapses so the overlay scrolls
+         from the top when the card is taller than the viewport (keyboard open). */
+      margin: auto;
       box-shadow: var(--mc-shadow-elevated);
       transform: scale(0.96);
       transition: transform var(--mc-dur-base) var(--mc-ease-out);

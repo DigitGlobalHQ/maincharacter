@@ -286,7 +286,7 @@ router.post('/seed-test-user', requireAuth, async (req, res) => {
   try {
     const protocol = require('../services/protocol');
     const day = protocol.generateProtocol(user, { scores, weakestAxis: weakest });
-    Lookmax.setProtocolDay(user.token, day);
+    await Lookmax.setProtocolDay(user.token, day);
   } catch (err) {
     log('SEED-WARN', `protocol not generated yet: ${err.message}`);
   }

@@ -5,6 +5,28 @@ Format: date, decision, 2-sentence rationale.
 
 ---
 
+## 2026-06-16 — Fix: await all _adapt-wrapped Lookmax model calls across routes/services (production 500s)
+
+### Root cause
+
+`models/Lookmax.js` wraps every daily-journey function (`addMirror`, `getMirrors`, `latestMirror`, `mirrorForToday`, `setProtocolDay`, `getProtocolToday`, `checkProtocolItem`, `lockProtocolToday`, `addHair`, `getHair`, `latestHair`, `addNightLog`, `getNightLogs`, `nightLogForDate`, `nightLogForToday`) with `_adapt()`. When `DATABASE_URL` is set, `_adapt` returns `Promise.resolve(pgFn(...))` instead of a plain value. Call sites that omitted `await` received a Promise object: calling `.filter()`, `.map()`, `.slice()`, or `.find()` on a Promise throws `TypeError: X.filter is not a function`. Additionally `new Set(promise.map(...))` threw and `if (Lookmax.mirrorForToday(...))` was always truthy (a Promise is always truthy), so the scheduler skipped nudging every Lookmaxxing user regardless of whether they had taken a mirror. Tests passed because CI uses the JSON backend (no `DATABASE_URL`), which returns values synchronously — `await` on a non-Promise is harmless, masking the bug.
+
+### Call sites fixed
+
+- `routes/lookmax.js`: `latestMirror` (mirror POST), `addMirror` (mirror POST), `getMirrors` ×5 (mirror POST fire-and-forget pruner, trend, dashboard, reveal/preview, me/history, me/data/export, me/data delete), `mirrorForToday` (dashboard), `getProtocolToday` ×2 (ensureProtocolToday helper, dashboard), `setProtocolDay` (ensureProtocolToday helper), `checkProtocolItem` (protocol/check), `lockProtocolToday` (protocol/complete-day), `addHair` (hair/photo POST), `getHair` ×4 (hair/photo first-record lookup, hair/photo fire-and-forget pruner, hair/history, dashboard, me/history, me/data/export, me/data delete), `nightLogForDate` (nightContextLine helper), `addNightLog` (night-log POST), `nightLogForToday` (night-log/today GET).
+- `services/protocol.js`: `getMirrors` in `weeklyAuditFromMirrors` (made async); `setProtocolDay` in `regenerateWeekly` loop.
+- `services/video.js`: `getMirrors` in `_processJob`.
+- `services/scheduler.js`: `mirrorForToday` guard in `sendMirrorNudges`.
+- `routes/admin.js`: `setProtocolDay` in the seed-test-user handler (already async).
+
+All previously-sync handlers that now use `await` were converted to `async (req, res) =>` and wrapped in `try/catch` so Express can catch and surface a clean 500 instead of an unhandled rejection.
+
+### Regression test added
+
+`tests/lookmax-async-pg-path.test.js` — 14 tests. Mocks `models/Lookmax` so every `_adapt`-wrapped function returns a Promise (simulating the Postgres path), then exercises `GET /dashboard`, `GET /protocol/today`, `GET /protocol/triggers`, `POST /night-log`, `GET /night-log/today`, `POST /mirror`, `POST /protocol/check`, `POST /protocol/complete-day`, `GET /me/history`, and `GET /reveal/preview` via Supertest. Each asserts HTTP 200 with the correct shape — not 500. Three semantic-only assertions document why a bare Promise is truthy (the bug) and why `await`ing to `null` is falsy (the fix), covering the scheduler guard.
+
+---
+
 ## 2026-06-16 — Layer-1 resilience: retry + circuit breaker (lib/retry.js, lib/circuit-breaker.js)
 
 ### What was added

@@ -116,12 +116,13 @@ function generateProtocol(user, audit) {
 /**
  * Weekly audit derived from the last 7 mirror readings (P5.2). Falls back to the
  * converting audit when there isn't enough mirror history.
+ * Async because Lookmax.getMirrors is _adapt-wrapped (PG path returns a Promise).
  */
-function weeklyAuditFromMirrors(user) {
+async function weeklyAuditFromMirrors(user) {
   let mirrors = [];
   try {
     const Lookmax = require('../models/Lookmax');
-    mirrors = Lookmax.getMirrors(user.token).slice(-7);
+    mirrors = (await Lookmax.getMirrors(user.token)).slice(-7);
   } catch {
     /* ignore */
   }
@@ -146,8 +147,8 @@ async function regenerateWeekly() {
     const Lookmax = require('../models/Lookmax');
     const users = Object.values(await User.getAllUsers()).filter((u) => u.lookmaxxingActive);
     for (const u of users) {
-      const audit = weeklyAuditFromMirrors(u);
-      Lookmax.setProtocolDay(u.token, generateProtocol(u, audit));
+      const audit = await weeklyAuditFromMirrors(u);
+      await Lookmax.setProtocolDay(u.token, generateProtocol(u, audit));
       count += 1;
     }
     log.info('WEEKLY', `regenerated ${count} protocol(s) from mirror trends`);

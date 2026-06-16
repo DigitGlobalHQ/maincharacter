@@ -155,7 +155,7 @@ async function _processJob(jobId) {
       if (!user) throw new Error('user not found');
 
       const Lookmax = require('../models/Lookmax');
-      const mirrors = Lookmax.getMirrors(job.userToken).slice(-7);
+      const mirrors = (await Lookmax.getMirrors(job.userToken)).slice(-7);
 
       if (mirrors.length === 0) {
         _setJobStatus(jobId, 'error', { error: 'no_mirror_photos' });

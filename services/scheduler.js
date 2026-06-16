@@ -102,7 +102,7 @@ async function sendMirrorNudges() {
 
   for (const user of users) {
     try {
-      if (Lookmax.mirrorForToday(user.token)) continue; // already done today
+      if (await Lookmax.mirrorForToday(user.token)) continue; // already done today
       await whatsapp.sendMessageSafe(user.phone, `◆ The mirror is open. ◆\n\n${BASE_URL}/lookmax/mirror`);
       log('MIRROR-NUDGE', `→ ${user.phone} (${user.name})`);
     } catch (err) {

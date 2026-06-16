@@ -150,18 +150,18 @@ router.post('/mirror', upload.single('photo'), async (req, res) => {
     const level = mirrorLevelFor(overall);
 
     // Streak: increment if the previous mirror was within 30h, else reset to 1.
-    const prev = Lookmax.latestMirror(user.token);
+    const prev = await Lookmax.latestMirror(user.token);
     const yest = prev || null;
     const streak = nextStreak(prev, user.lookmaxStreak || 0);
 
-    Lookmax.addMirror(user.token, { photoPath, axes, overallScore: overall, mirrorLevel: level });
+    await Lookmax.addMirror(user.token, { photoPath, axes, overallScore: overall, mirrorLevel: level });
     await User.updateUser(user.phone, { mirrorLevel: level, lastMirrorAt: new Date().toISOString(), lookmaxStreak: streak });
 
     // Task 2b — retention pruner: enforce last-7-mirror window.
     // Collect all r2: mirror keys for this user (including the one just added)
     // and prune oldest so only 7 survive.  Fire-and-forget — never block response.
     Promise.resolve().then(async () => {
-      const allMirrors = Lookmax.getMirrors(user.token);
+      const allMirrors = await Lookmax.getMirrors(user.token);
       const mirrorR2Keys = allMirrors
         .filter((m) => m.photoPath && m.photoPath.startsWith('r2:'))
         .map((m) => m.photoPath.slice('r2:'.length));
@@ -180,7 +180,7 @@ router.post('/mirror', upload.single('photo'), async (req, res) => {
       if (baseline && baseline[a] != null) deltaVsBaseline[a] = axes[a] - baseline[a];
     }
 
-    const trend = Lookmax.getMirrors(user.token).slice(-14).map((m) => ({ date: m.date, score: m.overallScore }));
+    const trend = (await Lookmax.getMirrors(user.token)).slice(-14).map((m) => ({ date: m.date, score: m.overallScore }));
     const consultantLine = await vision.consultantLine(axes, deltaVsYesterday);
 
     res.json({
@@ -192,7 +192,7 @@ router.post('/mirror', upload.single('photo'), async (req, res) => {
       streak,
       trend,
       consultantLine,
-      nightContext: nightContextLine(user.token),
+      nightContext: await nightContextLine(user.token),
     });
   } catch (err) {
     log.error('MIRROR', err.message);
@@ -209,9 +209,10 @@ function yesterdayIst() {
 /**
  * Deterministic, validator-clean "why it may have moved" line from LAST night's
  * log. State/habit context only — no health claims. Returns null when no log.
+ * Async because Lookmax.nightLogForDate is _adapt-wrapped (PG path returns Promise).
  */
-function nightContextLine(userId) {
-  const log = Lookmax.nightLogForDate(userId, yesterdayIst());
+async function nightContextLine(userId) {
+  const log = await Lookmax.nightLogForDate(userId, yesterdayIst());
   if (!log) return null;
   if (log.saltAlcoholFlag) {
     return "Last night's salt and drink tend to show as morning puffiness. Today's read carries that. ◆";
@@ -229,21 +230,31 @@ function nightContextLine(userId) {
 // Night Log — last night's sleep / water / salt-alcohol (Phase 3.2)
 // ═══════════════════════════════════════════════════════════════════
 
-router.post('/night-log', (req, res) => {
-  const user = req.lookmaxUser;
-  const body = req.body || {};
-  const saved = Lookmax.addNightLog(user.token, {
-    sleepHours: body.sleepHours,
-    waterGlasses: body.waterGlasses,
-    saltAlcoholFlag: body.saltAlcoholFlag,
-    notes: body.notes,
-  });
-  res.json({ ok: true, nightLog: saved });
+router.post('/night-log', async (req, res) => {
+  try {
+    const user = req.lookmaxUser;
+    const body = req.body || {};
+    const saved = await Lookmax.addNightLog(user.token, {
+      sleepHours: body.sleepHours,
+      waterGlasses: body.waterGlasses,
+      saltAlcoholFlag: body.saltAlcoholFlag,
+      notes: body.notes,
+    });
+    res.json({ ok: true, nightLog: saved });
+  } catch (err) {
+    log.error('NIGHT-LOG', err.message);
+    res.status(500).json({ error: 'Something has interrupted the work. Night log could not be saved.' }); // TODO copy review
+  }
 });
 
-router.get('/night-log/today', (req, res) => {
-  const user = req.lookmaxUser;
-  res.json({ nightLog: Lookmax.nightLogForToday(user.token) });
+router.get('/night-log/today', async (req, res) => {
+  try {
+    const user = req.lookmaxUser;
+    res.json({ nightLog: await Lookmax.nightLogForToday(user.token) });
+  } catch (err) {
+    log.error('NIGHT-LOG', err.message);
+    res.status(500).json({ error: 'Something has interrupted the work. Night log unavailable.' }); // TODO copy review
+  }
 });
 
 /** Read the user's converting-audit baseline scores, if present. */
@@ -262,64 +273,85 @@ async function loadBaseline(user) {
 // P5 — Daily Protocol
 // ═══════════════════════════════════════════════════════════════════
 
-/** Build today's protocol on demand if one hasn't been generated yet. */
-function ensureProtocolToday(user) {
-  let day = Lookmax.getProtocolToday(user.token);
+/** Build today's protocol on demand if one hasn't been generated yet. Async because
+ *  Lookmax.getProtocolToday / setProtocolDay are _adapt-wrapped (PG path returns Promises). */
+async function ensureProtocolToday(user) {
+  let day = await Lookmax.getProtocolToday(user.token);
   if (day) return day;
   const protocolSvc = require('../services/protocol');
   const audit = protocolSvc.auditForUser(user);
   day = protocolSvc.generateProtocol(user, audit);
-  return Lookmax.setProtocolDay(user.token, day);
+  return await Lookmax.setProtocolDay(user.token, day);
 }
 
-router.get('/protocol/today', (req, res) => {
-  const user = req.lookmaxUser;
-  const day = ensureProtocolToday(user);
-  const completedCount = day.items.filter((i) => i.checked).length;
-  res.json({
-    items: day.items,
-    doNots: day.doNots,
-    completedCount,
-    totalCount: day.items.length,
-    isLocked: day.isLocked,
-    streak: user.lookmaxProtocolStreak || 0,
-  });
+router.get('/protocol/today', async (req, res) => {
+  try {
+    const user = req.lookmaxUser;
+    const day = await ensureProtocolToday(user);
+    const completedCount = day.items.filter((i) => i.checked).length;
+    res.json({
+      items: day.items,
+      doNots: day.doNots,
+      completedCount,
+      totalCount: day.items.length,
+      isLocked: day.isLocked,
+      streak: user.lookmaxProtocolStreak || 0,
+    });
+  } catch (err) {
+    log.error('PROTOCOL', err.message);
+    res.status(500).json({ error: 'Something has interrupted the work. Protocol unavailable.' }); // TODO copy review
+  }
 });
 
-router.post('/protocol/check', (req, res) => {
-  const { itemId, checked } = req.body || {};
-  const day = Lookmax.checkProtocolItem(req.lookmaxUser.token, itemId, checked);
-  if (!day) return res.status(409).json({ error: 'locked or item not found' });
-  res.json({ ok: true, completedCount: day.items.filter((i) => i.checked).length });
+router.post('/protocol/check', async (req, res) => {
+  try {
+    const { itemId, checked } = req.body || {};
+    const day = await Lookmax.checkProtocolItem(req.lookmaxUser.token, itemId, checked);
+    if (!day) return res.status(409).json({ error: 'locked or item not found' });
+    res.json({ ok: true, completedCount: day.items.filter((i) => i.checked).length });
+  } catch (err) {
+    log.error('PROTOCOL', err.message);
+    res.status(500).json({ error: 'Something has interrupted the work. Check could not be saved.' }); // TODO copy review
+  }
 });
 
 // Active triggers + streak progress for the user's weakest changeable axes
 // (Phase 3.3). Tasks are validator-safe by construction (services/trigger-engine).
-router.get('/protocol/triggers', (req, res) => {
-  const user = req.lookmaxUser;
-  const triggerEngine = require('../services/trigger-engine');
-  const protocolSvc = require('../services/protocol');
-  const audit = protocolSvc.weeklyAuditFromMirrors(user);
-  const scores = audit.scores || {};
-  // Weakest-first ordering across the changeable axes we actually score.
-  const weakAxes = AESTHETIC_AXES.slice().sort((a, b) => (scores[a] ?? 50) - (scores[b] ?? 50));
-  const mirrors = Lookmax.getMirrors(user.token);
-  res.json({ triggers: triggerEngine.triggersWithProgress(weakAxes, mirrors, 2) });
+router.get('/protocol/triggers', async (req, res) => {
+  try {
+    const user = req.lookmaxUser;
+    const triggerEngine = require('../services/trigger-engine');
+    const protocolSvc = require('../services/protocol');
+    const audit = await protocolSvc.weeklyAuditFromMirrors(user);
+    const scores = audit.scores || {};
+    // Weakest-first ordering across the changeable axes we actually score.
+    const weakAxes = AESTHETIC_AXES.slice().sort((a, b) => (scores[a] ?? 50) - (scores[b] ?? 50));
+    const mirrors = await Lookmax.getMirrors(user.token);
+    res.json({ triggers: triggerEngine.triggersWithProgress(weakAxes, mirrors, 2) });
+  } catch (err) {
+    log.error('TRIGGERS', err.message);
+    res.status(500).json({ error: 'Something has interrupted the work. Triggers unavailable.' }); // TODO copy review
+  }
 });
 
 router.post('/protocol/complete-day', async (req, res) => {
-  const user = req.lookmaxUser;
-  const day = ensureProtocolToday(user);
-  if (day.isLocked) return res.json({ streak: user.lookmaxProtocolStreak || 0, streakIncremented: false });
-  Lookmax.lockProtocolToday(user.token);
-  const doItems = day.items.length;
-  const done = day.items.filter((i) => i.checked).length;
-  const ratio = doItems ? done / doItems : 0;
-  let streak = user.lookmaxProtocolStreak || 0;
-  const incremented = ratio >= 0.8;
-  streak = incremented ? streak + 1 : 0;
-  await User.updateUser(user.phone, { lookmaxProtocolStreak: streak });
-  res.json({ streak, streakIncremented: incremented });
+  try {
+    const user = req.lookmaxUser;
+    const day = await ensureProtocolToday(user);
+    if (day.isLocked) return res.json({ streak: user.lookmaxProtocolStreak || 0, streakIncremented: false });
+    await Lookmax.lockProtocolToday(user.token);
+    const doItems = day.items.length;
+    const done = day.items.filter((i) => i.checked).length;
+    const ratio = doItems ? done / doItems : 0;
+    let streak = user.lookmaxProtocolStreak || 0;
+    const incremented = ratio >= 0.8;
+    streak = incremented ? streak + 1 : 0;
+    await User.updateUser(user.phone, { lookmaxProtocolStreak: streak });
+    res.json({ streak, streakIncremented: incremented });
+  } catch (err) {
+    log.error('PROTOCOL', err.message);
+    res.status(500).json({ error: 'Something has interrupted the work. Day could not be completed.' }); // TODO copy review
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -379,8 +411,9 @@ router.post(
       });
 
       const hairSvc = require('../services/hair');
-      const first = Lookmax.getHair(user.token)[0] || null;
-      const rec = Lookmax.addHair(user.token, {
+      const hairList = await Lookmax.getHair(user.token);
+      const first = hairList[0] || null;
+      const rec = await Lookmax.addHair(user.token, {
         frontPath: savedFront.path,
         crownPath: savedCrown.path,
         norwood: result.norwood,
@@ -391,7 +424,7 @@ router.post(
 
       // Task 2b — retention pruner: enforce last-4 hair window.
       Promise.resolve().then(async () => {
-        const allHair = Lookmax.getHair(user.token);
+        const allHair = await Lookmax.getHair(user.token);
         const hairR2Keys = [];
         for (const h of allHair) {
           if (h.frontPath && h.frontPath.startsWith('r2:')) hairR2Keys.push(h.frontPath.slice('r2:'.length));
@@ -424,26 +457,31 @@ router.post(
   }
 );
 
-router.get('/hair/history', (req, res) => {
-  const user = req.lookmaxUser;
-  const hairSvc = require('../services/hair');
-  const readings = Lookmax.getHair(user.token);
-  const latest = readings.length ? readings[readings.length - 1] : null;
-  let unlocked = true;
-  let daysUntilNext = 0;
-  if (latest) {
-    const ageDays = (Date.now() - new Date(latest.createdAt).getTime()) / 86400000;
-    unlocked = ageDays >= HAIR_COOLDOWN_DAYS;
-    daysUntilNext = Math.max(0, Math.ceil(HAIR_COOLDOWN_DAYS - ageDays));
+router.get('/hair/history', async (req, res) => {
+  try {
+    const user = req.lookmaxUser;
+    const hairSvc = require('../services/hair');
+    const readings = await Lookmax.getHair(user.token);
+    const latest = readings.length ? readings[readings.length - 1] : null;
+    let unlocked = true;
+    let daysUntilNext = 0;
+    if (latest) {
+      const ageDays = (Date.now() - new Date(latest.createdAt).getTime()) / 86400000;
+      unlocked = ageDays >= HAIR_COOLDOWN_DAYS;
+      daysUntilNext = Math.max(0, Math.ceil(HAIR_COOLDOWN_DAYS - ageDays));
+    }
+    const decorate = (r) =>
+      r ? { ...r, recommendations: hairSvc.recommendationsForNorwood(r.norwood) } : null;
+    res.json({
+      unlocked,
+      daysUntilNext,
+      latest: decorate(latest),
+      readings: readings.map((r) => ({ date: r.date, hairlineScore: r.hairlineScore, norwood: r.norwood })),
+    });
+  } catch (err) {
+    log.error('HAIR', err.message);
+    res.status(500).json({ error: 'Something has interrupted the work. Hair history unavailable.' }); // TODO copy review
   }
-  const decorate = (r) =>
-    r ? { ...r, recommendations: hairSvc.recommendationsForNorwood(r.norwood) } : null;
-  res.json({
-    unlocked,
-    daysUntilNext,
-    latest: decorate(latest),
-    readings: readings.map((r) => ({ date: r.date, hairlineScore: r.hairlineScore, norwood: r.norwood })),
-  });
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -466,70 +504,75 @@ function computeCrossSellEligible(user, status) {
   return msElapsed >= 14 * 86400000;
 }
 
-router.get('/dashboard', (req, res) => {
-  const user = req.lookmaxUser;
-  const status = User.computeAuraStatus(user);
-  const todayMirror = Lookmax.mirrorForToday(user.token);
-  const day = Lookmax.getProtocolToday(user.token);
-  const protocol = day
-    ? { completedCount: day.items.filter((i) => i.checked).length, totalCount: day.items.length, isLocked: day.isLocked }
-    : { completedCount: 0, totalCount: 0, isLocked: false };
+router.get('/dashboard', async (req, res) => {
+  try {
+    const user = req.lookmaxUser;
+    const status = User.computeAuraStatus(user);
+    const todayMirror = await Lookmax.mirrorForToday(user.token);
+    const day = await Lookmax.getProtocolToday(user.token);
+    const protocol = day
+      ? { completedCount: day.items.filter((i) => i.checked).length, totalCount: day.items.length, isLocked: day.isLocked }
+      : { completedCount: 0, totalCount: 0, isLocked: false };
 
-  // Hair window
-  const hairReadings = Lookmax.getHair(user.token);
-  const latestHair = hairReadings.length ? hairReadings[hairReadings.length - 1] : null;
-  let hairUnlocked = true;
-  let hairDays = 0;
-  if (latestHair) {
-    const ageDays = (Date.now() - new Date(latestHair.createdAt).getTime()) / 86400000;
-    hairUnlocked = ageDays >= HAIR_COOLDOWN_DAYS;
-    hairDays = Math.max(0, Math.ceil(HAIR_COOLDOWN_DAYS - ageDays));
+    // Hair window
+    const hairReadings = await Lookmax.getHair(user.token);
+    const latestHair = hairReadings.length ? hairReadings[hairReadings.length - 1] : null;
+    let hairUnlocked = true;
+    let hairDays = 0;
+    if (latestHair) {
+      const ageDays = (Date.now() - new Date(latestHair.createdAt).getTime()) / 86400000;
+      hairUnlocked = ageDays >= HAIR_COOLDOWN_DAYS;
+      hairDays = Math.max(0, Math.ceil(HAIR_COOLDOWN_DAYS - ageDays));
+    }
+
+    // This week: 7 dots, gold for a day with a completed mirror.
+    const mirrorDates = new Set((await Lookmax.getMirrors(user.token)).map((m) => m.date));
+    const thisWeek = lastSevenDates().map((d) => mirrorDates.has(d));
+
+    // NOW-3: cross-sell eligibility
+    const crossSellEligible = computeCrossSellEligible(user, status);
+
+    // NOW-2 / B2: Day-30 re-audit eligibility (pull-based; see routes/reaudit.js).
+    // Dashboard surfaces the "Sit for the second reading." card when eligible.
+    // The full eligibility computation lives in reaudit.js; we inline a lean
+    // version here so the dashboard has no hard import on the reaudit route.
+    const baselineAvailable = !!(user.lookmaxBaseline && user.lookmaxBaseline.scores);
+    const daysSincePayment = user.lookmaxxingStartedAt
+      ? Math.floor((Date.now() - new Date(user.lookmaxxingStartedAt).getTime()) / 86400000)
+      : 0;
+    const reauditEligible = !!(user.lookmaxxingActive) && daysSincePayment >= 30 && baselineAvailable;
+    const reauditCompleted = !!(user.reAuditCompletedThisCycle);
+
+    // CTA routing: pre-completion → /audit?reAudit=true; post-completion → reveal.
+    const reauditCta = reauditCompleted
+      ? `/lookmax/reveal?mode=day30`
+      : `/audit?reAudit=true&token=${user.token}`;
+
+    const reauditStatus = {
+      eligible: reauditEligible,
+      completed: reauditCompleted,
+      daysSincePayment,
+      baselineAvailable,
+      cta: reauditCta,
+    };
+
+    res.json({
+      user: { name: user.name, oratorActive: status.oratorActive, lookmaxxingActive: status.lookmaxxingActive, auraPlusPlus: status.auraPlusPlus },
+      today: {
+        mirror: todayMirror ? { takenToday: true, score: todayMirror.overallScore, at: istTime(todayMirror.createdAt) } : { takenToday: false },
+        protocol,
+        hair: { unlocked: hairUnlocked, daysUntil: hairDays },
+      },
+      thisWeek,
+      streak: user.lookmaxStreak || 0,
+      mirrorLevel: user.mirrorLevel || 'raw',
+      crossSellEligible,
+      reauditStatus,
+    });
+  } catch (err) {
+    log.error('DASHBOARD', err.message);
+    res.status(500).json({ error: 'Something has interrupted the work. Dashboard unavailable.' }); // TODO copy review
   }
-
-  // This week: 7 dots, gold for a day with a completed mirror.
-  const mirrorDates = new Set(Lookmax.getMirrors(user.token).map((m) => m.date));
-  const thisWeek = lastSevenDates().map((d) => mirrorDates.has(d));
-
-  // NOW-3: cross-sell eligibility
-  const crossSellEligible = computeCrossSellEligible(user, status);
-
-  // NOW-2 / B2: Day-30 re-audit eligibility (pull-based; see routes/reaudit.js).
-  // Dashboard surfaces the "Sit for the second reading." card when eligible.
-  // The full eligibility computation lives in reaudit.js; we inline a lean
-  // version here so the dashboard has no hard import on the reaudit route.
-  const baselineAvailable = !!(user.lookmaxBaseline && user.lookmaxBaseline.scores);
-  const daysSincePayment = user.lookmaxxingStartedAt
-    ? Math.floor((Date.now() - new Date(user.lookmaxxingStartedAt).getTime()) / 86400000)
-    : 0;
-  const reauditEligible = !!(user.lookmaxxingActive) && daysSincePayment >= 30 && baselineAvailable;
-  const reauditCompleted = !!(user.reAuditCompletedThisCycle);
-
-  // CTA routing: pre-completion → /audit?reAudit=true; post-completion → reveal.
-  const reauditCta = reauditCompleted
-    ? `/lookmax/reveal?mode=day30`
-    : `/audit?reAudit=true&token=${user.token}`;
-
-  const reauditStatus = {
-    eligible: reauditEligible,
-    completed: reauditCompleted,
-    daysSincePayment,
-    baselineAvailable,
-    cta: reauditCta,
-  };
-
-  res.json({
-    user: { name: user.name, oratorActive: status.oratorActive, lookmaxxingActive: status.lookmaxxingActive, auraPlusPlus: status.auraPlusPlus },
-    today: {
-      mirror: todayMirror ? { takenToday: true, score: todayMirror.overallScore, at: istTime(todayMirror.createdAt) } : { takenToday: false },
-      protocol,
-      hair: { unlocked: hairUnlocked, daysUntil: hairDays },
-    },
-    thisWeek,
-    streak: user.lookmaxStreak || 0,
-    mirrorLevel: user.mirrorLevel || 'raw',
-    crossSellEligible,
-    reauditStatus,
-  });
 });
 
 /** The last seven IST dates (oldest → today) as YYYY-MM-DD. */
@@ -620,7 +663,7 @@ router.get('/me/history', async (req, res) => {
     }
 
     // ── mirrors (always present; may be empty) ──
-    const mList = Lookmax.getMirrors(user.token) || [];
+    const mList = (await Lookmax.getMirrors(user.token)) || [];
     const loggedDates = [...new Set(mList.map((m) => m.date).filter(Boolean))].sort();
     const mirrors = {
       totalCount: mList.length,
@@ -630,7 +673,7 @@ router.get('/me/history', async (req, res) => {
     };
 
     // ── hair (only when ≥1 reading) ──
-    const hList = Lookmax.getHair(user.token) || [];
+    const hList = (await Lookmax.getHair(user.token)) || [];
     let hair = null;
     if (hList.length) {
       const history = hList.map((h) => ({
@@ -717,23 +760,29 @@ router.post('/push/subscribe', async (req, res) => {
 // P8 — Weekly Reveal (stub)
 // ═══════════════════════════════════════════════════════════════════
 
-router.get('/reveal/preview', (req, res) => {
-  const user = req.lookmaxUser;
-  const weekAgo = Date.now() - 7 * 86400000;
-  const recent = Lookmax.getMirrors(user.token).filter((m) => new Date(m.createdAt).getTime() >= weekAgo);
-  const count = recent.length;
-  if (count < 4) {
-    return res.json({ unlocked: false, count });
+router.get('/reveal/preview', async (req, res) => {
+  try {
+    const user = req.lookmaxUser;
+    const weekAgo = Date.now() - 7 * 86400000;
+    const allMirrors = await Lookmax.getMirrors(user.token);
+    const recent = allMirrors.filter((m) => new Date(m.createdAt).getTime() >= weekAgo);
+    const count = recent.length;
+    if (count < 4) {
+      return res.json({ unlocked: false, count });
+    }
+    const lmStartedAt = user.lookmaxxingStartedAt ? new Date(user.lookmaxxingStartedAt).getTime() : Date.now();
+    const weekNumber = Math.max(1, Math.ceil((Date.now() - lmStartedAt) / (7 * 86400000)));
+    res.json({
+      unlocked: true,
+      count,
+      weekNumber,
+      photoUrls: recent.map((m) => photos.publicUrl(m.photoPath, req.lookmaxToken || req.query.token || '')),
+      scores: recent.map((m) => m.overallScore),
+    });
+  } catch (err) {
+    log.error('REVEAL', err.message);
+    res.status(500).json({ error: 'Something has interrupted the work. Reveal preview unavailable.' }); // TODO copy review
   }
-  const lmStartedAt = user.lookmaxxingStartedAt ? new Date(user.lookmaxxingStartedAt).getTime() : Date.now();
-  const weekNumber = Math.max(1, Math.ceil((Date.now() - lmStartedAt) / (7 * 86400000)));
-  res.json({
-    unlocked: true,
-    count,
-    weekNumber,
-    photoUrls: recent.map((m) => photos.publicUrl(m.photoPath, req.lookmaxToken || req.query.token || '')),
-    scores: recent.map((m) => m.overallScore),
-  });
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -860,8 +909,8 @@ router.get('/me/data/export', async (req, res) => {
     const Lookmax = require('../models/Lookmax');
     const AuditSession = require('../models/AuditSession');
 
-    const mirrors = Lookmax.getMirrors(user.token) || [];
-    const hair    = Lookmax.getHair(user.token) || [];
+    const mirrors = (await Lookmax.getMirrors(user.token)) || [];
+    const hair    = (await Lookmax.getHair(user.token)) || [];
 
     // Collect r2: prefixed paths and convert to signed URLs
     const allR2Keys = [];
@@ -992,8 +1041,8 @@ router.delete('/me/data', async (req, res) => {
   try {
     // ── 1. Delete all R2 photos ────────────────────────────────────
     const Lookmax = require('../models/Lookmax');
-    const mirrors = Lookmax.getMirrors(user.token) || [];
-    const hair    = Lookmax.getHair(user.token) || [];
+    const mirrors = (await Lookmax.getMirrors(user.token)) || [];
+    const hair    = (await Lookmax.getHair(user.token)) || [];
 
     const r2Keys = [];
     for (const m of mirrors) {

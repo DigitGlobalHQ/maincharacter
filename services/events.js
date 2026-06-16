@@ -276,6 +276,27 @@ async function _write(name, rawProps, userToken, anonId) {
   // JSONL path
   _pendingLines.push(JSON.stringify(row));
   scheduleFlush();
+
+  // ── Activity feed forward ────────────────────────────────────────────────
+  // After persistence is scheduled, forward curated milestone events to the
+  // Slack activity feed. Runs via setImmediate so it never delays the write
+  // path. Lazy-require to avoid require cycles (events ↔ User ↔ activity-feed).
+  // Fully guarded: must NEVER change _write's behaviour, block writes, or throw.
+  if (userToken) {
+    setImmediate(() => {
+      try {
+        const feed = require('../lib/activity-feed'); // eslint-disable-line global-require
+        if (!feed.ACTIVITY_EVENTS || !feed.ACTIVITY_EVENTS[name]) return;
+        const User = require('../models/User'); // eslint-disable-line global-require
+        Promise.resolve(User.getUserByToken(userToken))
+          .then((user) => {
+            if (!user || user.comp) return;
+            feed.userActivity(user, { event: name, props }).catch(() => {});
+          })
+          .catch(() => {});
+      } catch { /* guard: never propagate */ }
+    });
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

@@ -58,6 +58,18 @@ services:
       # When unset: alerts log at warn/info level and never POST to Slack.
       - key: SLACK_WEBHOOK_URL
         sync: false
+      # ─── Slack activity feed (threaded per-user journey) ───────────────────
+      # Primary mode (threaded): create a Slack app, add Bot Token Scope chat:write,
+      # install to workspace, invite the bot to your activity channel, paste the xoxb- token.
+      # Both SLACK_BOT_TOKEN and SLACK_ACTIVITY_CHANNEL must be set for threaded mode.
+      # If only SLACK_ACTIVITY_WEBHOOK_URL is set, events post flat (no threads).
+      # If none are set: DRY-RUN (logged, no POST). A feed error never blocks any request.
+      - key: SLACK_BOT_TOKEN
+        sync: false
+      - key: SLACK_ACTIVITY_CHANNEL
+        sync: false
+      - key: SLACK_ACTIVITY_WEBHOOK_URL
+        sync: false
       # ─── Gemini resilience ───
       # Override the 10-RPM in-process rate limiter. Raise if you upgrade your Gemini quota.
       # Default: 10. Set to 0 to force all Gemini calls to use the fallback scorer.

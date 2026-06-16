@@ -21,6 +21,9 @@ sentry.init();
 // Slack alerting — DRY-RUN when SLACK_WEBHOOK_URL is unset (lib/alerts.js).
 const alerts = require('./lib/alerts');
 
+// Slack activity feed — separate channel, threaded per user. DRY-RUN when unconfigured.
+const activityFeed = require('./lib/activity-feed');
+
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
@@ -422,6 +425,7 @@ app.get('/health', async (req, res) => {
           bucket: process.env.R2_BUCKET || null,
         },
         alerts: { configured: alerts.isConfigured() },
+        activityFeed: { configured: activityFeed.isConfigured() },
         sms: { configured: !!process.env.MSG91_AUTH_KEY },
         email: { configured: !!process.env.RESEND_API_KEY },
         analytics: {

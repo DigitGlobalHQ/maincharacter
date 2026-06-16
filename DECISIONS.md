@@ -5,6 +5,28 @@ Format: date, decision, 2-sentence rationale.
 
 ---
 
+## 2026-06-16 — Threaded Slack user-activity feed (lib/activity-feed.js)
+
+### Threaded via Slack Web API bot token, not incoming webhooks
+
+Slack incoming webhooks cannot create threads (no `ts` returned), so threaded mode requires `chat.postMessage` with a bot token (`SLACK_BOT_TOKEN` + `SLACK_ACTIVITY_CHANNEL`). The returned `ts` is persisted on the user record as `activityThreadTs` so all subsequent journey events reply under the same parent thread. A flat incoming-webhook fallback (`SLACK_ACTIVITY_WEBHOOK_URL`) is provided for operators who want zero threading overhead; DRY-RUN (logged, no POST) when neither is configured.
+
+### Distinct from lib/alerts.js — separate channel, separate concern
+
+`lib/alerts.js` posts ops-critical incidents to the ops channel via incoming webhooks; `lib/activity-feed.js` posts per-user journey milestones to a founder-facing activity channel via the Web API. The two modules share no code and use separate env vars so the activity channel can be archived or silenced without affecting ops alerting.
+
+### thread_ts persisted on user record; idempotent parent creation
+
+Persisting `activityThreadTs` on the user (via `User.updateUser`) ensures that multiple services calling `userActivity` all thread under the same parent, even across process restarts. `userSignedUp` is idempotent: if `activityThreadTs` is already set, it skips posting a second parent. `userActivity` lazily creates the parent if `activityThreadTs` is absent, handling users who reach a journey milestone before the signup hook fires.
+
+### Curated milestone allowlist — 12 events, noisy micro-events excluded
+
+`ACTIVITY_EVENTS` maps 12 milestone event names (audit_started, audit complete, paywall, payment, first mirror, daily mirror, reveal_watched, reaudit_completed, bundle_attached, lookmaxing variants) to short human labels. Excluded: lookmax_first_login (covered by signup), quiz_qN_answered, video_*, protocol_task_completed, landing_viewed, dashboard_loaded — these are too high-frequency to be actionable in a founder feed. Payment events receive Slack's `color:'good'` (green) attachment treatment.
+
+### comp users excluded from feed; both hook points are fire-and-forget
+
+Users with `comp: true` (dogfood/founder accounts) are silently skipped so internal testing does not flood the activity feed. Both hook points — `recordLogin` in `lib/lookmax-auth.js` (signup) and `_write` in `services/events.js` (journey events) — use `.catch(() => {})` and are wrapped in try/catch so a Slack failure or require-cycle cannot block a login, a request, or an event write.
+
 ## 2026-06-16 — Slack alerting system + Gemini 429 resilience
 
 ### lib/alerts.js uses Slack incoming webhooks with in-memory throttle/dedup

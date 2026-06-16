@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import geminiHealth from '../lib/gemini-health.js';
 
 const { probe, getStatus, classifyError, _reset } = geminiHealth;
+const alerts = require('../lib/alerts');
 
 describe('gemini-health classifyError', () => {
   it('detects a leaked key', () => {
@@ -53,5 +54,36 @@ describe('gemini-health probe', () => {
   it('getStatus returns a snapshot synchronously', () => {
     const s = getStatus();
     expect(s).toHaveProperty('status');
+  });
+
+  it('sends a recovery notice when a previously-firing condition recovers', async () => {
+    process.env.GEMINI_API_KEY = 'test-key';
+    delete process.env.SLACK_WEBHOOK_URL; // dry-run is fine — we assert the call, not the POST
+    alerts._resetThrottle();
+    // Simulate the rate-limit condition having fired.
+    await alerts.notify({ severity: 'warning', title: 'Gemini key rate limited', detail: '429', key: 'gemini-key-rate_limited' });
+
+    const resolveSpy = vi.spyOn(alerts, 'resolve');
+    const okModel = { generateContent: async () => ({ response: { text: () => 'pong' } }) };
+    const snap = await probe(okModel);
+
+    expect(snap.status).toBe('ok');
+    const resolvedKeys = resolveSpy.mock.calls.map((c) => c[0] && c[0].key);
+    expect(resolvedKeys).toContain('gemini-key-rate_limited');
+    resolveSpy.mockRestore();
+  });
+
+  it('does not send a recovery notice on a healthy probe when nothing was firing', async () => {
+    process.env.GEMINI_API_KEY = 'test-key';
+    delete process.env.SLACK_WEBHOOK_URL;
+    alerts._resetThrottle(); // no firing conditions
+    const axios = require('axios');
+    const postSpy = vi.spyOn(axios, 'post');
+    process.env.SLACK_WEBHOOK_URL = 'https://hooks.slack.com/services/TEST/HOOK/URL';
+    const okModel = { generateContent: async () => ({ response: { text: () => 'pong' } }) };
+    await probe(okModel);
+    expect(postSpy).not.toHaveBeenCalled(); // resolve() is a no-op → no Slack POST
+    postSpy.mockRestore();
+    delete process.env.SLACK_WEBHOOK_URL;
   });
 });

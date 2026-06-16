@@ -1541,3 +1541,22 @@ of expanding the scope of this data-integrity fix outweighed the benefit.
 The DAY and STREAK columns in `/admin` were showing Orator `day`/`streak` for all users; for `pillar === 'aesthetic'`
 users those fields are always 0. Added `lookmaxStreak` and `mirrorLevel` to the admin stats API response and updated
 the table renderer to show `mirrorLevel` in the DAY cell and `lookmaxStreak` in the STREAK cell for aesthetic users.
+
+### Alert recovery notices (alerts.resolve + gemini-health wiring)
+
+An alert with no recovery signal leaves the founder guessing whether a condition
+is still broken. Added `alerts.resolve({ key, title, detail })` to `lib/alerts.js`:
+the module now tracks "firing" keys (set on every `notify()`, before the dry-run
+and throttle branches so an ongoing-but-suppressed condition still counts as
+firing). `resolve()` sends a green `[RESOLVED]` Slack message ONLY when the key
+was actually firing — a no-op otherwise, so a healthy poll for a never-broken
+condition stays silent. It also clears the throttle entry on recovery so a
+genuine re-occurrence (flapping) alerts immediately instead of being suppressed
+by the stale cooldown.
+
+`lib/gemini-health.js` calls `resolve()` on every `ok` probe for the Gemini
+condition keys (`gemini-key-rate_limited`, `gemini-key-invalid_key`,
+`gemini-key-leaked`, `gemini-fallback-used`). The continuously-polled health
+probe is the only place with a real recovery signal, so recovery notices apply
+to sustained conditions (API-key health), not one-off events like a single 500
+or a failed payment (those have no "resolved" state). 7 new tests; 1750 total.

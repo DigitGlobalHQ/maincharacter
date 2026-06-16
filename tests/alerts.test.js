@@ -227,3 +227,75 @@ describe('alerts — throttle and dedup', () => {
     }
   });
 });
+
+// ─── RESOLVE / RECOVERY NOTICES ──────────────────────────────────────────────
+
+describe('alerts — resolve() recovery notices', () => {
+  function configureLive() {
+    process.env.SLACK_WEBHOOK_URL = 'https://hooks.slack.com/services/TEST/HOOK/URL';
+  }
+
+  it('resolve() is a no-op (returns false, no POST) when the key never fired', async () => {
+    configureLive();
+    axios.post.mockResolvedValue({ status: 200 });
+    const alerts = require('../lib/alerts');
+    alerts._resetThrottle();
+    const sent = await alerts.resolve({ key: 'never-fired', title: 'Recovered' });
+    expect(sent).toBe(false);
+    expect(axios.post).not.toHaveBeenCalled();
+  });
+
+  it('resolve() sends a green [RESOLVED] message when the key was firing', async () => {
+    configureLive();
+    axios.post.mockResolvedValue({ status: 200 });
+    const alerts = require('../lib/alerts');
+    alerts._resetThrottle();
+
+    await alerts.notify({ severity: 'warning', title: 'Gemini key rate limited', detail: '429', key: 'gemini-key-rate_limited' });
+    expect(axios.post).toHaveBeenCalledTimes(1); // the alert
+
+    const sent = await alerts.resolve({ key: 'gemini-key-rate_limited', title: 'Gemini key recovered', detail: 'back to normal' });
+    expect(sent).toBe(true);
+    expect(axios.post).toHaveBeenCalledTimes(2); // alert + recovery
+
+    const recoveryPayload = axios.post.mock.calls[1][1].attachments[0];
+    expect(recoveryPayload.color).toBe('good');
+    expect(recoveryPayload.title).toContain('[RESOLVED]');
+    expect(recoveryPayload.title).toContain('Gemini key recovered');
+  });
+
+  it('resolve() can only fire once per incident (second resolve is a no-op)', async () => {
+    configureLive();
+    axios.post.mockResolvedValue({ status: 200 });
+    const alerts = require('../lib/alerts');
+    alerts._resetThrottle();
+
+    await alerts.notify({ severity: 'critical', title: 'X', detail: 'y', key: 'incident-1' });
+    const first = await alerts.resolve({ key: 'incident-1' });
+    const second = await alerts.resolve({ key: 'incident-1' });
+    expect(first).toBe(true);
+    expect(second).toBe(false);
+  });
+
+  it('after resolve(), a re-occurrence alerts immediately despite a long cooldown', async () => {
+    configureLive();
+    process.env.ALERT_COOLDOWN_CRITICAL_MS = '999999';
+    axios.post.mockResolvedValue({ status: 200 });
+    const alerts = require('../lib/alerts');
+    alerts._resetThrottle();
+
+    await alerts.notify({ severity: 'critical', title: 'Flap', detail: 'a', key: 'flap-key' }); // 1: alert
+    await alerts.resolve({ key: 'flap-key' });                                                  // 2: resolved (clears throttle)
+    await alerts.notify({ severity: 'critical', title: 'Flap', detail: 'b', key: 'flap-key' }); // 3: re-alert (not suppressed)
+    expect(axios.post).toHaveBeenCalledTimes(3);
+  });
+
+  it('resolve() never throws and is a logged no-op in dry-run', async () => {
+    delete process.env.SLACK_WEBHOOK_URL;
+    const alerts = require('../lib/alerts');
+    alerts._resetThrottle();
+    await alerts.notify({ severity: 'warning', title: 'W', detail: 'x', key: 'dry-resolve' });
+    await expect(alerts.resolve({ key: 'dry-resolve', title: 'Recovered' })).resolves.toBe(true);
+    expect(axios.post).not.toHaveBeenCalled();
+  });
+});

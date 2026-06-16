@@ -53,3 +53,13 @@ services:
         sync: false
       - key: UPGRADE_BASE_URL
         value: https://maincharacter.digitglobalservices.com
+      # ─── Slack alerting — DRY-RUN (logged no-op) until set ───
+      # Paste a Slack incoming webhook URL (Settings > Incoming Webhooks in your Slack app).
+      # When unset: alerts log at warn/info level and never POST to Slack.
+      - key: SLACK_WEBHOOK_URL
+        sync: false
+      # ─── Gemini resilience ───
+      # Override the 10-RPM in-process rate limiter. Raise if you upgrade your Gemini quota.
+      # Default: 10. Set to 0 to force all Gemini calls to use the fallback scorer.
+      - key: GEMINI_RPM_LIMIT
+        sync: false

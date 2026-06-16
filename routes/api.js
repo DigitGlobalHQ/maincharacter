@@ -17,6 +17,7 @@ const razorpay = require('../services/razorpay');
 const scheduler = require('../services/scheduler');
 const events = require('../services/events');
 const admin = require('../lib/admin');
+const alerts = require('../lib/alerts');
 const { DAYS, buildMorningMessage, buildEveningMessage, buildEvolutionReport } = require('../data/orator-content');
 
 const BASE_URL = process.env.UPGRADE_BASE_URL || 'https://maincharacter.digitglobalservices.com';
@@ -176,6 +177,12 @@ router.post('/enroll', enrollValidators, async (req, res) => {
     res.json({ success: true, userId: user.token, redirectTo: `/welcome?name=${encodeURIComponent(user.name)}&phone=${encodeURIComponent(user.phone)}&time=${encodeURIComponent(user.preferredTime)}` });
   } catch (err) {
     log('ERROR', `Enrollment failed: ${err.message}`);
+    alerts.notify({
+      severity: 'critical',
+      title: 'Enrollment failed',
+      key: 'enrollment-failed',
+      detail: err.message,
+    }).catch(() => {});
     res.status(500).json({ error: 'Enrollment failed. Please try again.' });
   }
 });
@@ -659,6 +666,12 @@ router.post('/payment/subscribe', async (req, res) => {
     });
   } catch (err) {
     log('ERROR', `subscribe failed: ${err.message}`);
+    alerts.notify({
+      severity: 'critical',
+      title: 'Payment processing failed',
+      key: 'payment-subscribe-failed',
+      detail: err.message,
+    }).catch(() => {});
     res.status(500).json({ error: 'could not create subscription' });
   }
 });
@@ -951,7 +964,15 @@ router.post('/payment/webhook', async (req, res) => {
     return res.status(400).json({ error: 'invalid signature' });
   }
   res.json({ status: 'ok' });
-  processPaymentEvent(req.body).catch((err) => log('ERROR', `Payment webhook: ${err.message}`));
+  processPaymentEvent(req.body).catch((err) => {
+    log('ERROR', `Payment webhook: ${err.message}`);
+    alerts.notify({
+      severity: 'critical',
+      title: 'Payment processing failed',
+      key: 'payment-webhook-failed',
+      detail: err.message,
+    }).catch(() => {});
+  });
 });
 
 module.exports = router;

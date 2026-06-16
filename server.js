@@ -18,6 +18,9 @@ require('dotenv').config();
 const sentry = require('./lib/sentry');
 sentry.init();
 
+// Slack alerting — DRY-RUN when SLACK_WEBHOOK_URL is unset (lib/alerts.js).
+const alerts = require('./lib/alerts');
+
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
@@ -418,6 +421,7 @@ app.get('/health', async (req, res) => {
           configured: storage.isR2Configured(),
           bucket: process.env.R2_BUCKET || null,
         },
+        alerts: { configured: alerts.isConfigured() },
         sms: { configured: !!process.env.MSG91_AUTH_KEY },
         email: { configured: !!process.env.RESEND_API_KEY },
         analytics: {
@@ -481,6 +485,14 @@ app.use((err, req, res, _next) => {
   }
   sentry.captureException(err);
   slog.error('UNHANDLED', err.message, { path: req.path, stack: err.stack });
+  // Fire-and-forget: alert failure must never break the response path.
+  alerts.notify({
+    severity: 'critical',
+    title: 'Unhandled server error',
+    key: `http-500:${req.method} ${req.path}`,
+    detail: err.message,
+    meta: { path: req.path, method: req.method },
+  }).catch(() => {});
   res.status(500).json({ error: 'Internal server error' });
 });
 
@@ -571,4 +583,32 @@ app.listen(PORT, async () => {
   // Probe Gemini key validity once on boot (non-blocking) so /health.config.geminiKey
   // reflects 'ok'/'leaked'/'invalid_key' rather than mere key presence. funnel-repair.
   geminiHealth.init();
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// PROCESS-LEVEL ERROR HANDLERS — alerts only; do not change exit behaviour
+// ═══════════════════════════════════════════════════════════════════
+
+process.on('uncaughtException', (err) => {
+  slog.error('UNCAUGHT', err.message, { stack: err.stack });
+  alerts.notify({
+    severity: 'critical',
+    title: 'Uncaught exception',
+    key: 'uncaught-exception',
+    detail: err.message,
+    meta: { type: err.constructor ? err.constructor.name : 'Error' },
+  }).catch(() => {});
+  // Do NOT exit — maintain existing Node behaviour (log + continue) to avoid
+  // taking down the server over a single unhandled exception in a non-critical path.
+});
+
+process.on('unhandledRejection', (reason) => {
+  const msg = reason instanceof Error ? reason.message : String(reason);
+  slog.error('UNHANDLED-REJECTION', msg);
+  alerts.notify({
+    severity: 'critical',
+    title: 'Unhandled promise rejection',
+    key: 'unhandled-rejection',
+    detail: msg,
+  }).catch(() => {});
 });

@@ -5,6 +5,28 @@ Format: date, decision, 2-sentence rationale.
 
 ---
 
+## 2026-06-16 — Slack alerting system + Gemini 429 resilience
+
+### lib/alerts.js uses Slack incoming webhooks with in-memory throttle/dedup
+
+Slack incoming webhooks require no new npm dependency (axios already in use) and are the lightest-weight ops notification channel available. The in-memory Map throttle (critical = 5 min, warning = 15 min, overridable via `ALERT_COOLDOWN_CRITICAL_MS`/`ALERT_COOLDOWN_WARNING_MS`) prevents a broken code path from spamming Slack on every request; suppressed-count is surfaced on the next send so no event is truly invisible.
+
+### DRY-RUN default: SLACK_WEBHOOK_URL absent → logged no-op, never throws
+
+The DRY-RUN pattern matches the established convention in services/whatsapp.js, services/sms.js, and lib/sentry.js — unconfigured integrations log intent at info/warn and return without blocking the caller. An alert POST error is also swallowed (logged only) so a slow or dead Slack endpoint can never break a live request or crash the app.
+
+### Triggers wired: critical (server 500, uncaughtException, unhandledRejection, enrollment failure, payment webhook failure, payment subscribe failure, gemini key leaked/invalid) + warning (gemini key rate_limited probe, gemini fallback used, photo upload fallback)
+
+Critical triggers cover the paths that directly break user revenue flow (payments, enrollments, process crashes). Warning triggers cover degraded-but-still-working states (rate limiting, R2 fallback storage) where the funnel continues but quality or durability is reduced — these use the 15-minute cooldown to stay quiet under normal transient conditions.
+
+### Gemini RPM limit is now env-configurable (GEMINI_RPM_LIMIT, default 10)
+
+The hard-coded 10 RPM was fine at launch but founders need to raise it once on a higher Gemini quota tier without a code deploy. The constant is read at module load time so a Render env-var change + restart is sufficient.
+
+### Gemini 429 retry uses classifyError from lib/gemini-health.js to keep error classification in one place
+
+`_withGeminiRetry` retries up to 2 times (500ms then 1500ms) on `rate_limited` errors only; non-429 errors propagate immediately. Reusing `classifyError` from gemini-health avoids duplicating the 429/quota/resource_exhausted detection logic and keeps the two modules consistent in their interpretation of Gemini error shapes.
+
 ## 2026-06-15 — Lookmaxing price change ₹99→₹499, referral codes, USD display
 
 ### lookmax499 is a new plan key; lookmax99 is retained for existing subscribers

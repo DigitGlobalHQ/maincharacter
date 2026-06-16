@@ -21,6 +21,7 @@ const vision = require('../services/vision');
 const { AESTHETIC_AXES } = require('../data/lookmax-prompts');
 const { requireLookmaxAuth } = require('../lib/lookmax-auth');
 const { createLogger } = require('../lib/log');
+const alerts = require('../lib/alerts');
 
 const log = createLogger('LOOKMAX');
 
@@ -126,6 +127,13 @@ router.post('/mirror', upload.single('photo'), async (req, res) => {
       photoPath = `r2:${putResult.key}`;
     } else {
       // DRY-RUN or R2 failure — keep existing local-storage fallback
+      alerts.notify({
+        severity: 'warning',
+        title: 'Photo upload using local fallback',
+        key: 'photo-upload-fallback',
+        detail: 'Mirror photo could not be stored in R2 (DRY-RUN or upload error). Using /tmp local fallback.',
+        meta: { userId: user.token, kind: 'mirror' },
+      }).catch(() => {});
       const saved = await photos.saveUserPhoto({ userId: user.token, buffer: req.file.buffer, kind: 'mirror', mimeType: req.file.mimetype });
       photoPath = saved.path;
     }
@@ -343,11 +351,25 @@ router.post(
       if (frontPut.key) {
         savedFront = { path: `r2:${frontPut.key}` };
       } else {
+        alerts.notify({
+          severity: 'warning',
+          title: 'Photo upload using local fallback',
+          key: 'photo-upload-fallback',
+          detail: 'Hair-front photo could not be stored in R2 (DRY-RUN or upload error). Using /tmp local fallback.',
+          meta: { userId: user.token, kind: 'hair-front' },
+        }).catch(() => {});
         savedFront = await photos.saveUserPhoto({ userId: user.token, buffer: frontBuf, kind: 'hair-front', mimeType: f.front[0].mimetype });
       }
       if (crownPut.key) {
         savedCrown = { path: `r2:${crownPut.key}` };
       } else {
+        alerts.notify({
+          severity: 'warning',
+          title: 'Photo upload using local fallback',
+          key: 'photo-upload-fallback',
+          detail: 'Hair-crown photo could not be stored in R2 (DRY-RUN or upload error). Using /tmp local fallback.',
+          meta: { userId: user.token, kind: 'hair-crown' },
+        }).catch(() => {});
         savedCrown = await photos.saveUserPhoto({ userId: user.token, buffer: crownBuf, kind: 'hair-crown', mimeType: f.crown[0].mimetype });
       }
 

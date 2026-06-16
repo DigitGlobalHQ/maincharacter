@@ -243,6 +243,18 @@ async function tick({ source = 'cron' } = {}) {
     _health.lastError = err.message;
     _health.lastErrorAt = new Date().toISOString();
     log('ERROR', `Scheduler tick error: ${err.message}`);
+    // Fire-and-forget: alert failure must never propagate into the scheduler.
+    // BACKLOG: if lastError persists across many consecutive ticks without recovery,
+    // consider escalating from warning to critical.
+    try {
+      require('../lib/alerts').notify({
+        severity: 'warning',
+        title: 'Scheduler tick error',
+        key: 'scheduler-error',
+        detail: err.message,
+        meta: { source },
+      }).catch(() => {});
+    } catch (_) { /* alerts not available */ }
     return { ok: false, error: err.message };
   }
 }

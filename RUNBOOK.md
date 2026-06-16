@@ -67,6 +67,48 @@ There is no rank/subscription edit endpoint beyond `promote` yet; for
 `subscriptionStatus` changes, edit `data/users.json` directly on the host (or
 add an admin endpoint — BACKLOG).
 
+## Render free-tier keep-alive (uptime pinger)
+
+Render's free tier sleeps the instance after 15 minutes of no inbound traffic.
+When the instance sleeps, `node-cron` dies with it and scheduled morning messages
+are missed until the next boot.
+
+**Current mitigation — already active:** cron-job.org pings `GET /health` every
+5 minutes, which keeps the instance awake around the clock.
+
+### Set up a new pinger (if cron-job.org job is lost)
+
+1. Go to [cron-job.org](https://cron-job.org) → New cronjob.
+2. URL: `https://maincharacter.digitglobalservices.com/health`
+3. Schedule: every 5 minutes (`*/5 * * * *`).
+4. Expected HTTP status: 200. Enable failure notification emails.
+
+`GET /health` is lightweight — it checks a few env vars and returns a JSON
+object. It does NOT run heavy queries or DB scans on the hot path (confirmed;
+see `server.js`). Safe to ping frequently.
+
+### Optional: external cron driving the scheduler tick
+
+If you want the scheduler to be driven by an external cron rather than the
+in-process `node-cron`, use:
+
+```
+POST https://maincharacter.digitglobalservices.com/api/cron/tick
+Authorization: Bearer <CRON_SECRET>
+```
+
+`CRON_SECRET` must be set in Render env. The endpoint runs one scheduler tick
+(same logic as the in-process cron every 60s). External cron interval: 60s or
+5 minutes, your preference. Note: this does not replace the `/health` pinger —
+both are needed (pinger keeps instance warm; tick drives scheduling).
+
+### Upgrade path
+
+Upgrading to Render Starter ($7/mo) eliminates the sleep issue entirely and is
+the recommended long-term fix once MRR justifies it.
+
+---
+
 ## Admin can't log in
 
 - `POST /api/admin/login` validates against `ADMIN_PASSWORD_HASH` (bcrypt) if

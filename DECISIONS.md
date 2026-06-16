@@ -5,6 +5,44 @@ Format: date, decision, 2-sentence rationale.
 
 ---
 
+## 2026-06-16 — Layer-1 resilience: retry + circuit breaker (lib/retry.js, lib/circuit-breaker.js)
+
+### What was added
+
+`lib/retry.js` — `withRetry(fn, opts)` with exponential back-off and jitter. Retries on transient network errors (ECONNRESET, ETIMEDOUT, ENOTFOUND, EAI_AGAIN, socket hang up), HTTP 5xx, and HTTP 429. Never retries HTTP 4xx (other than 429) — they are permanent client errors that will not succeed on retry. Also detects `err.$metadata.httpStatusCode` (AWS SDK v3 / Cloudflare R2 pattern).
+
+`lib/circuit-breaker.js` — `breaker(key, fn, opts)` per-key circuit breaker. States: CLOSED → OPEN (after N consecutive failures) → HALF-OPEN (one trial after cooldown) → CLOSED on success. Throws `CircuitOpenError` when open.
+
+### Safety boundary — what was wrapped and what was deliberately NOT wrapped
+
+**Wrapped with `withRetry` (idempotent creates, fire-and-forget sends):**
+- `services/email.js` `transport()` — Resend SDK send. Duplicate email is low-harm; a lost receipt is worse.
+- `services/sms.js` `sendOtp` + `sendSms` — MSG91 axios POSTs.
+- `services/whatsapp.js` `sendMessageSafe` — standardised onto `withRetry` (retries=1, isRetryable: always, preserving original contract).
+- `services/razorpay.js` `createOrder`, `createOrFetchPlan`, `createSubscription`, `createPaymentLink` — Razorpay CREATE calls. These do not move money; the customer authorises payment later in checkout, so a retried create at worst leaves a harmless unused object.
+- `services/storage.js` `put` (R2 PUT) — idempotent by key; retry before the existing local fallback.
+
+**Wrapped with `breaker` (notification channels only, best-effort/fire-and-forget):**
+- Email channel — keyed `'email'`. When open: returns `{ result: 'circuit-open' }` stub, never throws.
+- SMS channel — keyed `'sms'`. When open: returns `{ result: 'circuit-open' }` stub.
+- WhatsApp channel — keyed `'whatsapp'`. When open: `sendMessageSafe` returns `null` (same as existing failure path).
+
+**Deliberately NOT wrapped:**
+- `verifyPayment`, `verifySubscriptionPayment`, `verifyWebhookSignature` — local crypto, no network call. Nothing to retry.
+- Any Razorpay call that captures/charges (none exist as direct calls; charging flows through Razorpay's hosted checkout, not our server). The circuit breaker is explicitly absent from the payment path to prevent any risk of blocking or double-charging.
+- `services/gemini.js` — already has its own `_withGeminiRetry` (429-specific). Not modified per brief instruction.
+- `services/storage.js` `getSignedUrl`, `deleteObject` — not in the brief scope; no retry added to these secondary operations.
+
+### Uptime pinger — documented in RUNBOOK.md, no new endpoints
+
+The existing `/health` (lightweight) and `/api/cron/tick` (CRON_SECRET) endpoints are sufficient. Operational setup documented in RUNBOOK.md under "Render free-tier keep-alive (uptime pinger)".
+
+### Test seams added
+
+`services/razorpay.js`: `__setRazorpayInstance(instance)` + `__clearPlanCache()` + `__resetPlanCache()` — allow tests to inject a mock Razorpay SDK without touching env vars. `services/storage.js`: `__setS3Client(client)` — allows tests to inject a mock S3 client. Both patterns follow the existing `__setTransport` / `__resetTransport` seam in `services/email.js`.
+
+---
+
 ## 2026-06-16 — Durable audit-session store (migrations/0006, routes/lookmaxing.js)
 
 ### Root cause: ephemeral JSON file caused /pay/order and GET /audit/:id to 404 after Render redeploy

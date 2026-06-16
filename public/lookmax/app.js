@@ -75,11 +75,15 @@
     r.innerHTML = 'Add to home screen &nbsp;→&nbsp; ◆ <span class="x">✕</span>';
     r.addEventListener('click', async (ev) => {
       if (ev.target.classList.contains('x')) { dismissRibbon(r); return; }
-      if (deferredPrompt) { deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; r.remove(); }
+      if (deferredPrompt) { deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; removeRibbon(r); }
     });
     document.body.appendChild(r);
+    // The ribbon is position:fixed at top; offset the page below it so it never
+    // overlaps the page header. Measured (not hardcoded) to survive font/zoom.
+    document.body.style.paddingTop = r.offsetHeight + 'px';
   }
-  function dismissRibbon(r) { localStorage.setItem(INSTALL_KEY, String(Date.now())); r.remove(); }
+  function removeRibbon(r) { if (r) r.remove(); document.body.style.paddingTop = ''; }
+  function dismissRibbon(r) { localStorage.setItem(INSTALL_KEY, String(Date.now())); removeRibbon(r); }
 
   function registerSW() {
     if ('serviceWorker' in navigator) {

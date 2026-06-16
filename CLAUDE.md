@@ -81,6 +81,8 @@ MainComponent/
 │   ├── scheduler.js         ← node-cron every 60s + checkMissedMessages on boot
 │   └── razorpay.js          ← createOrder, createSubscription, verifyPayment, verifySubscriptionPayment, verifyWebhookSignature
 │   (lib/messaging-mode.js   ← shared all/allowlist/off kill-switch for WhatsApp+SMS+email)
+│   (lib/alerts.js           ← ops alerts → Slack webhook: notify() critical/warning + resolve() [RESOLVED] recovery, throttle/dedup, DRY-RUN until SLACK_WEBHOOK_URL)
+│   (lib/activity-feed.js    ← user-activity feed → Slack: userSignedUp() parent + userActivity() threaded replies via bot token, flat-webhook fallback, comp users excluded)
 │
 ├── models/
 │   └── User.js              ← JSON-file CRUD (data/users.json, data/waitlist.json)
@@ -157,6 +159,11 @@ Set in Render dashboard (NOT in committed `.env`):
 | `SENTRY_DSN` | new — error monitoring | add |
 | `WHATSAPP_SEND_MODE` | `all` / `allowlist` / `off` — global send guard for WhatsApp+SMS+email (defaults to `allowlist`; legacy `WATI_SEND_MODE` still read for 30 days) | yes |
 | `CRON_SECRET` | shared secret for `/api/cron/tick` (external pinger). Open+warn until set — set it in prod | add |
+| `SLACK_WEBHOOK_URL` | ops alerts incoming-webhook (`lib/alerts.js`) — critical + warning + `[RESOLVED]`. DRY-RUN until set | add |
+| `GEMINI_RPM_LIMIT` | Gemini requests-per-minute cap (`services/gemini.js`); defaults to 10. Raise once billing is on | add |
+| `SLACK_BOT_TOKEN` | `xoxb-…` bot token for the threaded user-activity feed (`lib/activity-feed.js`, `chat:write`) | add |
+| `SLACK_ACTIVITY_CHANNEL` | channel ID (`C0…`) the activity bot posts to — required with `SLACK_BOT_TOKEN` | add |
+| `SLACK_ACTIVITY_WEBHOOK_URL` | optional flat (non-threaded) fallback for the activity feed when no bot token | add |
 | `WEB_PUSH_VAPID_PUBLIC` | VAPID public key for PWA push notifications | add |
 | `WEB_PUSH_VAPID_PRIVATE` | VAPID private key for PWA push notifications | add |
 | `R2_ACCOUNT_ID` | Cloudflare R2 (object storage for daily mirror photos + reveal videos) | add |

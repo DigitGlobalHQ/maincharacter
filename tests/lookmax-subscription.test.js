@@ -243,7 +243,7 @@ describe('Entitlement: user.lookmaxxingActive unlocks without session.paid', () 
 
   it('GET /audit/:id/pdf returns 200 (not 403) when user.lookmaxxingActive=true and session.paid=false', async () => {
     // user already has lookmaxxingActive=true from prior test
-    const session = lookmaxingRouter._getSession(auditId);
+    const session = await lookmaxingRouter._getSession(auditId);
     expect(session.paid).toBe(false); // confirm session itself is still unpaid
 
     const res = await request(lmApp)

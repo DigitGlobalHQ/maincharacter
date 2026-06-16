@@ -134,7 +134,20 @@ const router = express.Router();
 // ─── Multer — memory storage; storage.putPhoto handles the disk/R2 layer ────
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
-// ─── Audit-session JSON store ────────────────────────────────────────────────
+// ─── Audit-session store ──────────────────────────────────────────────────────
+//
+// Two-backend design (mirrors services/events.js):
+//   Postgres  — when DATABASE_URL is set (or AUDIT_SESSION_BACKEND=pg/postgres)
+//   JSON file — fallback for tests / local dev / no DATABASE_URL
+//
+// Backend selection:
+//   AUDIT_SESSION_BACKEND=pg | postgres → Postgres
+//   AUDIT_SESSION_BACKEND=file          → file (forced, even if DATABASE_URL set)
+//   unset + DATABASE_URL set            → Postgres
+//   unset + no DATABASE_URL             → file
+//
+// All three public helpers (_getSession, _putSession, _updateSession) are async
+// so callers can always await them without branching on the backend.
 
 const STORE_PATH =
   process.env.AUDIT_V2_STORE_PATH ||
@@ -147,7 +160,7 @@ function _ensureStore() {
 }
 _ensureStore();
 
-function _load() {
+function _loadFile() {
   try {
     return JSON.parse(fs.readFileSync(STORE_PATH, 'utf8'));
   } catch {
@@ -156,27 +169,189 @@ function _load() {
 }
 
 /** Atomic write — mirrors models/User.js pattern. */
-function _save(data) {
+function _saveFile(data) {
   fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2));
 }
 
-function _getSession(id) {
-  return _load()[id] || null;
+// ── Postgres pool (lazy, same pattern as services/events.js) ─────────────────
+
+let _pgPool = null;
+let _pgAttempted = false;
+
+function _getPgPool() {
+  if (_pgAttempted) return _pgPool;
+  _pgAttempted = true;
+  if (!process.env.DATABASE_URL) return null;
+  try {
+    const { Pool } = require('pg'); // eslint-disable-line global-require
+    _pgPool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false }, // Neon requires SSL; cert chain varies by region
+      max: 5,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000,
+    });
+    _pgPool.on('error', (err) => {
+      log.error('SESSION-PG', `pool error: ${err.message}`);
+    });
+    log.info('SESSION-PG', 'Postgres pool initialised for audit-session store');
+  } catch (err) {
+    log.warn('SESSION-PG', `pg not available — falling back to file store: ${err.message}`);
+    _pgPool = null;
+  }
+  return _pgPool;
 }
 
-function _putSession(session) {
-  const data = _load();
+/** True when the Postgres backend should be used. */
+function _usePostgresStore() {
+  const eb = process.env.AUDIT_SESSION_BACKEND;
+  if (eb === 'pg' || eb === 'postgres') return true;
+  if (eb === 'file') return false;
+  // Auto-flip: unset + DATABASE_URL → Postgres
+  return !!process.env.DATABASE_URL;
+}
+
+// ── Public async store helpers ────────────────────────────────────────────────
+
+/**
+ * Retrieve an audit session by id.
+ * Returns the session object or null when not found.
+ * @param {string} id
+ * @returns {Promise<object|null>}
+ */
+async function _getSession(id) {
+  if (_usePostgresStore()) {
+    const pool = _getPgPool();
+    if (pool) {
+      try {
+        const { rows } = await pool.query(
+          'SELECT data FROM audit_session_store WHERE id = $1',
+          [id]
+        );
+        return rows.length ? rows[0].data : null;
+      } catch (err) {
+        log.warn('SESSION-PG', `_getSession pg failed (${id}): ${err.message} — falling back to file`);
+        // Fall through to file
+      }
+    }
+  }
+  return _loadFile()[id] || null;
+}
+
+/**
+ * Create or fully replace an audit session (upsert).
+ * Returns the session object.
+ * @param {object} session  Must have session.id.
+ * @returns {Promise<object>}
+ */
+async function _putSession(session) {
+  if (_usePostgresStore()) {
+    const pool = _getPgPool();
+    if (pool) {
+      try {
+        await pool.query(
+          `INSERT INTO audit_session_store (id, user_id, paid, data)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (id) DO UPDATE
+             SET user_id    = EXCLUDED.user_id,
+                 paid       = EXCLUDED.paid,
+                 data       = EXCLUDED.data,
+                 updated_at = NOW()`,
+          [
+            session.id,
+            session.userId || null,
+            session.paid === true,
+            JSON.stringify(session),
+          ]
+        );
+        return session;
+      } catch (err) {
+        log.warn('SESSION-PG', `_putSession pg failed (${session.id}): ${err.message} — falling back to file`);
+        // Fall through to file
+      }
+    }
+  }
+  // File backend
+  const data = _loadFile();
   data[session.id] = session;
-  _save(data);
+  _saveFile(data);
   return session;
 }
 
-function _updateSession(id, updates) {
-  const data = _load();
+/**
+ * Partial update of an existing session.
+ * Loads the stored session, merges updates, writes back.
+ * Also refreshes the mirrored paid / user_id columns in Postgres when those keys change.
+ * Returns the merged session or null when the session doesn't exist.
+ * @param {string} id
+ * @param {object} updates  Partial fields to merge.
+ * @returns {Promise<object|null>}
+ */
+async function _updateSession(id, updates) {
+  if (_usePostgresStore()) {
+    const pool = _getPgPool();
+    if (pool) {
+      try {
+        const { rows } = await pool.query(
+          'SELECT data FROM audit_session_store WHERE id = $1',
+          [id]
+        );
+        if (!rows.length) return null;
+        const existing = rows[0].data;
+        const merged   = Object.assign({}, existing, updates, { updatedAt: new Date().toISOString() });
+        await pool.query(
+          `UPDATE audit_session_store
+              SET data       = $2,
+                  user_id    = $3,
+                  paid       = $4,
+                  updated_at = NOW()
+            WHERE id = $1`,
+          [
+            id,
+            JSON.stringify(merged),
+            merged.userId || null,
+            merged.paid === true,
+          ]
+        );
+        return merged;
+      } catch (err) {
+        log.warn('SESSION-PG', `_updateSession pg failed (${id}): ${err.message} — falling back to file`);
+        // Fall through to file
+      }
+    }
+  }
+  // File backend
+  const data = _loadFile();
   if (!data[id]) return null;
   Object.assign(data[id], updates, { updatedAt: new Date().toISOString() });
-  _save(data);
+  _saveFile(data);
   return data[id];
+}
+
+/**
+ * Return the full session map { [id]: session } — used by the admin endpoint.
+ * On Postgres, reads all rows and reconstructs the map. Falls back to file.
+ * @returns {Promise<object>}
+ */
+async function _allSessions() {
+  if (_usePostgresStore()) {
+    const pool = _getPgPool();
+    if (pool) {
+      try {
+        const { rows } = await pool.query('SELECT data FROM audit_session_store');
+        const map = {};
+        for (const row of rows) {
+          const s = row.data;
+          if (s && s.id) map[s.id] = s;
+        }
+        return map;
+      } catch (err) {
+        log.warn('SESSION-PG', `_allSessions pg failed: ${err.message} — falling back to file`);
+        // Fall through to file
+      }
+    }
+  }
+  return _loadFile();
 }
 
 // ─── PREMIUM blocks (spec §5) ─────────────────────────────────────────────────
@@ -1243,7 +1418,7 @@ function _renderDossier(doc, auditId, report, photoBuffer) {
  * @param {boolean} consent
  */
 async function _injectReportForTest(auditId, report, consent = true) {
-  _updateSession(auditId, {
+  await _updateSession(auditId, {
     geminiReport: report,
     consentGiven: consent,
     analyzedAt: new Date().toISOString(),
@@ -1256,7 +1431,7 @@ async function _injectReportForTest(auditId, report, consent = true) {
  * @param {boolean} paid
  */
 async function _setAuditPaidForTest(auditId, paid) {
-  _updateSession(auditId, { paid });
+  await _updateSession(auditId, { paid });
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1267,7 +1442,7 @@ async function _setAuditPaidForTest(auditId, paid) {
 // Sign-in required (funnel-repair P1): every audit is owned by a signed-in user.
 // Returns the new auditId; the frontend carries it through capture → analyze.
 
-router.post('/quiz', (req, res) => {
+router.post('/quiz', async (req, res) => {
   const actor = resolveActor(req);
   if (!actor) return res.status(401).json({ error: 'unauthorized' });
 
@@ -1287,7 +1462,7 @@ router.post('/quiz', (req, res) => {
   // User-owned session: the session id is a fresh UUID, distinct from the userId.
   const auditId = crypto.randomUUID();
   const now = new Date().toISOString();
-  _putSession({
+  await _putSession({
     id:          auditId,
     guestId:     null, // column retained for back-compat; always null now
     userId:      actor.userId,
@@ -1323,14 +1498,14 @@ router.post(['/capture', '/photo'], upload.single('photo'), async (req, res) => 
 
   if (!auditId) return res.status(400).json({ error: 'auditId required' });
 
-  const session = _getSession(auditId);
+  const session = await _getSession(auditId);
   if (!session) return res.status(404).json({ error: 'session not found' });
   if (!canAccess(session, actor)) return res.status(403).json({ error: 'forbidden' });
 
   if (!req.file) return res.status(400).json({ error: 'photo file required' });
 
   // Persist consent flag (even when false — the analyze step gates on this).
-  _updateSession(auditId, { consentGiven });
+  await _updateSession(auditId, { consentGiven });
 
   // Normalise the photo: EXIF auto-orient (phone selfies arrive rotated) and
   // downscale so the Gemini inline payload + session stash stay bounded.
@@ -1361,7 +1536,7 @@ router.post(['/capture', '/photo'], upload.single('photo'), async (req, res) => 
 
   // Stash the bytes on the session so /analyze can always reach Gemini with the
   // photo, regardless of whether R2 is configured. Cleared after analyze.
-  _updateSession(auditId, { photoKey, photoB64: photoBuffer.toString('base64') });
+  await _updateSession(auditId, { photoKey, photoB64: photoBuffer.toString('base64') });
 
   events.trackAnonymous('lookmaxing_photo_uploaded', { auditId }, actor.userId).catch(() => {});
   return res.json({ ok: true, auditId });
@@ -1381,7 +1556,7 @@ router.post('/analyze', async (req, res) => {
   const { auditId } = req.body || {};
   if (!auditId) return res.status(400).json({ error: 'auditId required' });
 
-  const session = _getSession(auditId);
+  const session = await _getSession(auditId);
   if (!session) return res.status(404).json({ error: 'session not found' });
   if (!canAccess(session, actor)) return res.status(403).json({ error: 'forbidden' });
 
@@ -1415,7 +1590,7 @@ router.post('/analyze', async (req, res) => {
   }
 
   // Drop the raw photo bytes from the session now that the reading is generated.
-  _updateSession(auditId, { geminiReport: report, analyzedAt: new Date().toISOString(), photoB64: null });
+  await _updateSession(auditId, { geminiReport: report, analyzedAt: new Date().toISOString(), photoB64: null });
 
   events.trackAnonymous('lookmaxing_audit_generated', { auditId }, actor.userId).catch(() => {});
 
@@ -1457,7 +1632,7 @@ router.get('/audit/:id', async (req, res) => {
   // Guest may not have a cookie if they're fetching directly — allow no-auth for
   // existing sessions by matching any identity. We still enforce ownership below.
   const id = req.params.id;
-  const session = _getSession(id);
+  const session = await _getSession(id);
   if (!session) return res.status(404).json({ error: 'audit not found' });
 
   if (!actor || !canAccess(session, actor)) {
@@ -1506,7 +1681,7 @@ function _paymentBypass() {
 // redeem that returns ok:false (race condition — code already exhausted) is logged
 // but does NOT block the unlock: the payment was already initiated at a valid price.
 async function _settlePaidAudit(auditId, { paymentId = null } = {}) {
-  const session = _getSession(auditId);
+  const session = await _getSession(auditId);
   if (!session) return null;
   if (session.paid) return session;
 
@@ -1529,7 +1704,7 @@ async function _settlePaidAudit(auditId, { paymentId = null } = {}) {
     }
   }
 
-  _updateSession(auditId, {
+  await _updateSession(auditId, {
     paid:              true,
     paidAt:            new Date().toISOString(),
     razorpayPaymentId: paymentId,
@@ -1568,7 +1743,7 @@ async function _settlePaidAudit(auditId, { paymentId = null } = {}) {
   return _getSession(auditId);
 }
 
-// ─── POST /pay/validate-code ──────────────────────────────────────────────────
+// ─── POST /pay/validate-code ─────────────────────────────────────────────────
 // Read-only price check for a referral code. Does NOT redeem. Returns the
 // discounted amounts and display strings so the UI can show the final price
 // before the user commits to the order. Requires a valid actor (same pattern
@@ -1623,7 +1798,7 @@ router.post('/pay/order', async (req, res) => {
   const { auditId, code } = req.body || {};
   if (!auditId) return res.status(400).json({ error: 'auditId required' });
 
-  const session = _getSession(auditId);
+  const session = await _getSession(auditId);
   if (!session) return res.status(404).json({ error: 'audit not found' });
   if (!canAccess(session, actor)) return res.status(403).json({ error: 'forbidden' });
 
@@ -1647,7 +1822,7 @@ router.post('/pay/order', async (req, res) => {
     referralCodeUsed   = String(code).toUpperCase();
 
     // Store the pending code on the session so _settlePaidAudit can redeem it.
-    _updateSession(auditId, {
+    await _updateSession(auditId, {
       pendingReferralCode:  referralCodeUsed,
       referralPercentOff,
     });
@@ -1727,7 +1902,7 @@ router.post('/pay/subscribe', async (req, res) => {
   const { auditId } = req.body || {};
   if (!auditId) return res.status(400).json({ error: 'auditId required' });
 
-  const session = _getSession(auditId);
+  const session = await _getSession(auditId);
   if (!session) return res.status(404).json({ error: 'audit not found' });
   if (!canAccess(session, actor)) return res.status(403).json({ error: 'forbidden' });
 
@@ -1743,7 +1918,7 @@ router.post('/pay/subscribe', async (req, res) => {
   if (_paymentBypass()) {
     const user = session.userId ? await User.getUserByToken(session.userId) : null;
     const subId = 'sub_bypass_' + Date.now();
-    _updateSession(auditId, { razorpaySubscriptionId: subId });
+    await _updateSession(auditId, { razorpaySubscriptionId: subId });
     if (user) {
       await User.updateUser(user.phone, { razorpaySubscriptionId: subId, pendingPlan: 'lookmax499' });
     }
@@ -1776,7 +1951,7 @@ router.post('/pay/subscribe', async (req, res) => {
 
     // Persist the subscription id on the session and the user record so the
     // entitlement check can resolve this subscription back to the user on webhook.
-    _updateSession(auditId, { razorpaySubscriptionId: sub.id });
+    await _updateSession(auditId, { razorpaySubscriptionId: sub.id });
     if (user) {
       await User.updateUser(user.phone, {
         razorpaySubscriptionId: sub.id,
@@ -1832,7 +2007,7 @@ router.post('/pay/webhook', async (req, res) => {
     return res.json({ ok: true, ignored: true });
   }
 
-  const session = _getSession(auditId);
+  const session = await _getSession(auditId);
   if (!session) {
     log.warn('PAY-WEBHOOK', `audit ${auditId} not found`);
     return res.json({ ok: true, ignored: true });
@@ -1866,7 +2041,7 @@ router.post('/pay/test-confirm', async (req, res) => {
   const { auditId } = req.body || {};
   if (!auditId) return res.status(400).json({ error: 'auditId required' });
 
-  const session = _getSession(auditId);
+  const session = await _getSession(auditId);
   if (!session) return res.status(404).json({ error: 'audit not found' });
   if (!canAccess(session, actor)) return res.status(403).json({ error: 'forbidden' });
 
@@ -1924,7 +2099,7 @@ router.post('/pay/verify', async (req, res) => {
   if (!auditId || !razorpay_payment_id || !razorpay_signature || (!razorpay_subscription_id && !razorpay_order_id)) {
     return res.status(400).json({ error: 'missing payment fields' });
   }
-  const session = _getSession(auditId);
+  const session = await _getSession(auditId);
   if (!session) return res.status(404).json({ error: 'audit not found' });
   if (!canAccess(session, actor)) return res.status(403).json({ error: 'forbidden' });
 
@@ -1948,7 +2123,7 @@ router.get('/audit/:id/pdf', async (req, res) => {
   if (!actor) return res.status(401).json({ error: 'unauthorized' });
 
   const id      = req.params.id;
-  const session = _getSession(id);
+  const session = await _getSession(id);
   if (!session) return res.status(404).json({ error: 'audit not found' });
   if (!canAccess(session, actor)) return res.status(403).json({ error: 'forbidden' });
 
@@ -2002,11 +2177,11 @@ router.get('/audit/:id/pdf', async (req, res) => {
   let pdfBase64 = null;
   if (!upload.dryRun && upload.key) {
     url = await storage.getSignedUrl(pdfKey, 24 * 60 * 60); // 24 h
-    _updateSession(id, { pdfKey });
+    await _updateSession(id, { pdfKey });
   } else {
     // R2 not configured — return inline base64 so the client can still download.
     pdfBase64 = pdfBuffer.toString('base64');
-    _updateSession(id, { pdfBase64 });
+    await _updateSession(id, { pdfBase64 });
   }
 
   events.trackAnonymous('lookmaxing_pdf_downloaded', { auditId: id }, actor.userId).catch(() => {});
@@ -2053,10 +2228,12 @@ module.exports = router;
 module.exports.default = router;
 module.exports._injectReportForTest  = _injectReportForTest;
 module.exports._setAuditPaidForTest  = _setAuditPaidForTest;
-module.exports._getSession           = _getSession;   // for merge test assertions
-module.exports._putSession           = _putSession;
+module.exports._getSession           = _getSession;     // for merge test assertions + admin
+module.exports._putSession           = _putSession;     // now async — always returns Promise
+module.exports._updateSession        = _updateSession;  // now async — always returns Promise
+module.exports._allSessions          = _allSessions;    // for admin /lookmax-users endpoint
 module.exports.applyResolutionGate   = applyResolutionGate;
 module.exports._sanitizeReport       = _sanitizeReport; // Phase 1 safety backstop
-module.exports._isUnlocked           = _isUnlocked;   // entitlement check (tests)
+module.exports._isUnlocked           = _isUnlocked;     // entitlement check (tests)
 module.exports.getAnalyzeStats       = getAnalyzeStats; // aura-engine gemini/fallback counters
-module.exports._generatePdf          = _generatePdf;   // dossier renderer (tests + visual QA)
+module.exports._generatePdf          = _generatePdf;    // dossier renderer (tests + visual QA)

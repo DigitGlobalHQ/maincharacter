@@ -26,8 +26,22 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { createLogger } = require('../lib/log');
+const { withRetry } = require('../lib/retry');
 
 const log = createLogger('STORAGE');
+
+// Retry opts for R2 PUT calls.  2 retries with small backoff.
+// A retried PUT is idempotent (same key + same content) so no harm from doubles.
+// The existing local-fallback is preserved — if retries are exhausted, put()
+// returns { key: null, dryRun: true } and callers fall back gracefully.
+const R2_RETRY_OPTS = {
+  retries: 2,
+  baseMs: 300,
+  maxMs: 3000,
+  factor: 2,
+  jitter: true,
+  label: 'r2-put',
+};
 
 const LOCAL_DIR =
   process.env.UPLOAD_DIR || path.join(require('os').tmpdir(), 'maincharacter-uploads');
@@ -67,7 +81,20 @@ function getSharp() {
 }
 
 let _s3Client = null;
+// Test seam — allows tests to inject a mock S3 client. `null` clears the seam.
+let _s3ClientOverride;
+
+/** Inject a mock S3 client for tests. Pass null to clear the override. */
+function __setS3Client(client) {
+  _s3ClientOverride = client;
+  // Also reset the cached real client so the override is seen immediately.
+  _s3Client = null;
+}
+
 function getS3() {
+  // Test seam: return the override if set.
+  if (_s3ClientOverride !== undefined) return _s3ClientOverride;
+
   // Always rebuild if not yet built (first call) or if R2 is newly configured.
   if (_s3Client) return _s3Client;
   if (!isR2Configured()) return null;
@@ -104,21 +131,26 @@ function getS3() {
  */
 async function put(key, buffer, contentType = 'image/jpeg') {
   const s3 = getS3();
-  if (!s3 || !isR2Configured()) {
+  if (!s3 || (!_s3ClientOverride && !isR2Configured())) {
     log.info('DRY-RUN', `storage.put dry-run: ${key} (${buffer.byteLength} bytes)`);
     return { key: null, etag: null, dryRun: true };
   }
   const c = r2Config();
   try {
     const { PutObjectCommand } = require('@aws-sdk/client-s3'); // eslint-disable-line global-require
-    const resp = await s3.send(
-      new PutObjectCommand({ Bucket: c.bucket, Key: key, Body: buffer, ContentType: contentType })
+    // Retry the R2 PUT on transient errors before falling back to local.
+    // A retried PUT is idempotent — same key, same content, harmless duplicate.
+    const resp = await withRetry(
+      () => s3.send(
+        new PutObjectCommand({ Bucket: c.bucket, Key: key, Body: buffer, ContentType: contentType })
+      ),
+      R2_RETRY_OPTS
     );
     const etag = resp.ETag || null;
     log.info('PUT', `${key} → R2 (${buffer.byteLength} bytes)`);
     return { key, etag };
   } catch (err) {
-    log.error('PUT-FAIL', `put ${key} failed: ${err.message}`);
+    log.error('PUT-FAIL', `put ${key} failed after retries: ${err.message}`);
     return { key: null, etag: null, dryRun: true };
   }
 }
@@ -427,4 +459,6 @@ module.exports = {
   readImage,
   readImageBase64,
   LOCAL_DIR,
+  // Test seam
+  __setS3Client,
 };

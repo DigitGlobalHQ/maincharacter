@@ -21,8 +21,26 @@ const axios = require('axios');
 const crypto = require('crypto');
 const { createLogger } = require('../lib/log');
 const mode = require('../lib/messaging-mode');
+const { withRetry } = require('../lib/retry');
+const { breaker, CircuitOpenError } = require('../lib/circuit-breaker');
 
 const log = createLogger('SMS');
+
+// Retry opts for MSG91 axios calls.
+const RETRY_OPTS = {
+  retries: 2,
+  baseMs: 300,
+  maxMs: 4000,
+  factor: 2,
+  jitter: true,
+  label: 'sms-transport',
+};
+
+// Circuit-breaker opts for the SMS channel.
+const BREAKER_OPTS = {
+  failureThreshold: 5,
+  cooldownMs: 30000,
+};
 
 const MSG91_BASE = 'https://control.msg91.com/api/v5';
 
@@ -74,6 +92,8 @@ function generateOtp() {
 
 /**
  * Send a DLT-approved OTP via MSG91. Caller supplies the OTP (use generateOtp()).
+ * Retries on transient/5xx/429.  When the SMS circuit breaker is open, returns
+ * a `{ result: 'circuit-open' }` stub — caller treats it like a swallowed send.
  * @param {string} phone
  * @param {string} otp 6-digit code
  * @returns {Promise<object>}
@@ -84,21 +104,39 @@ async function sendOtp(phone, otp) {
   if (blocked) return blocked;
 
   const c = creds();
-  const response = await axios.post(
-    `${MSG91_BASE}/otp`,
-    {},
-    {
-      params: { template_id: c.otpTemplateId, mobile: normalized, otp, otp_length: 6 },
-      headers: { authkey: c.authKey, 'Content-Type': 'application/json' },
-      timeout: 15000,
+
+  try {
+    const response = await breaker(
+      'sms',
+      () => withRetry(
+        () => axios.post(
+          `${MSG91_BASE}/otp`,
+          {},
+          {
+            params: { template_id: c.otpTemplateId, mobile: normalized, otp, otp_length: 6 },
+            headers: { authkey: c.authKey, 'Content-Type': 'application/json' },
+            timeout: 15000,
+          }
+        ),
+        RETRY_OPTS
+      ),
+      BREAKER_OPTS
+    );
+    log.info('OTP', `→ ${normalized} status=${response.status}`);
+    return response.data;
+  } catch (err) {
+    if (err instanceof CircuitOpenError) {
+      log.warn('CIRCUIT-OPEN', `SMS circuit open — OTP to ${normalized} suppressed`);
+      return { result: 'circuit-open' };
     }
-  );
-  log.info('OTP', `→ ${normalized} status=${response.status}`);
-  return response.data;
+    throw err;
+  }
 }
 
 /**
  * Send a generic SMS via an MSG91 flow (DLT-approved template only).
+ * Retries on transient/5xx/429.  When the SMS circuit breaker is open, returns
+ * a `{ result: 'circuit-open' }` stub — caller treats it like a swallowed send.
  * @param {string} phone
  * @param {string} message message text (must match an approved template)
  * @param {string} [templateId] flow template id; defaults to MSG91_FLOW_TEMPLATE_ID
@@ -110,20 +148,36 @@ async function sendSms(phone, message, templateId = process.env.MSG91_FLOW_TEMPL
   if (blocked) return blocked;
 
   const c = creds();
-  const response = await axios.post(
-    `${MSG91_BASE}/flow/`,
-    {
-      template_id: templateId,
-      sender: c.senderId,
-      recipients: [{ mobiles: normalized, message }],
-    },
-    {
-      headers: { authkey: c.authKey, 'Content-Type': 'application/json' },
-      timeout: 15000,
+
+  try {
+    const response = await breaker(
+      'sms',
+      () => withRetry(
+        () => axios.post(
+          `${MSG91_BASE}/flow/`,
+          {
+            template_id: templateId,
+            sender: c.senderId,
+            recipients: [{ mobiles: normalized, message }],
+          },
+          {
+            headers: { authkey: c.authKey, 'Content-Type': 'application/json' },
+            timeout: 15000,
+          }
+        ),
+        RETRY_OPTS
+      ),
+      BREAKER_OPTS
+    );
+    log.info('SMS', `→ ${normalized} (${message.length} chars) status=${response.status}`);
+    return response.data;
+  } catch (err) {
+    if (err instanceof CircuitOpenError) {
+      log.warn('CIRCUIT-OPEN', `SMS circuit open — message to ${normalized} suppressed`);
+      return { result: 'circuit-open' };
     }
-  );
-  log.info('SMS', `→ ${normalized} (${message.length} chars) status=${response.status}`);
-  return response.data;
+    throw err;
+  }
 }
 
 module.exports = {

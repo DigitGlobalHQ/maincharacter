@@ -23,8 +23,33 @@ const axios = require('axios');
 const crypto = require('crypto');
 const { createLogger } = require('../lib/log');
 const mode = require('../lib/messaging-mode');
+const { withRetry } = require('../lib/retry');
+const { breaker, CircuitOpenError } = require('../lib/circuit-breaker');
 
 const log = createLogger('WHATSAPP');
+
+// Retry opts for sendMessageSafe.  Keep existing 1-retry behaviour (retries=1)
+// to preserve the original contract — callers depend on at-most-one-retry.
+//
+// isRetryable: retry on ALL errors (the original implementation retried every
+// error with a 2s sleep).  sendMessageSafe never throws and returns null on total
+// failure, so broadening the retry set here is safe — the circuit breaker is the
+// backstop against persistent failures.
+const SAFE_RETRY_OPTS = {
+  retries: 1,
+  baseMs: 2000,
+  maxMs: 4000,
+  factor: 2,
+  jitter: false,
+  label: 'whatsapp-safe',
+  isRetryable: () => true,
+};
+
+// Circuit-breaker opts for the WhatsApp channel.
+const BREAKER_OPTS = {
+  failureThreshold: 5,
+  cooldownMs: 30000,
+};
 
 const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || 'v18.0';
 
@@ -163,25 +188,38 @@ async function sendOtp(phone, otp, templateName = process.env.WHATSAPP_OTP_TEMPL
 }
 
 /**
- * Send a message with one retry. Never throws — returns null on total failure.
+ * Send a message with one retry (standardised via withRetry).
+ * Never throws — returns null on total failure or when circuit is open.
  * Suppressed/blocked/dry-run sends are returned as-is (no retry needed).
+ *
+ * Contract preserved: at most 1 retry (retries=1), 2 s base delay — identical
+ * behaviour to the previous hand-rolled implementation, now using the shared
+ * withRetry helper.  The circuit breaker is keyed to 'whatsapp' so persistent
+ * failures open the breaker and short-circuit subsequent sends without blocking.
+ *
  * @param {string} phone
  * @param {string} text
+ * @returns {Promise<object|null>}
  */
 async function sendMessageSafe(phone, text) {
+  // Guard first — suppressed/blocked/dry-run stubs never need retry or breaker.
+  const normalized = mode.normalizePhone(phone);
+  const blocked = guard(normalized, `text "${String(text).slice(0, 80)}"`);
+  if (blocked) return blocked;
+
   try {
-    return await sendMessage(phone, text);
+    return await breaker(
+      'whatsapp',
+      () => withRetry(() => sendMessage(phone, text), SAFE_RETRY_OPTS),
+      BREAKER_OPTS
+    );
   } catch (err) {
-    log.warn('RETRY', `retrying once for ${mode.normalizePhone(phone)}: ${err.message}`);
-    try {
-      await new Promise((r) => setTimeout(r, 2000));
-      return await sendMessage(phone, text);
-    } catch (retryErr) {
-      log.error('FAIL', `both attempts failed for ${mode.normalizePhone(phone)}`, {
-        error: retryErr.message,
-      });
+    if (err instanceof CircuitOpenError) {
+      log.warn('CIRCUIT-OPEN', `WhatsApp circuit open — message to ${normalized} suppressed`);
       return null;
     }
+    log.error('FAIL', `all attempts failed for ${normalized}`, { error: err.message });
+    return null;
   }
 }
 

@@ -21,8 +21,29 @@ const path = require('path');
 const { createLogger } = require('../lib/log');
 const mode = require('../lib/messaging-mode');
 const { maskEmail } = require('../lib/log-mask');
+const { withRetry } = require('../lib/retry');
+const { breaker, CircuitOpenError } = require('../lib/circuit-breaker');
 
 const log = createLogger('EMAIL');
+
+// Retry opts for the Resend transport call.  2 retries is sufficient — a
+// duplicate email is low-harm but a lost receipt is worse.
+const RETRY_OPTS = {
+  retries: 2,
+  baseMs: 300,
+  maxMs: 4000,
+  factor: 2,
+  jitter: true,
+  label: 'email-transport',
+};
+
+// Circuit-breaker opts for the email channel.  Threshold of 5 consecutive
+// failures opens the breaker for 30s.  Applied ONLY after the guards pass
+// (mode/allowlist/credentials checks) — so DRY-RUN and blocked sends bypass it.
+const BREAKER_OPTS = {
+  failureThreshold: 5,
+  cooldownMs: 30000,
+};
 
 const TEMPLATE_DIR = path.join(__dirname, '..', 'data', 'email-templates');
 
@@ -120,20 +141,37 @@ async function sendEmail({ to, subject, html, text, replyTo } = {}) {
     return { result: 'dry-run' };
   }
 
-  const { data, error } = await transport({
+  const payload = {
     from: fromAddress(),
     to,
     subject,
     html,
     text,
     ...(replyTo ? { reply_to: replyTo } : {}),
-  });
-  if (error) {
-    log.error('FAIL', `Resend error for ${to}: ${error.message || JSON.stringify(error)}`);
-    throw new Error(`Resend send failed: ${error.message || 'unknown'}`);
+  };
+
+  // Wrap the actual network call with retry (transient/5xx/429) then circuit
+  // breaker keyed to the 'email' channel.  When the breaker is open — treated
+  // exactly like a swallowed send failure (logged, returns stub).
+  try {
+    const { data, error } = await breaker(
+      'email',
+      () => withRetry(() => transport(payload), RETRY_OPTS),
+      BREAKER_OPTS
+    );
+    if (error) {
+      log.error('FAIL', `Resend error for ${maskEmail(to)}: ${error.message || JSON.stringify(error)}`);
+      throw new Error(`Resend send failed: ${error.message || 'unknown'}`);
+    }
+    log.info('SENT', `"${subject}" → ${maskEmail(to)} (id=${data && data.id})`);
+    return data;
+  } catch (err) {
+    if (err instanceof CircuitOpenError) {
+      log.warn('CIRCUIT-OPEN', `email circuit open — "${subject}" to ${maskEmail(to)} suppressed`);
+      return { result: 'circuit-open' };
+    }
+    throw err;
   }
-  log.info('SENT', `"${subject}" → ${to} (id=${data && data.id})`);
-  return data;
 }
 
 /** Format paise → "₹1,499". */

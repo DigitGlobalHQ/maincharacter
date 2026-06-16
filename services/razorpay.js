@@ -7,8 +7,23 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const { createLogger } = require('../lib/log');
+const { withRetry } = require('../lib/retry');
 
 const log = createLogger('RAZORPAY');
+
+// Retry opts for Razorpay CREATE calls (orders, plans, subscriptions, links).
+// Conservative: 2 retries, small backoff. These calls are idempotent in the
+// sense that a duplicate order/link simply goes unused — no money moves until
+// the customer authorises in checkout.  NEVER retry verify/webhook functions
+// (local crypto, no network) or capture/charge calls.
+const RAZORPAY_RETRY_OPTS = {
+  retries: 2,
+  baseMs: 300,
+  maxMs: 3000,
+  factor: 2,
+  jitter: true,
+  label: 'razorpay-create',
+};
 
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || '';
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || '';
@@ -20,6 +35,11 @@ if (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET) {
   razorpay = new Razorpay({ key_id: RAZORPAY_KEY_ID, key_secret: RAZORPAY_KEY_SECRET });
   log.info('INIT', 'Initialised');
 }
+
+// Test seam — allows tests to inject a mock Razorpay instance without modifying
+// env vars. `undefined` means "use the module-level razorpay variable".
+// Set to `null` to simulate no-keys (mock) mode, or an object to mock the SDK.
+let _razorpayOverride; // intentionally undefined by default
 
 // P4.2 launch-time guard: subscriptions are on by default this run, but warn
 // loudly if the live keys aren't set (or look like test keys) so charges aren't
@@ -118,12 +138,18 @@ function resolvePlanForPillars(pillars = []) {
 
 /**
  * Create a Razorpay order.
+ * Retries on transient/5xx/429 only.  A duplicate order is harmless — it goes
+ * unused if the customer never opens it.  4xx errors (bad request / auth /
+ * validation) fail fast with no retry.
  */
 async function createOrder(planKey, phone, name) {
   const plan = PLANS[planKey];
   if (!plan) throw new Error(`Unknown plan: ${planKey}`);
 
-  if (!razorpay) {
+  // Use the injected test instance if set, otherwise the module-level one.
+  const rp = _razorpayOverride !== undefined ? _razorpayOverride : razorpay;
+
+  if (!rp) {
     // Mock mode
     return {
       id: `order_mock_${Date.now()}`,
@@ -135,14 +161,15 @@ async function createOrder(planKey, phone, name) {
     };
   }
 
-  const order = await razorpay.orders.create({
-    amount: plan.amount,
-    currency: 'INR',
-    receipt: `mc_${planKey}_${Date.now()}`,
-    notes: { phone, name, plan: planKey },
-  });
-
-  return order;
+  return withRetry(
+    () => rp.orders.create({
+      amount: plan.amount,
+      currency: 'INR',
+      receipt: `mc_${planKey}_${Date.now()}`,
+      notes: { phone, name, plan: planKey },
+    }),
+    RAZORPAY_RETRY_OPTS
+  );
 }
 
 /**
@@ -204,29 +231,36 @@ function verifyWebhookSignature(rawBody, signature) {
 
 /**
  * Generate a payment link for WhatsApp (Razorpay Payment Link API).
+ * Retries on transient/5xx/429.  Falls back to the legacy upgrade URL on any
+ * final failure (existing behaviour preserved).
  */
 async function createPaymentLink(planKey, phone, name) {
   const plan = PLANS[planKey];
   if (!plan) throw new Error(`Unknown plan: ${planKey}`);
 
-  if (!razorpay) {
+  const rp = _razorpayOverride !== undefined ? _razorpayOverride : razorpay;
+
+  if (!rp) {
     return `${BASE_URL}/upgrade?plan=${planKey}&phone=${phone}`;
   }
 
   try {
-    const link = await razorpay.paymentLink.create({
-      amount: plan.amount,
-      currency: 'INR',
-      description: plan.description,
-      customer: {
-        name: name,
-        contact: '+' + phone,
-      },
-      notify: { sms: true, email: false },
-      callback_url: `${BASE_URL}/upgrade?status=success&plan=${planKey}`,
-      callback_method: 'get',
-      notes: { phone, name, plan: planKey },
-    });
+    const link = await withRetry(
+      () => rp.paymentLink.create({
+        amount: plan.amount,
+        currency: 'INR',
+        description: plan.description,
+        customer: {
+          name: name,
+          contact: '+' + phone,
+        },
+        notify: { sms: true, email: false },
+        callback_url: `${BASE_URL}/upgrade?status=success&plan=${planKey}`,
+        callback_method: 'get',
+        notes: { phone, name, plan: planKey },
+      }),
+      RAZORPAY_RETRY_OPTS
+    );
     return link.short_url;
   } catch (err) {
     log.error('LINK', `Payment link error: ${err.message}`);
@@ -259,6 +293,8 @@ function savePlanCache(cache) {
 /**
  * Create (once) or fetch a cached Razorpay Plan id for a plan key. In mock mode
  * (no live keys) returns a deterministic mock id so the flow is testable.
+ * Retries on transient/5xx/429 — a duplicate plan.create is harmless because
+ * the cache hit on the second call prevents duplicate plans in Razorpay.
  * @param {string} planKey
  * @returns {Promise<string>} razorpay plan id
  */
@@ -266,24 +302,32 @@ async function createOrFetchPlan(planKey) {
   const plan = PLANS[planKey];
   if (!plan) throw new Error(`Unknown plan: ${planKey}`);
 
-  const cache = loadPlanCache();
+  // Use the in-memory plan-cache override when set (tests), else fall through
+  // to the filesystem-backed loadPlanCache.
+  const useMemCache = _planCacheOverride !== undefined;
+  const cache = useMemCache ? { ..._planCacheOverride } : loadPlanCache();
   if (cache[planKey]) return cache[planKey];
 
-  if (!razorpay) {
+  const rp = _razorpayOverride !== undefined ? _razorpayOverride : razorpay;
+
+  if (!rp) {
     const mockId = `plan_mock_${planKey}`;
     cache[planKey] = mockId;
-    savePlanCache(cache);
+    if (useMemCache) { _planCacheOverride = cache; } else { savePlanCache(cache); }
     return mockId;
   }
 
-  const created = await razorpay.plans.create({
-    period: 'monthly',
-    interval: 1,
-    item: { name: plan.label, amount: plan.amount, currency: 'INR', description: plan.description },
-    notes: { planKey },
-  });
+  const created = await withRetry(
+    () => rp.plans.create({
+      period: 'monthly',
+      interval: 1,
+      item: { name: plan.label, amount: plan.amount, currency: 'INR', description: plan.description },
+      notes: { planKey },
+    }),
+    RAZORPAY_RETRY_OPTS
+  );
   cache[planKey] = created.id;
-  savePlanCache(cache);
+  if (useMemCache) { _planCacheOverride = cache; } else { savePlanCache(cache); }
   log.info('PLAN', `created Razorpay plan ${created.id} for ${planKey}`);
   return created.id;
 }
@@ -311,11 +355,14 @@ async function createSubscription(planKey, customer = {}, extraNotes = {}) {
     ...extraNotes,
   };
 
+  // Use the injected test instance if set, otherwise the module-level one.
+  const rp = _razorpayOverride !== undefined ? _razorpayOverride : razorpay;
+
   // Optional free-trial: if LOOKMAX_TRIAL_DAYS > 0 and live keys are present,
   // delay the first charge by that many days (card on file, charge later).
   const trialDays = parseInt(process.env.LOOKMAX_TRIAL_DAYS || '0', 10);
 
-  if (!razorpay) {
+  if (!rp) {
     return {
       id: `sub_mock_${planKey}_${Date.now()}`,
       short_url: `${BASE_URL}/upgrade?status=success&plan=${planKey}&phone=${customer.phone || ''}`,
@@ -337,7 +384,10 @@ async function createSubscription(planKey, customer = {}, extraNotes = {}) {
     log.info('SUBS', `trial start_at set: ${trialDays}d for plan ${planKey}`);
   }
 
-  const sub = await razorpay.subscriptions.create(subParams);
+  const sub = await withRetry(
+    () => rp.subscriptions.create(subParams),
+    RAZORPAY_RETRY_OPTS
+  );
   return { id: sub.id, short_url: sub.short_url };
 }
 
@@ -356,6 +406,25 @@ function inrPaiseToUsd(paise) {
   return '$' + rounded.toFixed(2);
 }
 
+// Test seams — not for production use.
+/** Inject a mock Razorpay SDK instance (pass null to simulate no-keys mode). */
+function __setRazorpayInstance(instance) {
+  _razorpayOverride = instance;
+}
+/** Clear the in-memory plan cache override so createOrFetchPlan uses an empty map. */
+function __clearPlanCache() {
+  _planCacheOverride = {};
+}
+
+/** Restore the real filesystem plan-cache (call after a test that used __clearPlanCache). */
+function __resetPlanCache() {
+  _planCacheOverride = undefined;
+}
+
+// In-memory plan cache override for tests (avoids touching the filesystem).
+// `undefined` = not active (use filesystem). `{}` or populated = use this map.
+let _planCacheOverride;
+
 module.exports = {
   PLANS,
   pillarsForPlan,
@@ -370,4 +439,8 @@ module.exports = {
   inrPaiseToUsd,
   subscriptionsEnabled: process.env.RAZORPAY_SUBSCRIPTIONS_ENABLED !== 'false',
   razorpayKeyId: RAZORPAY_KEY_ID,
+  // Test seams
+  __setRazorpayInstance,
+  __clearPlanCache,
+  __resetPlanCache,
 };

@@ -1490,3 +1490,32 @@ Guarded by an assertion in `tests/lookmaxing-frontend.test.js` (uses `.lm-tools_
 Founder flagged the `/lookmaxing/` footer as misaligned. Cause: the runtime mark-swap (`lib/mark-swap.js`) replaces the `◆` in `◆ MainCharacter` with an `<img class="mc-ico">` carrying `vertical-align:-0.14em`; inside the flex footer line that pushed the icon to the **top** of a 36px-tall `<a>` box while the text sat ~9px lower (icon floating above "MainCharacter · The Consultant"). Fixed in the page's `#mc-footer-fix` style: the footer brand link is now `display:inline-flex;align-items:center;gap:.35em`, the `mc-ico` is `vertical-align:middle`, and the footer `<p>` got `line-height:1.5` + `flex-wrap:wrap`. Browser-verified on localhost: icon center-Y == text center-Y (offset 0), `<a>` height 36px → 21px, all three footer lines centered on one line each.
 
 Guarded by an assertion in `tests/lookmaxing-frontend.test.js`. Full suite **1647 passed**, `npm run smoke` 44/44. **Held on branch — NOT merged to main; awaiting founder go.**
+
+---
+
+## 2026-06-16 — Lookmaxxing daily journey persisted to Postgres (migration 0005)
+
+### Bug: models/Lookmax.js was JSON-file-only; every Render redeploy wiped daily mirror/protocol/hair/nightLog history
+
+Root cause confirmed: `data/lookmax/lookmax.json` lives on Render's ephemeral disk and is wiped on every redeploy.
+User accounts survived (they are in the Postgres `users` table already migrated in 0001) but per-day mirror scores,
+protocol checklists, hair readings, and night logs were lost on every deploy. Production has Postgres (Neon) healthy
+(`DATABASE_URL` set, `/health database:true`).
+
+Fix: migration `0005_lookmax.sql` adds two tables (`lookmax_records` for append-only mirror/hair/nightlog rows keyed
+by `(user_id, kind, date)`, and `lookmax_protocols` with a `(user_id, date)` PRIMARY KEY for upsert-by-date protocol
+checklist rows). `models/Lookmax.js` now wraps every daily-journey function with the same `_adapt(jsonFn, pgFn)`
+pattern used in `models/User.js`, falling back to the JSON path when DATABASE_URL is unset or the pool is not ready.
+The JSON path is fully preserved so local dev and CI (no DATABASE_URL) are unaffected.
+
+### OTPs remain on the JSON path (deliberate scope limit)
+
+OTPs (`setOtp`/`verifyOtp`) are 10-minute login codes. Their loss on redeploy is benign — the user requests a fresh
+OTP. Persisting them to Postgres would add two round-trips per login check with negligible durability gain; the risk
+of expanding the scope of this data-integrity fix outweighed the benefit.
+
+### Admin table fix: aesthetic pillar users now show Lookmaxxing streak and mirror level
+
+The DAY and STREAK columns in `/admin` were showing Orator `day`/`streak` for all users; for `pillar === 'aesthetic'`
+users those fields are always 0. Added `lookmaxStreak` and `mirrorLevel` to the admin stats API response and updated
+the table renderer to show `mirrorLevel` in the DAY cell and `lookmaxStreak` in the STREAK cell for aesthetic users.

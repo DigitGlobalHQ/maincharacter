@@ -109,6 +109,9 @@ router.get('/stats', requireAuth, async (req, res) => {
       lastLoginAt: u.lastLoginAt || null,
       firstLoginAt: u.firstLoginAt || null,
       loginCount: u.loginCount || 0,
+      // ── Lookmaxxing progression (used by admin table for aesthetic pillar users) ──
+      lookmaxStreak: u.lookmaxStreak || 0,
+      mirrorLevel: u.mirrorLevel || 'raw',
     })),
     waitlist: User.getWaitlist(),
   });

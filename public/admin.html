@@ -487,6 +487,7 @@
     <h1>◆ MainCharacter Admin</h1>
     <div class="header-actions">
       <a class="header-btn" id="export-btn" href="#">Export CSV ↓</a>
+      <button class="header-btn" id="test-alert-btn" onclick="sendTestAlert()" title="Fire a test alert to the Slack channel">Test alert ◆</button>
       <button class="header-btn" onclick="loadData()">Refresh ↻</button>
     </div>
   </div>
@@ -681,6 +682,30 @@ function doLogin() {
     })
     .catch(() => {
       document.getElementById('login-error').style.display = 'block';
+    });
+}
+
+function sendTestAlert() {
+  const btn = document.getElementById('test-alert-btn');
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  fetch('/api/admin/test-alert', {
+    method: 'POST',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ severity: 'critical' }),
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.configured) {
+        btn.textContent = 'Sent → check Slack ✓';
+      } else {
+        btn.textContent = 'Not configured (dry-run)';
+      }
+    })
+    .catch(() => { btn.textContent = 'Failed ✕'; })
+    .finally(() => {
+      setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 4000);
     });
 }
 
